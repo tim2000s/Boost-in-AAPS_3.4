@@ -480,7 +480,15 @@ class DetermineBasalBoost @Inject constructor(
             sensitivityRatio = sensitivityRatio,
             consoleLog = consoleLog,
             consoleError = consoleError,
-            variable_sens = sens
+            variable_sens = sens,
+            // Boost/DynISF fields for Nightscout upload
+            boostActive = profile.boostActive,
+            predictionISF = round(profile.variable_sens, 1),
+            sensNormalTarget = round(profile.sensNormalTarget, 1),
+            tdd = if (profile.TDD > 0) round(profile.TDD, 1) else null,
+            tddRatio = if (sensitivityRatio != null && sensitivityRatio != 1.0) sensitivityRatio else null,
+            deltaAcceleration = delta_accl,
+            boostProfileSwitch = if (profile.profileSwitch != 100) profile.profileSwitch else null
         )
 
         // =====================================================================
@@ -731,6 +739,7 @@ class DetermineBasalBoost @Inject constructor(
         }
         future_sens = round(future_sens, 1)
         consoleLog.add("Future sens adjusted to: $future_sens")
+        rT.dynamicISF = future_sens
 
         // =====================================================================
         // minPredBG calculation (same as standard oref1)
@@ -1090,6 +1099,8 @@ class DetermineBasalBoost @Inject constructor(
                 // ----- Tier 1: Primary COB handling (< 25 min since carbs) -----
                 if (boostActive && COB > 0 && lastCarbAge < 25) {
                     consoleError.add(">>> TIER 1: Primary COB handling <<<")
+                    rT.boostTier = "COB_PRIMARY"
+                    rT.insulinReqPctEffective = round((1.0 / insulinReqPCT) * 100, 1)
                     rT.reason.append("Primary carb handling code operating; lastCarbAge: $lastCarbAge; ")
                     microBolus = Math.floor(min(insulinReq / insulinReqPCT, insulinReq) * roundSMBTo) / roundSMBTo
                     consoleError.add("Insulin required % (${(1.0 / insulinReqPCT) * 100}%) applied.")
@@ -1097,6 +1108,8 @@ class DetermineBasalBoost @Inject constructor(
                 // ----- Tier 2: Secondary COB handling (< 40 min, delta > 5) -----
                 else if (boostActive && COB > 0 && lastCarbAge < 40 && glucose_status.delta > 5) {
                     consoleError.add(">>> TIER 2: Secondary COB handling <<<")
+                    rT.boostTier = "COB_SECONDARY"
+                    rT.insulinReqPctEffective = round((1.0 / insulinReqPCT) * 100, 1)
                     val cob_boost_max = max((COB / CR) / insulinReqPCT, boost_max)
                     rT.reason.append("Secondary carb handling; boost_max due to COB = $cob_boost_max; lastCarbAge: $lastCarbAge; ")
                     microBolus = Math.floor(min(insulinReq / insulinReqPCT, cob_boost_max) * roundSMBTo) / roundSMBTo
@@ -1105,6 +1118,7 @@ class DetermineBasalBoost @Inject constructor(
                 // ----- Tier 3: UAM Boost (strong acceleration with positive delta) -----
                 else if (glucose_status.delta >= 5 && glucose_status.shortAvgDelta >= 3 && uamBoost1 > 1.2 && uamBoost2 > 2 && boostActive && iob_data.iob < boostMaxIOB && boost_scale < 3 && eventualBG > target_bg && bg > 80 && insulinReq > 0) {
                     consoleError.add(">>> TIER 3: UAM Boost <<<")
+                    rT.boostTier = "UAM_BOOST"
                     consoleError.add("Insulin required pre-boost is $insulinReq")
                     boostInsulinReq = min(boost_scale * boostInsulinReq, boost_max)
                     if (boostInsulinReq > boostMaxIOB - iob_data.iob) {
@@ -1126,6 +1140,7 @@ class DetermineBasalBoost @Inject constructor(
                 // ----- Tier 4: UAM High Boost (high BG > 180 with acceleration) -----
                 else if (delta_accl > 5 && bg > 180 && boostActive && iob_data.iob < boostMaxIOB && boost_scale < 3 && eventualBG > target_bg && bg > 80 && insulinReq > 0) {
                     consoleError.add(">>> TIER 4: UAM High Boost <<<")
+                    rT.boostTier = "UAM_HIGH_BOOST"
                     consoleError.add("Insulin required pre-boost is $insulinReq")
                     boostInsulinReq = min(boost_scale * boostInsulinReq, boost_max)
                     if (boostInsulinReq > boostMaxIOB - iob_data.iob) {
@@ -1143,6 +1158,7 @@ class DetermineBasalBoost @Inject constructor(
                 // ----- Tier 5: Percent scale (BG 98-180, delta > 3, accelerating) -----
                 else if (bg > 98 && bg < 181 && glucose_status.delta > 3 && delta_accl > 0 && eventualBG > target_bg && iob_data.iob < boostMaxIOB && boostActive) {
                     consoleError.add(">>> TIER 5: Percent Scale <<<")
+                    rT.boostTier = "PERCENT_SCALE"
                     if (insulinReq > boostMaxIOB - iob_data.iob) {
                         insulinReq = boostMaxIOB - iob_data.iob
                     }
@@ -1159,6 +1175,7 @@ class DetermineBasalBoost @Inject constructor(
                 // ----- Tier 6: Acceleration bolus (delta_accl > 25) -----
                 else if (delta_accl > 25 && glucose_status.delta > 4 && iob_data.iob < boostMaxIOB && boostActive && eventualBG > target_bg) {
                     consoleError.add(">>> TIER 6: Acceleration Bolus <<<")
+                    rT.boostTier = "ACCELERATION"
                     boostInsulinReq = min(boost_scale * boostInsulinReq, boost_max)
                     if (boostInsulinReq > boostMaxIOB - iob_data.iob) {
                         boostInsulinReq = boostMaxIOB - iob_data.iob
@@ -1173,12 +1190,14 @@ class DetermineBasalBoost @Inject constructor(
                 // ----- Tier 7: Enhanced oref1 (mild acceleration) -----
                 else if (boostActive && glucose_status.delta > 0 && delta_accl >= 0.5) {
                     consoleError.add(">>> TIER 7: Enhanced oref1 <<<")
+                    rT.boostTier = "ENHANCED_OREF1"
                     microBolus = Math.floor(min(insulinReq / insulinReqPCT, boost_max) * roundSMBTo) / roundSMBTo
                     rT.reason.append("Enhanced oref1 triggered; SMB equals $microBolus; ")
                 }
                 // ----- Tier 8: Regular oref1 (default fallback) -----
                 else {
                     consoleError.add(">>> TIER 8: Regular oref1 (fallback) <<<")
+                    rT.boostTier = "REGULAR_OREF1"
                     microBolus = Math.floor(min(insulinReq / insulinReqPCT, maxBolus) * roundSMBTo) / roundSMBTo
                     rT.reason.append("Regular oref1 triggered; SMB equals $microBolus; ")
                 }

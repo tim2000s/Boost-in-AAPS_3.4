@@ -46,7 +46,21 @@ data class RT(
 
 
     var consoleLog: MutableList<String>? = null,
-    var consoleError: MutableList<String>? = null
+    var consoleError: MutableList<String>? = null,
+
+    // Boost-specific: tier dosing decision (uploaded to Nightscout)
+    var boostTier: String? = null,               // Which tier was triggered (e.g. "UAM_BOOST", "PERCENT_SCALE", etc.)
+    var boostActive: Boolean? = null,            // Whether Boost was in its active time window
+
+    // Boost-specific: DynamicISF data (uploaded to Nightscout)
+    var dynamicISF: Double? = null,              // Dosing ISF (future_sens) used for insulin requirement
+    var predictionISF: Double? = null,           // Prediction ISF (variable_sens) used for BG predictions
+    var sensNormalTarget: Double? = null,        // ISF at normal target BG level
+    var tdd: Double? = null,                     // Blended TDD value used in ISF calculation
+    var tddRatio: Double? = null,                // Sensitivity ratio derived from TDD (8h weighted / 7D)
+    var insulinReqPctEffective: Double? = null,  // Effective insulin required % used for dosing
+    var deltaAcceleration: Double? = null,       // Delta acceleration percentage
+    var boostProfileSwitch: Int? = null          // Effective profile % (activity-adjusted)
 ) {
 
     fun serialize() = Json.encodeToString(serializer(), this)
