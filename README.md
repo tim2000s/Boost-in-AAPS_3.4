@@ -3,15 +3,17 @@
 * Check the wiki: https://wiki.aaps.app
 * Everyone who's been looping with AndroidAPS needs to fill out the form after 3 days of looping https://docs.google.com/forms/d/14KcMjlINPMJHVt28MDRupa4sz4DDIooI4SrW0P3HSN8/viewform?c=0&w=1
 
-[![Support Server](https://img.shields.io/discord/629952586895851530.svg?label=Discord&logo=Discord&colorB=7289da&style=for-the-badge)](https://discord.gg/Yvbu4k43)
+[![Support Server](https://img.shields.io/discord/629952586895851530.svg?label=Discord&logo=Discord&colorB=7289da&style=for-the-badge)](https://discord.gg/aUzQ8q5zQd)
 
-***Boost V2 based on AAPS 3.4.0.0***
+***Boost and Boost V2 based on AAPS 3.4.0.0***
 
-Boost V2 is a variant of the Boost plugin that uses **Chris Wilson's DynISF V2 formula** for ISF calculation. It can be installed alongside the original Boost plugin so that you can compare outputs before switching.
+Boost V2 is a variant of the Boost plugin that uses **Chris Wilson's DynISF V2 formula** for ISF calculation. It is included in the release and but it is advised that you install alongside the original Boost plugin on a development phone so that you can compare outputs before switching.
 
-All Boost-specific settings, including Dynamic ISF V2, Night Mode, and Step Counting, are consolidated within the Boost V2 preferences screen as sub-screens.
+All Boost-specific settings, including Dynamic ISF, Night Mode, and Step Counting, are now consolidated within the Boost and Boost V2 preferences screen as sub-screens.
 
 This release also includes a **new Boost Overview UI** — a redesigned home screen tailored for Boost users, with at-a-glance algorithm status, larger graphs, and tappable detail panels. See the [Boost Overview UI](#boost-overview-ui) section below.
+
+## You will need to make a note of your preferences and re-enter them. This is true for all the Boost, Dynamic ISF and Night Mode preferences due to the major re-engineering that had to take place.
 
 ---
 
@@ -49,7 +51,6 @@ The V2 formula squares the TDD term and uses a fixed 0.02 scaling factor. There 
 |---|---|---|
 | **Numerator** | 1800 | 2300 |
 | **TDD term** | TDD (linear) | TDD² (squared) |
-| **Scaling** | BG impact slider (0–200%) | Fixed 0.02 multiplier |
 | **BG impact dampening** | User-adjustable | None — always full effect |
 | **TDD sensitivity** | 10% TDD change ≈ 10% ISF change | 10% TDD change ≈ 21% ISF change |
 
@@ -59,7 +60,7 @@ Because TDD is squared in the V2 formula, ISF is **much more responsive to TDD c
 
 * V2 will self-adjust more aggressively as your TDD changes day to day.
 * It is strongly recommended to **log-compare V1 and V2 output side by side** before running V2 live.
-* TDD data is mandatory for V2. If TDD data is incomplete, V2 falls back to your profile ISF.
+* TDD data is mandatory for. If TDD data is incomplete, ISF falls back to your profile ISF.
 * **Start with an adjustment factor of 100%** and adjust from there.
 
 ---
@@ -70,9 +71,9 @@ The Boost Overview UI is a redesigned home screen that replaces the standard AAP
 
 ### Enabling the Boost Overview UI
 
-To enable the new UI, go to **Preferences → Overview → Advanced Settings → Use Boost Overview**. When this toggle is on, the HOME tab will display the Boost Overview instead of the standard AAPS Overview. Turning it off reverts to the standard layout. 
+To enable the new UI, go to **Preferences → Overview → Use Boost Overview**. When this toggle is on, the HOME tab will display the Boost Overview instead of the standard AAPS Overview. Turning it off reverts to the standard layout. 
 
-For the setting to take effect, switch tabs or restart the app.
+For the setting to take effect, restart the app.
 
 ### Layout
 
@@ -112,9 +113,28 @@ The Boost Overview reads algorithm data directly from the last APS run result. F
 
 ---
 
-## Dynamic ISF V2
+## Dynamic ISF 
+
+###Dynamic ISF in Boost Plugin
+
+Dynamic ISF settings are located within the Boost and Boost2 plugin Preferences sub-screen.
+
+### Settings
+
+The following settings are available in the Dynamic ISF sub-screen:
+
+* *Use TDD-based ISF* — Enable or disable TDD-based ISF calculation. When disabled, profile ISF is used directly. TDD data is required — falls back to profile ISF if data is incomplete.
+* *Adjust Sensitivity* — Adjust sensitivity ratio using 24h TDD / 7D TDD, similar to Autosens. Recommended to start with this off.
+* *DynISF normal target (mg/dl)* — Reference BG target for the ISF calculation. Default: 99.
+* *DynISF BG cap* — BG above this value is softened to reduce ISF aggressiveness at very high BG. Default: 210.
+* *TDD adjustment factor (%)* — Scales the blended TDD value up or down before ISF calculation. This number is likely to need reducing.
+* *BG impact on ISF ** — Controls how much of the BG-driven ISF adjustment is applied. At 100%, the full logarithmic scaling is used. At lower values, the ISF is dampened toward your profile value. 
+
+###Dynamic ISF V2 in Boost2 Plugin
 
 Dynamic ISF V2 settings are located within the Boost V2 preferences under the **Dynamic ISF V2 (TDD²-based)** sub-screen. Within this, there is a switch to enable or disable TDD-based ISF calculation. If disabled, your profile ISF will be used.
+
+### Settings
 
 The following settings are available in the Dynamic ISF V2 sub-screen:
 
@@ -139,8 +159,6 @@ The ISF for dosing decisions within Boost V2 is slightly different to the predic
 5. If BG is not increasing, use minimum predicted BG.
 
 In V2, the dosing ISF applies the full scaler ratio with no velocity dampening. This means the ISF used for dosing will always reflect the complete BG-driven adjustment.
-
-Sensitivity raises target and resistance lowers target are always enabled in Boost V2 and are not user-configurable.
 
 ---
 
