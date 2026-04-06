@@ -14,7 +14,6 @@ body {
   min-height: 100vh;
 }
 
-/* ── Layout ─── */
 .app {
   display: grid;
   grid-template-columns: 340px 1fr;
@@ -30,10 +29,40 @@ header {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 header h1 { font-size: 1.1rem; font-weight: 700; color: #fff; }
 header h1 span { color: #6ee7b7; }
 header p { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+
+/* Unit toggle */
+.unit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: #0f1117;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.unit-btn {
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  transition: all 0.15s;
+  letter-spacing: 0.3px;
+}
+.unit-btn.active {
+  background: #6ee7b7;
+  color: #0f1117;
+}
+.unit-btn:not(.active):hover { background: #1e293b; color: #e2e8f0; }
+
 .tab-bar {
   margin-left: auto;
   display: flex;
@@ -52,7 +81,6 @@ header p { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
 .tab.active { background: #0f1117; border-color: #334155; color: #e2e8f0; }
 .tab:hover:not(.active) { background: #1e293b; }
 
-/* ── Left panel ─── */
 .sidebar {
   background: #161d2d;
   border-right: 1px solid #2d3748;
@@ -60,9 +88,7 @@ header p { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
   padding: 16px;
 }
 
-.section {
-  margin-bottom: 16px;
-}
+.section { margin-bottom: 16px; }
 .section-header {
   display: flex;
   align-items: center;
@@ -80,12 +106,9 @@ header p { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
 }
 .section-header .chevron { margin-left: auto; transition: transform 0.2s; }
 .section-header.collapsed .chevron { transform: rotate(-90deg); }
-.section-body { }
 .section-body.hidden { display: none; }
 
-.ctrl {
-  margin-bottom: 10px;
-}
+.ctrl { margin-bottom: 10px; }
 .ctrl-label {
   display: flex;
   justify-content: space-between;
@@ -98,7 +121,7 @@ header p { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
   font-weight: 700;
   font-family: monospace;
   color: #6ee7b7;
-  min-width: 60px;
+  min-width: 80px;
   text-align: right;
 }
 input[type=range] {
@@ -136,11 +159,7 @@ input[type=range]::-webkit-slider-thumb {
 }
 .toggle-row:last-child { border-bottom: none; }
 .toggle-label { font-size: 0.78rem; color: #94a3b8; }
-.toggle {
-  position: relative;
-  width: 34px; height: 18px;
-  flex-shrink: 0;
-}
+.toggle { position: relative; width: 34px; height: 18px; flex-shrink: 0; }
 .toggle input { opacity: 0; width: 0; height: 0; }
 .toggle-slider {
   position: absolute;
@@ -162,7 +181,6 @@ input[type=range]::-webkit-slider-thumb {
 input:checked + .toggle-slider { background: #059669; }
 input:checked + .toggle-slider::before { transform: translateX(16px); background: #fff; }
 
-/* ── Main content ─── */
 .main {
   overflow-y: auto;
   padding: 20px;
@@ -171,7 +189,6 @@ input:checked + .toggle-slider::before { transform: translateX(16px); background
   gap: 16px;
 }
 
-/* ── Cards ─── */
 .card {
   background: #1e293b;
   border: 1px solid #2d3748;
@@ -189,22 +206,12 @@ input:checked + .toggle-slider::before { transform: translateX(16px); background
   align-items: center;
   gap: 8px;
 }
-.card-title .badge {
-  font-size: 0.68rem;
-  padding: 2px 8px;
-  border-radius: 99px;
-  font-weight: 600;
-}
+.card-title .badge { font-size: 0.68rem; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
 .badge-v1 { background: #1d3461; color: #60a5fa; border: 1px solid #1d4ed8; }
 .badge-v2 { background: #2d1b69; color: #a78bfa; border: 1px solid #7c3aed; }
 .badge-live { background: #064e3b; color: #34d399; border: 1px solid #059669; }
 
-/* ── ISF Summary row ─── */
-.isf-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 10px;
-}
+.isf-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
 .isf-cell {
   background: #0f1117;
   border: 1px solid #2d3748;
@@ -219,26 +226,13 @@ input:checked + .toggle-slider::before { transform: translateX(16px); background
 .val-v2 { color: #a78bfa; }
 .val-profile { color: #94a3b8; }
 .val-smb { color: #6ee7b7; }
-.val-warning { color: #f87171; }
-
-/* change indicator */
 .change-up { color: #f97316; font-size: 0.7rem; margin-top: 2px; }
 .change-down { color: #60a5fa; font-size: 0.7rem; margin-top: 2px; }
 .change-neutral { color: #475569; font-size: 0.7rem; margin-top: 2px; }
 
-/* ── Canvas chart ─── */
-canvas {
-  width: 100%;
-  height: 300px;
-  display: block;
-}
+canvas { width: 100%; height: 300px; display: block; }
 
-/* ── SMB breakdown ─── */
-.smb-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px;
-}
+.smb-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 .smb-cell {
   background: #0f1117;
   border: 1px solid #2d3748;
@@ -250,7 +244,6 @@ canvas {
 .smb-value { font-size: 1.2rem; font-weight: 700; color: #6ee7b7; }
 .smb-unit { font-size: 0.65rem; color: #475569; margin-top: 2px; }
 
-/* ── Aggressiveness gauge ─── */
 .gauge-wrap {
   position: relative;
   height: 28px;
@@ -259,12 +252,7 @@ canvas {
   background: linear-gradient(to right, #1d4ed8, #2d3748 30%, #2d3748 70%, #c2410c);
   margin-top: 8px;
 }
-.gauge-fill {
-  position: absolute;
-  inset: 0;
-  background: rgba(255,255,255,0.12);
-  pointer-events: none;
-}
+.gauge-fill { position: absolute; inset: 0; background: rgba(255,255,255,0.12); pointer-events: none; }
 .gauge-marker {
   position: absolute;
   top: 0; bottom: 0;
@@ -274,15 +262,8 @@ canvas {
   box-shadow: 0 0 8px rgba(255,255,255,0.8);
   transition: left 0.3s ease;
 }
-.gauge-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.65rem;
-  color: #475569;
-  margin-top: 4px;
-}
+.gauge-labels { display: flex; justify-content: space-between; font-size: 0.65rem; color: #475569; margin-top: 4px; }
 
-/* ── Reason box ─── */
 .reason-box {
   background: #0f1117;
   border: 1px solid #2d3748;
@@ -296,37 +277,16 @@ canvas {
   overflow-y: auto;
 }
 
-/* ── Status pills ─── */
-.status-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-.pill {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 99px;
-  white-space: nowrap;
-}
+.status-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.pill { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
 .pill-green { background: #064e3b; color: #34d399; border: 1px solid #059669; }
 .pill-red   { background: #450a0a; color: #f87171; border: 1px solid #b91c1c; }
 .pill-yellow{ background: #422006; color: #fde047; border: 1px solid #854d0e; }
 .pill-gray  { background: #1e293b; color: #64748b; border: 1px solid #334155; }
 
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-
-/* ── Tab pages ─── */
 .tab-page { display: none; flex-direction: column; gap: 16px; }
 .tab-page.active { display: flex; }
 
-/* ── BG scenario row ─── */
-.scenario-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
 .scenario-btn {
   padding: 5px 12px;
   border-radius: 6px;
@@ -338,13 +298,8 @@ canvas {
   color: #94a3b8;
   transition: all 0.15s;
 }
-.scenario-btn:hover, .scenario-btn.active {
-  background: #0f1117;
-  border-color: #6ee7b7;
-  color: #6ee7b7;
-}
+.scenario-btn:hover { background: #0f1117; border-color: #6ee7b7; color: #6ee7b7; }
 
-/* ── Nightscout modal ─── */
 #ns-modal-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.75);
@@ -360,77 +315,38 @@ canvas {
   width: 440px; max-width: 100%;
   box-shadow: 0 24px 60px rgba(0,0,0,0.6);
 }
-#ns-modal h2 {
-  font-size: 1.05rem; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;
-}
-#ns-modal .ns-intro {
-  font-size: 0.8rem; color: #64748b; line-height: 1.55; margin-bottom: 20px;
-}
+#ns-modal h2 { font-size: 1.05rem; font-weight: 700; color: #e2e8f0; margin-bottom: 6px; }
+#ns-modal .ns-intro { font-size: 0.8rem; color: #64748b; line-height: 1.55; margin-bottom: 20px; }
 .ns-field { margin-bottom: 14px; }
-.ns-field label {
-  display: block; font-size: 0.72rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  color: #94a3b8; margin-bottom: 5px;
-}
-.ns-field input {
-  width: 100%; background: #0f1117; border: 1px solid #334155;
-  border-radius: 7px; padding: 9px 12px;
-  font-size: 0.85rem; color: #e2e8f0; outline: none;
-  transition: border-color 0.15s;
-}
+.ns-field label { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 5px; }
+.ns-field input { width: 100%; background: #0f1117; border: 1px solid #334155; border-radius: 7px; padding: 9px 12px; font-size: 0.85rem; color: #e2e8f0; outline: none; transition: border-color 0.15s; }
 .ns-field input:focus { border-color: #6ee7b7; }
 .ns-field input::placeholder { color: #475569; }
-.ns-btn-row {
-  display: flex; gap: 10px; margin-top: 20px;
-}
-.ns-btn-connect {
-  flex: 1; padding: 10px; border-radius: 8px; border: none; cursor: pointer;
-  background: #10b981; color: #fff; font-size: 0.85rem; font-weight: 700;
-  transition: background 0.15s;
-}
+.ns-btn-row { display: flex; gap: 10px; margin-top: 20px; }
+.ns-btn-connect { flex: 1; padding: 10px; border-radius: 8px; border: none; cursor: pointer; background: #10b981; color: #fff; font-size: 0.85rem; font-weight: 700; transition: background 0.15s; }
 .ns-btn-connect:hover { background: #059669; }
 .ns-btn-connect:disabled { background: #1e3a2f; color: #4b7a65; cursor: default; }
-.ns-btn-skip {
-  padding: 10px 18px; border-radius: 8px; border: 1px solid #334155; cursor: pointer;
-  background: transparent; color: #94a3b8; font-size: 0.85rem; font-weight: 600;
-  transition: all 0.15s;
-}
+.ns-btn-skip { padding: 10px 18px; border-radius: 8px; border: 1px solid #334155; cursor: pointer; background: transparent; color: #94a3b8; font-size: 0.85rem; font-weight: 600; transition: all 0.15s; }
 .ns-btn-skip:hover { border-color: #64748b; color: #e2e8f0; }
-#ns-status-msg {
-  margin-top: 12px; font-size: 0.78rem; min-height: 18px;
-  text-align: center; border-radius: 6px; padding: 0;
-}
+#ns-status-msg { margin-top: 12px; font-size: 0.78rem; min-height: 18px; text-align: center; border-radius: 6px; padding: 0; }
 #ns-status-msg.ok  { color: #10b981; }
 #ns-status-msg.err { color: #f87171; }
 #ns-status-msg.loading { color: #94a3b8; }
 
-/* ── NS live bar in header ─── */
 #ns-live-bar {
   display: none; align-items: center; gap: 10px;
   background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25);
   border-radius: 8px; padding: 6px 12px;
   font-size: 0.75rem; color: #6ee7b7;
 }
-#ns-live-bar .ns-live-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: #10b981;
-  animation: nsPulse 2s infinite;
-}
-@keyframes nsPulse {
-  0%,100% { opacity:1; } 50% { opacity:0.3; }
-}
-#ns-live-bar button {
-  background: none; border: none; cursor: pointer;
-  color: #6ee7b7; font-size: 0.72rem; text-decoration: underline;
-  padding: 0;
-}
+#ns-live-bar .ns-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; animation: nsPulse 2s infinite; }
+@keyframes nsPulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+#ns-live-bar button { background: none; border: none; cursor: pointer; color: #6ee7b7; font-size: 0.72rem; text-decoration: underline; padding: 0; }
 #ns-live-bar button:hover { color: #fff; }
 </style>
 </head>
 <body>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- NIGHTSCOUT MODAL                                          -->
-<!-- ════════════════════════════════════════════════════════ -->
 <div id="ns-modal-overlay">
   <div id="ns-modal">
     <h2>Boost Settings Simulator</h2>
@@ -457,14 +373,18 @@ canvas {
 
 <div class="app">
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- HEADER                                                    -->
-<!-- ════════════════════════════════════════════════════════ -->
 <header>
   <div>
     <h1>Boost <span>Settings Simulator</span></h1>
     <p>Live calculation of ISF, SMB size, and aggressiveness as you tweak settings</p>
   </div>
+
+  <!-- Unit toggle -->
+  <div class="unit-toggle" title="Switch BG display units">
+    <button class="unit-btn active" id="unit-btn-mgdl" onclick="setUnit('mgdl')">mg/dL</button>
+    <button class="unit-btn" id="unit-btn-mmol" onclick="setUnit('mmol')">mmol/L</button>
+  </div>
+
   <div id="ns-live-bar">
     <div class="ns-live-dot"></div>
     <span id="ns-live-label">Nightscout live</span>
@@ -479,12 +399,9 @@ canvas {
   </div>
 </header>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SIDEBAR — inputs                                         -->
-<!-- ════════════════════════════════════════════════════════ -->
+<!-- SIDEBAR -->
 <div class="sidebar">
 
-  <!-- Patient / insulin -->
   <div class="section">
     <div class="section-header" onclick="toggleSection(this)">
       <span>📊 Patient &amp; Insulin</span>
@@ -497,9 +414,9 @@ canvas {
         <div class="ctrl-hints"><span>10 U</span><span>100 U</span></div>
       </div>
       <div class="ctrl">
-        <div class="ctrl-label"><span class="ctrl-name">Profile ISF</span><span class="ctrl-val" id="v-profIsf">50 mg/U</span></div>
+        <div class="ctrl-label"><span class="ctrl-name">Profile ISF</span><span class="ctrl-val" id="v-profIsf">50</span></div>
         <input type="range" id="s-profIsf" min="10" max="200" step="1" value="50" oninput="update()">
-        <div class="ctrl-hints"><span>10</span><span>200 mg/dL/U</span></div>
+        <div class="ctrl-hints" id="hints-profIsf"><span>10</span><span>200</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Basal rate</span><span class="ctrl-val" id="v-basal">1.0 U/hr</span></div>
@@ -507,29 +424,29 @@ canvas {
         <div class="ctrl-hints"><span>0.1</span><span>5.0 U/hr</span></div>
       </div>
       <div class="ctrl">
-        <div class="ctrl-label"><span class="ctrl-name">Current BG</span><span class="ctrl-val" id="v-bg">140 mg/dL</span></div>
+        <div class="ctrl-label"><span class="ctrl-name">Current BG</span><span class="ctrl-val" id="v-bg">140</span></div>
         <input type="range" id="s-bg" min="40" max="350" step="1" value="140" oninput="update()">
-        <div class="ctrl-hints"><span>40</span><span>350 mg/dL</span></div>
+        <div class="ctrl-hints" id="hints-bg"><span>40</span><span>350</span></div>
       </div>
       <div class="ctrl">
-        <div class="ctrl-label"><span class="ctrl-name">BG delta (current 5min)</span><span class="ctrl-val" id="v-delta">+2 mg/dL/5m</span></div>
+        <div class="ctrl-label"><span class="ctrl-name">BG delta (current 5min)</span><span class="ctrl-val" id="v-delta">+2.0</span></div>
         <input type="range" id="s-delta" min="-10" max="15" step="0.5" value="2" oninput="update()">
-        <div class="ctrl-hints"><span>-10 (falling)</span><span>+15 (rising)</span></div>
+        <div class="ctrl-hints" id="hints-delta"><span>-10 (falling)</span><span>+15 (rising)</span></div>
       </div>
       <div class="ctrl">
-        <div class="ctrl-label"><span class="ctrl-name">Short avg delta (15–20 min)</span><span class="ctrl-val" id="v-shortAvgDelta">+1.5 mg/dL/5m</span></div>
+        <div class="ctrl-label"><span class="ctrl-name">Short avg delta (15–20 min)</span><span class="ctrl-val" id="v-shortAvgDelta">+1.5</span></div>
         <input type="range" id="s-shortAvgDelta" min="-10" max="15" step="0.5" value="1.5" oninput="update()">
-        <div class="ctrl-hints"><span>-10</span><span>+15 mg/dL/5m</span></div>
+        <div class="ctrl-hints" id="hints-shortAvgDelta"><span>-10</span><span>+15</span></div>
       </div>
       <div class="ctrl">
-        <div class="ctrl-label"><span class="ctrl-name">Long avg delta (30–40 min)</span><span class="ctrl-val" id="v-longAvgDelta">+1.0 mg/dL/5m</span></div>
+        <div class="ctrl-label"><span class="ctrl-name">Long avg delta (30–40 min)</span><span class="ctrl-val" id="v-longAvgDelta">+1.0</span></div>
         <input type="range" id="s-longAvgDelta" min="-10" max="15" step="0.5" value="1.0" oninput="update()">
-        <div class="ctrl-hints"><span>-10</span><span>+15 mg/dL/5m</span></div>
+        <div class="ctrl-hints" id="hints-longAvgDelta"><span>-10</span><span>+15</span></div>
       </div>
       <div class="ctrl">
-        <div class="ctrl-label"><span class="ctrl-name">Profile target BG</span><span class="ctrl-val" id="v-target">100 mg/dL</span></div>
+        <div class="ctrl-label"><span class="ctrl-name">Profile target BG</span><span class="ctrl-val" id="v-target">100</span></div>
         <input type="range" id="s-target" min="72" max="180" step="1" value="100" oninput="update()">
-        <div class="ctrl-hints"><span>72</span><span>180 mg/dL</span></div>
+        <div class="ctrl-hints" id="hints-target"><span>72</span><span>180</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Current IOB</span><span class="ctrl-val" id="v-iob">0.5 U</span></div>
@@ -544,7 +461,6 @@ canvas {
     </div>
   </div>
 
-  <!-- Dynamic ISF -->
   <div class="section">
     <div class="section-header" onclick="toggleSection(this)">
       <span>📐 Dynamic ISF</span>
@@ -556,14 +472,14 @@ canvas {
         <label class="toggle"><input type="checkbox" id="t-useTdd" checked onchange="update()"><div class="toggle-slider"></div></label>
       </div>
       <div class="ctrl" style="margin-top:10px">
-        <div class="ctrl-label"><span class="ctrl-name">Normal Target (dynISF)</span><span class="ctrl-val" id="v-normTarget">99 mg/dL</span></div>
+        <div class="ctrl-label"><span class="ctrl-name">Normal Target (dynISF)</span><span class="ctrl-val" id="v-normTarget">99</span></div>
         <input type="range" id="s-normTarget" min="70" max="120" step="1" value="99" oninput="update()">
-        <div class="ctrl-hints"><span>70 (aggressive)</span><span>120 (gentle)</span></div>
+        <div class="ctrl-hints" id="hints-normTarget"><span>70</span><span>120</span></div>
       </div>
       <div class="ctrl">
-        <div class="ctrl-label"><span class="ctrl-name">BG Cap (dynISF)</span><span class="ctrl-val" id="v-bgCap">210 mg/dL</span></div>
+        <div class="ctrl-label"><span class="ctrl-name">BG Cap (dynISF)</span><span class="ctrl-val" id="v-bgCap">210</span></div>
         <input type="range" id="s-bgCap" min="100" max="300" step="5" value="210" oninput="update()">
-        <div class="ctrl-hints"><span>100</span><span>300 mg/dL</span></div>
+        <div class="ctrl-hints" id="hints-bgCap"><span>100</span><span>300</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">BG Velocity (V1 only)</span><span class="ctrl-val" id="v-velocity">100%</span></div>
@@ -596,7 +512,6 @@ canvas {
     </div>
   </div>
 
-  <!-- SMB Controls -->
   <div class="section">
     <div class="section-header" onclick="toggleSection(this)">
       <span>💉 SMB Controls</span>
@@ -626,12 +541,12 @@ canvas {
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">maxSMBBasalMinutes</span><span class="ctrl-val" id="v-smbMin">30 min</span></div>
         <input type="range" id="s-smbMin" min="15" max="120" step="5" value="30" oninput="update()">
-        <div class="ctrl-hints"><span>15 min (IOB ≤ -0.2)</span><span>120 min</span></div>
+        <div class="ctrl-hints"><span>15 min</span><span>120 min</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">maxUAMSMBBasalMinutes</span><span class="ctrl-val" id="v-uamSmbMin">15 min</span></div>
         <input type="range" id="s-uamSmbMin" min="15" max="120" step="5" value="15" oninput="update()">
-        <div class="ctrl-hints"><span>15 min (IOB &gt; -0.2)</span><span>120 min</span></div>
+        <div class="ctrl-hints"><span>15 min</span><span>120 min</span></div>
       </div>
       <div class="toggle-row" style="margin-top:4px">
         <span class="toggle-label">Enable Percent Scaling</span>
@@ -640,12 +555,11 @@ canvas {
       <div class="ctrl" style="margin-top:8px">
         <div class="ctrl-label"><span class="ctrl-name">Percent Scale Factor</span><span class="ctrl-val" id="v-percentScale">200%</span></div>
         <input type="range" id="s-percentScale" min="50" max="500" step="10" value="200" oninput="update()">
-        <div class="ctrl-hints"><span>50%</span><span>500% (BG 108–180 amplifier)</span></div>
+        <div class="ctrl-hints"><span>50%</span><span>500%</span></div>
       </div>
     </div>
   </div>
 
-  <!-- Activity & Profile -->
   <div class="section">
     <div class="section-header" onclick="toggleSection(this)">
       <span>🏃 Activity &amp; Profile</span>
@@ -668,12 +582,11 @@ canvas {
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Inactivity Profile %</span><span class="ctrl-val" id="v-inactivityPct">130%</span></div>
         <input type="range" id="s-inactivityPct" min="100" max="200" step="1" value="130" oninput="update()">
-        <div class="ctrl-hints"><span>100% (no change)</span><span>200%</span></div>
+        <div class="ctrl-hints"><span>100%</span><span>200%</span></div>
       </div>
     </div>
   </div>
 
-  <!-- Night Mode -->
   <div class="section">
     <div class="section-header" onclick="toggleSection(this)">
       <span>🌙 Night Mode</span>
@@ -689,9 +602,9 @@ canvas {
         <label class="toggle"><input type="checkbox" id="t-nightActive" onchange="update()"><div class="toggle-slider"></div></label>
       </div>
       <div class="ctrl" style="margin-top:8px">
-        <div class="ctrl-label"><span class="ctrl-name">Night Mode BG Offset</span><span class="ctrl-val" id="v-nightOffset">27 mg/dL</span></div>
+        <div class="ctrl-label"><span class="ctrl-name">Night Mode BG Offset</span><span class="ctrl-val" id="v-nightOffset">27</span></div>
         <input type="range" id="s-nightOffset" min="0" max="90" step="1" value="27" oninput="update()">
-        <div class="ctrl-hints"><span>0 (at target only)</span><span>90 mg/dL</span></div>
+        <div class="ctrl-hints" id="hints-nightOffset"><span>0</span><span>90</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Current COB</span><span class="ctrl-val" id="v-cob">0 g</span></div>
@@ -719,7 +632,6 @@ canvas {
     </div>
   </div>
 
-  <!-- Temp Target -->
   <div class="section">
     <div class="section-header" onclick="toggleSection(this)">
       <span>🎯 Temp Target</span>
@@ -731,9 +643,9 @@ canvas {
         <label class="toggle"><input type="checkbox" id="t-tempTarget" onchange="update()"><div class="toggle-slider"></div></label>
       </div>
       <div class="ctrl" style="margin-top:8px">
-        <div class="ctrl-label"><span class="ctrl-name">Temp Target BG</span><span class="ctrl-val" id="v-tempTargetBg">140 mg/dL</span></div>
+        <div class="ctrl-label"><span class="ctrl-name">Temp Target BG</span><span class="ctrl-val" id="v-tempTargetBg">140</span></div>
         <input type="range" id="s-tempTargetBg" min="72" max="200" step="1" value="140" oninput="update()">
-        <div class="ctrl-hints"><span>72 (low/correction TT)</span><span>200 (exercise TT)</span></div>
+        <div class="ctrl-hints" id="hints-tempTargetBg"><span>72</span><span>200</span></div>
       </div>
       <div class="toggle-row">
         <span class="toggle-label">High TT raises sensitivity (less insulin)</span>
@@ -746,7 +658,6 @@ canvas {
     </div>
   </div>
 
-  <!-- Scenario presets -->
   <div class="section">
     <div class="section-header" onclick="toggleSection(this)">
       <span>🎯 Quick Scenarios</span>
@@ -770,41 +681,35 @@ canvas {
 
 </div><!-- /sidebar -->
 
-
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- MAIN CONTENT                                             -->
-<!-- ════════════════════════════════════════════════════════ -->
+<!-- MAIN -->
 <div class="main">
 
-  <!-- ── ISF & SMB tab ── -->
   <div class="tab-page active" id="tab-isf">
-
-    <!-- Status row -->
     <div id="status-row" class="status-row"></div>
 
-    <!-- ISF summary -->
     <div class="card">
       <div class="card-title">
         Insulin Sensitivity Factor (ISF)
         <span class="badge badge-live">LIVE</span>
+        <span id="isf-unit-badge" style="font-size:0.68rem;color:#64748b;font-weight:400;margin-left:4px;"></span>
       </div>
       <div class="isf-grid">
         <div class="isf-cell">
           <div class="isf-cell-label">Profile ISF</div>
           <div class="isf-cell-value val-profile" id="out-profIsf">50</div>
-          <div class="isf-cell-unit">mg/dL per U</div>
+          <div class="isf-cell-unit" id="out-isf-unit">mg/dL per U</div>
           <div class="change-neutral" id="out-profIsf-note">your baseline</div>
         </div>
         <div class="isf-cell">
           <div class="isf-cell-label">Boost V1 at BG</div>
           <div class="isf-cell-value val-v1" id="out-v1Isf">—</div>
-          <div class="isf-cell-unit">mg/dL per U</div>
+          <div class="isf-cell-unit" id="out-isf-unit-v1">mg/dL per U</div>
           <div id="out-v1-change" class="change-neutral">—</div>
         </div>
         <div class="isf-cell">
           <div class="isf-cell-label">Boost V2 at BG</div>
           <div class="isf-cell-value val-v2" id="out-v2Isf">—</div>
-          <div class="isf-cell-unit">mg/dL per U</div>
+          <div class="isf-cell-unit" id="out-isf-unit-v2">mg/dL per U</div>
           <div id="out-v2-change" class="change-neutral">—</div>
         </div>
         <div class="isf-cell">
@@ -814,25 +719,17 @@ canvas {
           <div class="change-neutral" id="out-divisor-note">—</div>
         </div>
       </div>
-
       <div style="margin-top:14px; padding:10px 14px; background:#0f1117; border:1px solid #2d3748; border-radius:8px; font-size:0.75rem; color:#94a3b8; line-height:1.7;" id="out-isf-breakdown">
         Adjust settings to see ISF breakdown...
       </div>
     </div>
 
-    <!-- SMB summary -->
     <div class="card">
       <div class="card-title">
         SMB Sizing Estimate
         <span class="badge badge-live">LIVE</span>
       </div>
-
-      <!-- Active tier + SMB callout -->
-      <div id="out-tier-banner" style="
-        border-radius:10px; padding:14px 18px; margin-bottom:14px;
-        border:2px solid #334155; background:#1e293b;
-        display:flex; align-items:center; justify-content:space-between; gap:16px;
-      ">
+      <div id="out-tier-banner" style="border-radius:10px; padding:14px 18px; margin-bottom:14px; border:2px solid #334155; background:#1e293b; display:flex; align-items:center; justify-content:space-between; gap:16px;">
         <div style="flex:1; min-width:0;">
           <div style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#64748b; margin-bottom:4px;">Active Tier</div>
           <div style="font-size:0.92rem; font-weight:700; color:#e2e8f0; line-height:1.3;" id="out-tier-name">—</div>
@@ -866,63 +763,33 @@ canvas {
         <div style="background:#0f1117; border:1px solid #7c3aed; border-radius:8px; padding:10px 14px;">
           <div style="font-size:0.72rem; font-weight:700; color:#a78bfa; margin-bottom:6px;">Percent Scaling Effect</div>
           <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center;">
-            <div>
-              <div style="font-size:0.65rem; color:#64748b; margin-bottom:3px;">Without scaling</div>
-              <div style="font-size:1rem; font-weight:700; color:#94a3b8;" id="out-ps-unscaled">—</div>
-            </div>
-            <div>
-              <div style="font-size:0.65rem; color:#64748b; margin-bottom:3px;">With scaling</div>
-              <div style="font-size:1rem; font-weight:700; color:#a78bfa;" id="out-ps-scaled">—</div>
-            </div>
-            <div>
-              <div style="font-size:0.65rem; color:#64748b; margin-bottom:3px;">Difference</div>
-              <div style="font-size:1rem; font-weight:700;" id="out-ps-diff">—</div>
-            </div>
+            <div><div style="font-size:0.65rem; color:#64748b; margin-bottom:3px;">Without scaling</div><div style="font-size:1rem; font-weight:700; color:#94a3b8;" id="out-ps-unscaled">—</div></div>
+            <div><div style="font-size:0.65rem; color:#64748b; margin-bottom:3px;">With scaling</div><div style="font-size:1rem; font-weight:700; color:#a78bfa;" id="out-ps-scaled">—</div></div>
+            <div><div style="font-size:0.65rem; color:#64748b; margin-bottom:3px;">Difference</div><div style="font-size:1rem; font-weight:700;" id="out-ps-diff">—</div></div>
           </div>
           <div style="font-size:0.7rem; color:#64748b; margin-top:6px;" id="out-ps-note"></div>
         </div>
       </div>
-
-      <div style="margin-top:14px; padding:10px 14px; background:#0f1117; border:1px solid #2d3748; border-radius:8px; font-size:0.75rem; color:#94a3b8; line-height:1.7;" id="out-smb-breakdown">
-        —
-      </div>
+      <div style="margin-top:14px; padding:10px 14px; background:#0f1117; border:1px solid #2d3748; border-radius:8px; font-size:0.75rem; color:#94a3b8; line-height:1.7;" id="out-smb-breakdown">—</div>
     </div>
 
-    <!-- Aggressiveness gauge -->
     <div class="card">
       <div class="card-title">Overall Aggressiveness</div>
-      <div class="gauge-wrap">
-        <div class="gauge-marker" id="gauge-marker" style="left:50%"></div>
-      </div>
-      <div class="gauge-labels">
-        <span>Very Conservative</span>
-        <span>Balanced</span>
-        <span>Aggressive</span>
-      </div>
+      <div class="gauge-wrap"><div class="gauge-marker" id="gauge-marker" style="left:50%"></div></div>
+      <div class="gauge-labels"><span>Very Conservative</span><span>Balanced</span><span>Aggressive</span></div>
       <div style="margin-top:10px; font-size:0.78rem; color:#94a3b8;" id="out-agg-summary">—</div>
     </div>
 
-    <!-- Reason string -->
     <div class="card">
       <div class="card-title">Algorithm Reasoning</div>
       <div class="reason-box" id="out-reason">—</div>
     </div>
+  </div>
 
-  </div><!-- /tab-isf -->
-
-
-  <!-- ── ISF Curve tab ── -->
   <div class="tab-page" id="tab-curve">
     <div class="card">
-      <div class="card-title">
-        ISF vs Blood Glucose — Current Settings
-        <span class="badge badge-v1">V1</span>
-        <span class="badge badge-v2">V2</span>
-      </div>
-      <p style="font-size:0.75rem; color:#64748b; margin-bottom:12px;">
-        Lower ISF = more insulin per mg/dL of BG error. Both curves assume current TDD and normal target setting.
-        The vertical line marks your current BG.
-      </p>
+      <div class="card-title">ISF vs Blood Glucose — Current Settings <span class="badge badge-v1">V1</span><span class="badge badge-v2">V2</span></div>
+      <p style="font-size:0.75rem; color:#64748b; margin-bottom:12px;">Lower ISF = more insulin per unit of BG error. The vertical line marks your current BG.</p>
       <canvas id="isfChart"></canvas>
       <div style="display:flex; gap:16px; margin-top:10px; font-size:0.75rem; justify-content:center;">
         <span style="color:#60a5fa;">── V1 ISF at BG</span>
@@ -930,12 +797,9 @@ canvas {
         <span style="color:#94a3b8; opacity:0.5">── Profile ISF</span>
       </div>
     </div>
-
     <div class="card">
       <div class="card-title">Sensitivity Ratio vs BG</div>
-      <p style="font-size:0.75rem; color:#64748b; margin-bottom:12px;">
-        Ratio = Dynamic ISF ÷ Profile ISF. &lt;1.0 = more aggressive than profile. &gt;1.0 = more conservative.
-      </p>
+      <p style="font-size:0.75rem; color:#64748b; margin-bottom:12px;">Ratio = Dynamic ISF ÷ Profile ISF. &lt;1.0 = more aggressive than profile. &gt;1.0 = more conservative.</p>
       <canvas id="ratioChart"></canvas>
       <div style="display:flex; gap:16px; margin-top:10px; font-size:0.75rem; justify-content:center;">
         <span style="color:#60a5fa;">── V1 ratio</span>
@@ -943,26 +807,20 @@ canvas {
         <span style="color:#6ee7b7; opacity:0.7">── 1.0 (= profile)</span>
       </div>
     </div>
-  </div><!-- /tab-curve -->
+  </div>
 
-
-  <!-- ── SMB Deep Dive tab ── -->
   <div class="tab-page" id="tab-smb">
     <div class="card">
       <div class="card-title">SMB Size vs BG (at current basal &amp; settings)</div>
-      <p style="font-size:0.75rem; color:#64748b; margin-bottom:12px;">
-        Estimated microbolus across the BG range. Caps and IOB limit are applied. Assumes BG = eventual BG (simplified).
-      </p>
+      <p style="font-size:0.75rem; color:#64748b; margin-bottom:12px;">Estimated microbolus across the BG range. Caps and IOB limit are applied.</p>
       <canvas id="smbChart"></canvas>
     </div>
-
     <div class="card">
       <div class="card-title">How Settings Affect Max SMB</div>
       <div id="out-smb-sensitivity" style="font-size:0.8rem; color:#94a3b8; line-height:1.9;">—</div>
     </div>
-  </div><!-- /tab-smb -->
+  </div>
 
-  <!-- ── BG Projection tab ── -->
   <div class="tab-page" id="tab-proj">
     <div class="card">
       <div class="card-title" style="display:flex; align-items:center; justify-content:space-between;">
@@ -970,10 +828,9 @@ canvas {
         <span id="proj-data-source" style="font-size:0.72rem; color:#64748b; font-weight:400;"></span>
       </div>
       <p style="font-size:0.75rem; color:#64748b; margin-bottom:12px; line-height:1.5;">
-        <span style="color:#94a3b8; font-weight:600;">—— Grey</span>: trend only (no new insulin) &nbsp;·&nbsp;
+        <span style="color:#94a3b8; font-weight:600;">—— Grey</span>: trend only &nbsp;·&nbsp;
         <span style="color:#6ee7b7; font-weight:600;">—— Green</span>: with Boost SMBs &nbsp;·&nbsp;
-        <span style="color:#a78bfa; font-weight:600;">▲</span>: SMB fired &nbsp;·&nbsp;
-        Dashed = projected, solid = historical
+        <span style="color:#a78bfa; font-weight:600;">▲</span>: SMB fired &nbsp;·&nbsp; Dashed = projected
       </p>
       <canvas id="projChart" style="width:100%; height:320px;"></canvas>
     </div>
@@ -981,18 +838,129 @@ canvas {
       <div class="card-title">Projected SMB Delivery</div>
       <div id="proj-smb-log" style="font-size:0.78rem; color:#94a3b8; line-height:1.9;">—</div>
     </div>
-  </div><!-- /tab-proj -->
+  </div>
 
 </div><!-- /main -->
 </div><!-- /app -->
 
-
 <script>
 // ════════════════════════════════════════════════════════════
-// Core math — mirrors Boost plugin Kotlin exactly
+// UNIT SYSTEM
+// All internal math uses mg/dL throughout.
+// Display layer converts on output; sliders always store mg/dL internally.
 // ════════════════════════════════════════════════════════════
+let currentUnit = 'mgdl'; // 'mgdl' or 'mmol'
+const MMOL = 18.0182;     // mg/dL per mmol/L
 
-// Circadian sensitivity polynomial (DetermineBasalBoost.kt lines 75-89)
+function toDisplay(mgdl) {
+  return currentUnit === 'mmol' ? mgdl / MMOL : mgdl;
+}
+function fromDisplay(v) {
+  return currentUnit === 'mmol' ? v * MMOL : v;
+}
+function dispUnit() {
+  return currentUnit === 'mmol' ? 'mmol/L' : 'mg/dL';
+}
+function fmtBG(mgdl, dp) {
+  if (mgdl == null || isNaN(mgdl)) return '—';
+  const dp2 = dp != null ? dp : (currentUnit === 'mmol' ? 1 : 0);
+  return toDisplay(mgdl).toFixed(dp2);
+}
+function fmtISF(mgdlPerU, dp) {
+  // ISF is also in mg/dL/U; in mmol mode display as mmol/L/U
+  if (mgdlPerU == null || isNaN(mgdlPerU)) return '—';
+  const dp2 = dp != null ? dp : (currentUnit === 'mmol' ? 2 : 1);
+  return toDisplay(mgdlPerU).toFixed(dp2);
+}
+function isfUnitLabel() {
+  return currentUnit === 'mmol' ? 'mmol/L per U' : 'mg/dL per U';
+}
+
+// ════════════════════════════════════════════════════════════
+// Sliders that are in BG units — configured here centrally
+// Each entry: { id, mgdlMin, mgdlMax, step_mgdl, step_mmol, dp_mmol }
+// ════════════════════════════════════════════════════════════
+const BG_SLIDERS = [
+  { id:'bg',           mgdlMin:40,   mgdlMax:350,  step_mgdl:1,   step_mmol:0.1 },
+  { id:'delta',        mgdlMin:-10,  mgdlMax:15,   step_mgdl:0.5, step_mmol:0.1, isDelta:true },
+  { id:'shortAvgDelta',mgdlMin:-10,  mgdlMax:15,   step_mgdl:0.5, step_mmol:0.1, isDelta:true },
+  { id:'longAvgDelta', mgdlMin:-10,  mgdlMax:15,   step_mgdl:0.5, step_mmol:0.1, isDelta:true },
+  { id:'target',       mgdlMin:72,   mgdlMax:180,  step_mgdl:1,   step_mmol:0.1 },
+  { id:'normTarget',   mgdlMin:70,   mgdlMax:120,  step_mgdl:1,   step_mmol:0.1 },
+  { id:'bgCap',        mgdlMin:100,  mgdlMax:300,  step_mgdl:5,   step_mmol:0.1 },
+  { id:'nightOffset',  mgdlMin:0,    mgdlMax:90,   step_mgdl:1,   step_mmol:0.1 },
+  { id:'tempTargetBg', mgdlMin:72,   mgdlMax:200,  step_mgdl:1,   step_mmol:0.1 },
+  { id:'profIsf',      mgdlMin:10,   mgdlMax:200,  step_mgdl:1,   step_mmol:0.05, isISF:true },
+];
+
+// Slider internal values are always stored in mg/dL.
+// When unit changes we rewrite the slider's min/max/step/value to display units,
+// but we track the "true" mg/dL value separately.
+
+const sliderMgdlValues = {}; // id -> mg/dL value (ground truth)
+
+function initSliderValues() {
+  BG_SLIDERS.forEach(s => {
+    const el = document.getElementById('s-' + s.id);
+    if (el) sliderMgdlValues[s.id] = parseFloat(el.value);
+  });
+}
+
+function rebuildBgSliders() {
+  BG_SLIDERS.forEach(s => {
+    const el = document.getElementById('s-' + s.id);
+    if (!el) return;
+    const mgdlVal = sliderMgdlValues[s.id] ?? parseFloat(el.value);
+    if (currentUnit === 'mmol') {
+      el.min  = (s.mgdlMin / MMOL).toFixed(1);
+      el.max  = (s.mgdlMax / MMOL).toFixed(1);
+      el.step = s.step_mmol;
+      el.value = (mgdlVal / MMOL).toFixed(2);
+    } else {
+      el.min  = s.mgdlMin;
+      el.max  = s.mgdlMax;
+      el.step = s.step_mgdl;
+      el.value = mgdlVal;
+    }
+  });
+}
+
+// Read a BG slider value always as mg/dL
+function getBgSliderMgdl(id) {
+  const el = document.getElementById('s-' + id);
+  if (!el) return 0;
+  const raw = parseFloat(el.value);
+  return currentUnit === 'mmol' ? raw * MMOL : raw;
+}
+
+// Called on every slider oninput — sync mg/dL cache
+function onBgSliderInput(id) {
+  sliderMgdlValues[id] = getBgSliderMgdl(id);
+  update();
+}
+
+// Patch all BG slider oninput handlers to go through onBgSliderInput
+function patchBgSliderHandlers() {
+  BG_SLIDERS.forEach(s => {
+    const el = document.getElementById('s-' + s.id);
+    if (el) el.oninput = () => onBgSliderInput(s.id);
+  });
+}
+
+function setUnit(unit) {
+  if (unit === currentUnit) return;
+  // Capture current mg/dL values before switching
+  BG_SLIDERS.forEach(s => { sliderMgdlValues[s.id] = getBgSliderMgdl(s.id); });
+  currentUnit = unit;
+  document.getElementById('unit-btn-mgdl').classList.toggle('active', unit === 'mgdl');
+  document.getElementById('unit-btn-mmol').classList.toggle('active', unit === 'mmol');
+  rebuildBgSliders();
+  update();
+}
+
+// ════════════════════════════════════════════════════════════
+// Core math — all internal values in mg/dL
+// ════════════════════════════════════════════════════════════
 function getCircadianSensitivity(hour) {
   const n = Math.max(hour, 0);
   if (n < 2)  return (0.09130*Math.pow(Math.max(n,0.5),3)) - (0.33261*Math.pow(Math.max(n,0.5),2)) + 1.4;
@@ -1003,35 +971,24 @@ function getCircadianSensitivity(hour) {
   if (n <= 22) return 1.0;
   return (0.000125*Math.pow(n,3)) - (0.0015*Math.pow(n,2)) - (0.0045*n) + 1.2;
 }
-
 function calcInsulinDivisor(peak) {
-  // From OpenAPSBoostPlugin.kt line 594
   return peak < 60 ? (90 - peak) + 30 : (90 - peak) + 40;
 }
-
 function capBg(bg, cap) {
   return bg > cap ? cap + (bg - cap) / 3.0 : bg;
 }
-
-// ISF at normalTarget using V1 formula (1800/TDD·ln)
 function calcSensNormalTargetV1(tdd, normalTarget, divisor) {
   if (tdd <= 0) return null;
   const logTerm = Math.log(normalTarget / divisor + 1);
   if (logTerm <= 0) return null;
   return 1800.0 / (tdd * logTerm);
 }
-
-// ISF at normalTarget using V2 formula (2300/ln·TDD²·0.02) — Chris Wilson
 function calcSensNormalTargetV2(tdd, normalTarget, divisor) {
   if (tdd <= 0) return null;
   const logTerm = Math.log(normalTarget / divisor + 1);
   if (logTerm <= 0) return null;
   return 2300.0 / (logTerm * tdd * tdd * 0.02);
 }
-
-// ISF at a given BG using getIsfByProfile (DetermineBasalBoost.kt line 60-68)
-// sensNT = sensNormalTarget (already computed by V1 or V2)
-// velocity: 0-1 (V2 is always 1.0)
 function calcIsfAtBg(bg, sensNT, normalTarget, divisor, velocity, bgCap) {
   let bgAdj = capBg(bg, bgCap);
   bgAdj = Math.max(bgAdj, 1);
@@ -1041,37 +998,33 @@ function calcIsfAtBg(bg, sensNT, normalTarget, divisor, velocity, bgCap) {
   return sensNT * (1 - (1 - scaler) * velocity);
 }
 
-// ════════════════════════════════════════════════════════════
-// Inputs
-// ════════════════════════════════════════════════════════════
 function getInputs() {
   const g = id => document.getElementById(id);
   const gf = id => parseFloat(g(id).value);
   const gb = id => g(id).checked;
   const gs = id => g(id).value;
+  // BG-type sliders: always read as mg/dL
+  const bgV = id => getBgSliderMgdl(id);
   return {
-    // Patient / insulin
     tdd:           gf('s-tdd'),
-    profIsf:       gf('s-profIsf'),
+    profIsf:       bgV('profIsf'),
     basal:         gf('s-basal'),
-    bg:            gf('s-bg'),
-    delta:         gf('s-delta'),
-    shortAvgDelta: gf('s-shortAvgDelta'),
-    longAvgDelta:  gf('s-longAvgDelta'),
-    target:        gf('s-target'),
+    bg:            bgV('bg'),
+    delta:         bgV('delta'),
+    shortAvgDelta: bgV('shortAvgDelta'),
+    longAvgDelta:  bgV('longAvgDelta'),
+    target:        bgV('target'),
     iob:           gf('s-iob'),
     peak:          gf('s-peak'),
-    // Dynamic ISF
     useTdd:        gb('t-useTdd'),
-    normTarget:    gf('s-normTarget'),
-    bgCap:         gf('s-bgCap'),
+    normTarget:    bgV('normTarget'),
+    bgCap:         bgV('bgCap'),
     velocity:      gf('s-velocity') / 100,
     tddAdj:        gf('s-tddAdj') / 100,
     adjustSens:    gb('t-adjustSens'),
     sensRatio:     gf('s-sensRatio'),
     circadian:     gb('t-circadian'),
     circHour:      gf('s-circHour'),
-    // SMB Controls
     scale:         gf('s-scale'),
     maxIob:        gf('s-maxIob'),
     bolusMax:      gf('s-bolusMax'),
@@ -1079,50 +1032,42 @@ function getInputs() {
     smbMin:        gf('s-smbMin'),
     uamSmbMin:     gf('s-uamSmbMin'),
     percentScale:    gb('t-percentScale'),
-    percentScaleVal: gf('s-percentScale'),      // raw value (e.g. 200), matches Kotlin formula
-    // Activity
+    percentScaleVal: gf('s-percentScale'),
     activityState: gs('s-activityState'),
     activityPct:   gf('s-activityPct'),
     inactivityPct: gf('s-inactivityPct'),
-    // Night Mode / COB
     nightMode:     gb('t-nightMode'),
     nightActive:   gb('t-nightActive'),
-    nightOffset:   gf('s-nightOffset'),
+    nightOffset:   bgV('nightOffset'),
     cob:           gf('s-cob'),
     lastCarbAge:   gf('s-lastCarbAge'),
     cr:            gf('s-cr'),
     recentLow:     gb('t-recentLow'),
     nightModeCob:  gb('t-nightModeCob'),
-    // Temp Target
     tempTarget:    gb('t-tempTarget'),
-    tempTargetBg:  gf('s-tempTargetBg'),
+    tempTargetBg:  bgV('tempTargetBg'),
     highTtSens:    gb('t-highTtSens'),
     lowTtSens:     gb('t-lowTtSens'),
   };
 }
 
-function fmt(v, dp=1) {
+function fmt(v, dp) {
   if (v == null || isNaN(v)) return '—';
-  return v.toFixed(dp);
+  return v.toFixed(dp != null ? dp : 1);
 }
 
 function calcAll(inp) {
   const divisor = calcInsulinDivisor(inp.peak);
-
-  // ── Profile % from activity state ─────────────────────────
   let profilePct;
   switch (inp.activityState) {
     case 'active':   profilePct = inp.activityPct;   break;
     case 'inactive': profilePct = inp.inactivityPct; break;
     default:         profilePct = 100;               break;
   }
-  const profileScale = profilePct / 100.0;
-  // globalScale mirrors OpenAPSBoostPlugin.kt line 256: 100.0 / profilePercent
-  const globalScale  = 100.0 / profilePct;
+  const profileScale  = profilePct / 100.0;
+  const globalScale   = 100.0 / profilePct;
   const effectiveBasal = inp.basal * profileScale;
-
-  // ── TDD & ISF at normal target ────────────────────────────
-  const adjustedTdd = inp.tdd * inp.tddAdj;
+  const adjustedTdd   = inp.tdd * inp.tddAdj;
   const scaledProfileIsf = inp.profIsf * profileScale;
 
   let sensNTV1, sensNTV2;
@@ -1133,22 +1078,16 @@ function calcAll(inp) {
     sensNTV1 = scaledProfileIsf;
     sensNTV2 = scaledProfileIsf;
   }
+  if (sensNTV1) sensNTV1 *= globalScale;
+  if (sensNTV2) sensNTV2 *= globalScale;
 
-  // Apply globalScale (profile %) — mirrors plugin line 310: sensNormalTarget *= globalScale
-  if (sensNTV1 != null) sensNTV1 *= globalScale;
-  if (sensNTV2 != null) sensNTV2 *= globalScale;
-
-  // ── TDD Sensitivity Adjustment ────────────────────────────
-  // mirrors plugin lines 313-316: sensNormalTarget /= ratio  (ratio = 24H/7D)
   if (inp.adjustSens && inp.sensRatio > 0) {
     const ratio = Math.max(0.7, Math.min(1.3, inp.sensRatio));
     if (sensNTV1) sensNTV1 /= ratio;
     if (sensNTV2) sensNTV2 /= ratio;
   }
 
-  // ── Temp target ISF adjustment ────────────────────────────
-  // mirrors plugin lines 331-340
-  const halfBasalTarget = 160; // SMBDefaults.half_basal_exercise_target
+  const halfBasalTarget = 160;
   let ttRatioApplied = 1.0;
   if (inp.tempTarget) {
     const tt = inp.tempTargetBg;
@@ -1165,7 +1104,6 @@ function calcAll(inp) {
     }
   }
 
-  // ── Circadian ISF ─────────────────────────────────────────
   let circFactor = 1.0;
   if (inp.circadian) {
     circFactor = getCircadianSensitivity(inp.circHour);
@@ -1173,7 +1111,6 @@ function calcAll(inp) {
     if (sensNTV2) sensNTV2 *= circFactor;
   }
 
-  // ── ISF at current BG ─────────────────────────────────────
   const bgCapped = capBg(inp.bg, inp.bgCap);
   const isfV1 = (sensNTV1 != null)
     ? calcIsfAtBg(inp.bg, sensNTV1, inp.normTarget, divisor, inp.velocity, inp.bgCap)
@@ -1182,93 +1119,61 @@ function calcAll(inp) {
     ? calcIsfAtBg(inp.bg, sensNTV2, inp.normTarget, divisor, 1.0, inp.bgCap)
     : scaledProfileIsf;
 
-  // ── SMB max bolus (Tier 8 / IOB-branch selection) ────────
-  // mirrors DetermineBasalBoost.kt lines 1035-1041
   const smbMinToUse = (inp.iob > -0.2) ? inp.uamSmbMin : inp.smbMin;
-  const maxBasalBolus = effectiveBasal * smbMinToUse / 60.0;  // used ONLY by Tier 8
-
-  // ── insulinReq ────────────────────────────────────────────
-  const insulinReqV1 = Math.max(0, (inp.bg - inp.target) / isfV1);
-
-  // ── Percent scaling divisors ──────────────────────────────
-  // mirrors DetermineBasalBoost.kt lines 1049-1068
-  const baseReqDivisor = 1.0 / inp.insulinReqPct;  // insulinReqPCT in Kotlin
-  // scale_pct: always computed; falls back to baseReqDivisor if percent scale disabled
-  const scale_pct = inp.percentScale
-    ? 100.0 / (inp.percentScaleVal * profileScale)
-    : baseReqDivisor;
-  let scaledDivisor = baseReqDivisor;  // insulinDivisor in Kotlin
+  const maxBasalBolus = effectiveBasal * smbMinToUse / 60.0;
+  const insulinReqV1  = Math.max(0, (inp.bg - inp.target) / isfV1);
+  const baseReqDivisor = 1.0 / inp.insulinReqPct;
+  const scale_pct = inp.percentScale ? 100.0 / (inp.percentScaleVal * profileScale) : baseReqDivisor;
+  let scaledDivisor = baseReqDivisor;
   if (inp.percentScale) {
     scaledDivisor = inp.bg < 108
       ? scale_pct
       : baseReqDivisor - ((Math.abs(inp.bg - 180) / 72) * (baseReqDivisor - scale_pct));
   }
 
-  // ── Night mode suppression ────────────────────────────────
   const nightSuppressed = inp.nightMode && inp.nightActive &&
     (inp.bg < (inp.target + inp.nightOffset)) &&
     !(inp.nightModeCob && inp.cob > 0);
 
-  // ── Derived dynamics (for tier decision tree) ─────────────
-  // mirrors DetermineBasalBoost.kt lines 235-237
   const delta_accl = Math.abs(inp.shortAvgDelta) > 0.001
     ? Math.round(100 * (inp.delta - inp.shortAvgDelta) / Math.abs(inp.shortAvgDelta) * 100) / 100
     : 0;
   const uamBoost1 = Math.abs(inp.shortAvgDelta) > 0.001 ? inp.delta / inp.shortAvgDelta : 0;
-  const uamBoost2 = Math.abs(inp.longAvgDelta) > 0.001 ? Math.abs(inp.delta / inp.longAvgDelta) : 0;
-  // Simplified eventualBG: 30-min trend projection using longAvgDelta (6 × 5-min intervals)
+  const uamBoost2 = Math.abs(inp.longAvgDelta) > 0.001  ? Math.abs(inp.delta / inp.longAvgDelta) : 0;
   const eventualBG = inp.bg + inp.longAvgDelta * 6;
-  // Fast-carb rebound detection (mirrors DetermineBasalBoost.kt lines 1089-1096)
-  const reversalScore = (inp.longAvgDelta < 0 && inp.delta > 0)
-    ? inp.delta * Math.abs(inp.longAvgDelta) : 0;
-  const fastCarbRebound = (inp.recentLow || reversalScore > 30)
-    && inp.cob === 0 && inp.bg < 170 && delta_accl > 25;
+  const reversalScore = (inp.longAvgDelta < 0 && inp.delta > 0) ? inp.delta * Math.abs(inp.longAvgDelta) : 0;
+  const fastCarbRebound = (inp.recentLow || reversalScore > 30) && inp.cob === 0 && inp.bg < 170 && delta_accl > 25;
 
-  // boost_scale = profile.boost_scale × (profileSwitch/100)
   const boost_scale = inp.scale * profileScale;
-
-  // ── Blocking conditions ───────────────────────────────────
   const ioBlock          = inp.iob > inp.maxIob;
   const boostDisabledScale = inp.scale >= 3.0;
-
-  // ── 8-tier SMB decision tree ──────────────────────────────
-  // Mirrors DetermineBasalBoost.kt lines 1133-1240
-  // Caps: Tiers 1-7 → bolusMax (boost_max); Tier 8 → maxBasalBolus AND bolusMax
-  const R = 20; // roundSMBTo = 1/bolus_increment (0.05 U)
+  const R = 20;
   const boostActive = !boostDisabledScale;
   const boostMaxIOB = inp.maxIob;
   let tier = 'BLOCKED', microBolus = 0;
 
   if (!ioBlock && !boostDisabledScale && !nightSuppressed) {
-    // Tier 1: Primary COB (< 25 min since carbs)
     if (boostActive && inp.cob > 0 && inp.lastCarbAge < 25) {
       tier = 'T1_COB_PRIMARY';
       microBolus = Math.floor(Math.min(insulinReqV1 / baseReqDivisor, insulinReqV1) * R) / R;
-    }
-    // Tier 2: Secondary COB (< 40 min, delta > 5)
-    else if (boostActive && inp.cob > 0 && inp.lastCarbAge < 40 && inp.delta > 5) {
+    } else if (boostActive && inp.cob > 0 && inp.lastCarbAge < 40 && inp.delta > 5) {
       tier = 'T2_COB_SECONDARY';
       const cobBoostMax = Math.max((inp.cob / inp.cr) / baseReqDivisor, inp.bolusMax);
       microBolus = Math.floor(Math.min(insulinReqV1 / baseReqDivisor, cobBoostMax) * R) / R;
-    }
-    // Tier 3: UAM Boost (strong acceleration)
-    else if (!fastCarbRebound && inp.delta >= 5 && inp.shortAvgDelta >= 3
+    } else if (!fastCarbRebound && inp.delta >= 5 && inp.shortAvgDelta >= 3
         && uamBoost1 > 1.2 && uamBoost2 > 2
         && boostActive && inp.iob < boostMaxIOB && boost_scale < 3
         && eventualBG > inp.target && inp.bg > 80 && insulinReqV1 > 0) {
       tier = 'T3_UAM_BOOST';
       let boostInsReq = Math.min(boost_scale * effectiveBasal, inp.bolusMax);
       if (boostInsReq > boostMaxIOB - inp.iob) boostInsReq = boostMaxIOB - inp.iob;
-      // When delta_accl > 1, switch to scaled divisor (percent scale)
       const t3div = delta_accl > 1 ? scaledDivisor : baseReqDivisor;
       if (boostInsReq < insulinReqV1 / t3div) {
         microBolus = Math.floor(Math.min(insulinReqV1 / t3div, inp.bolusMax) * R) / R;
       } else {
         microBolus = Math.floor(Math.min(boostInsReq, inp.bolusMax) * R) / R;
       }
-    }
-    // Tier 4: UAM High Boost (BG > 180, delta_accl > 5)
-    else if (delta_accl > 5 && inp.bg > 180 && boostActive && inp.iob < boostMaxIOB
+    } else if (delta_accl > 5 && inp.bg > 180 && boostActive && inp.iob < boostMaxIOB
         && boost_scale < 3 && eventualBG > inp.target && inp.bg > 80 && insulinReqV1 > 0) {
       tier = 'T4_UAM_HIGH_BOOST';
       let boostInsReq = Math.min(boost_scale * effectiveBasal, inp.bolusMax);
@@ -1279,48 +1184,36 @@ function calcAll(inp) {
       } else {
         microBolus = Math.floor(Math.min(boostInsReq, inp.bolusMax) * R) / R;
       }
-    }
-    // Tier 5: Percent Scale (BG 98-181, delta > 3, any acceleration)
-    else if (!fastCarbRebound && inp.bg > 98 && inp.bg < 181 && inp.delta > 3
+    } else if (!fastCarbRebound && inp.bg > 98 && inp.bg < 181 && inp.delta > 3
         && delta_accl > 0 && eventualBG > inp.target && inp.iob < boostMaxIOB && boostActive) {
       tier = 'T5_PERCENT_SCALE';
       let insReq = insulinReqV1;
       if (insReq > boostMaxIOB - inp.iob) insReq = boostMaxIOB - inp.iob;
       let div5 = scaledDivisor;
       if (insReq < 0) {
-        // BG falling but still above target – use doubled scale
         div5 = baseReqDivisor - ((Math.abs(inp.bg - 180) / 72) * (baseReqDivisor - 2 * scale_pct));
         insReq = effectiveBasal;
       }
       microBolus = Math.floor(Math.min(insReq / div5, inp.bolusMax) * R) / R;
-    }
-    // Tier 6: Acceleration Bolus (delta_accl > 25)
-    else if (!fastCarbRebound && delta_accl > 25 && inp.delta > 4
+    } else if (!fastCarbRebound && delta_accl > 25 && inp.delta > 4
         && inp.iob < boostMaxIOB && boostActive && eventualBG > inp.target) {
       tier = 'T6_ACCELERATION';
       let boostInsReq = Math.min(boost_scale * effectiveBasal, inp.bolusMax);
       if (boostInsReq > boostMaxIOB - inp.iob) boostInsReq = boostMaxIOB - inp.iob;
       const div6 = baseReqDivisor - ((Math.abs(inp.bg - 180) / 72) * (baseReqDivisor - 2 * scale_pct));
       microBolus = Math.floor(Math.min(boostInsReq / div6, inp.bolusMax) * R) / R;
-    }
-    // Tier 7: Enhanced oref1 (mild rise, slight acceleration)
-    else if (boostActive && inp.delta > 0 && delta_accl >= 0.5) {
+    } else if (boostActive && inp.delta > 0 && delta_accl >= 0.5) {
       tier = 'T7_ENHANCED_OREF1';
       let insReq = insulinReqV1;
       if (insReq > boostMaxIOB - inp.iob) insReq = boostMaxIOB - inp.iob;
       microBolus = Math.floor(Math.min(insReq / baseReqDivisor, inp.bolusMax) * R) / R;
-    }
-    // Tier 8: Regular oref1 (fallback) — only tier that uses maxBasalBolus cap
-    else {
+    } else {
       tier = 'T8_REGULAR_OREF1';
       microBolus = Math.floor(Math.min(insulinReqV1 / baseReqDivisor, maxBasalBolus) * R) / R;
     }
   }
 
-  const rawMicroBolus = microBolus; // kept for compatibility with existing UI code
-  // For percent-scale comparison panel: before/after using bolusMax cap only
   const rawMicroBolusUnscaled = Math.max(0, Math.min(insulinReqV1 / baseReqDivisor, inp.bolusMax));
-
   const aggScore = computeAggScore(inp, isfV1, inp.profIsf, maxBasalBolus, profilePct, nightSuppressed);
 
   return {
@@ -1328,12 +1221,11 @@ function calcAll(inp) {
     scaledProfileIsf, sensNTV1, sensNTV2,
     isfV1, isfV2, bgCapped,
     smbMinToUse, maxBasalBolus,
-    insulinReqV1, scaledDivisor, baseReqDivisor, scale_pct, rawMicroBolus, rawMicroBolusUnscaled, microBolus,
+    insulinReqV1, scaledDivisor, baseReqDivisor, scale_pct, rawMicroBolusUnscaled, microBolus,
     ioBlock, boostDisabledScale, nightSuppressed,
     ttRatioApplied, circFactor,
     delta_accl, uamBoost1, uamBoost2, eventualBG, fastCarbRebound, tier,
-    boost_scale,
-    aggScore,
+    boost_scale, aggScore,
   };
 }
 
@@ -1354,48 +1246,116 @@ function computeAggScore(inp, isfV1, profIsf, maxBasalBolus, profilePct, nightSu
 }
 
 // ════════════════════════════════════════════════════════════
+// Slider label display helpers
+// ════════════════════════════════════════════════════════════
+function sliderLabel(id) {
+  const el = document.getElementById('s-' + id);
+  if (!el) return '';
+  return parseFloat(el.value);
+}
+
+function updateSliderLabels(inp) {
+  const u = dispUnit();
+  const dISF = currentUnit === 'mmol' ? 2 : 0;  // decimal places for ISF display
+  const dBG  = currentUnit === 'mmol' ? 1 : 0;
+  const dD   = currentUnit === 'mmol' ? 2 : 1;   // delta
+
+  document.getElementById('v-tdd').textContent    = fmt(inp.tdd,1) + ' U';
+  document.getElementById('v-profIsf').textContent = fmtISF(inp.profIsf, dISF) + ' ' + (currentUnit === 'mmol' ? 'mmol/U' : 'mg/U');
+  document.getElementById('v-basal').textContent  = fmt(inp.basal,2) + ' U/hr';
+  document.getElementById('v-bg').textContent     = fmtBG(inp.bg, dBG) + ' ' + u;
+  document.getElementById('v-delta').textContent  = (inp.delta >= 0 ? '+' : '') + fmtBG(inp.delta, dD) + ' ' + (currentUnit==='mmol'?'mmol/5m':'mg/5m');
+  document.getElementById('v-shortAvgDelta').textContent = (inp.shortAvgDelta>=0?'+':'') + fmtBG(inp.shortAvgDelta, dD) + ' ' + (currentUnit==='mmol'?'mmol/5m':'mg/5m');
+  document.getElementById('v-longAvgDelta').textContent  = (inp.longAvgDelta>=0?'+':'') + fmtBG(inp.longAvgDelta, dD) + ' ' + (currentUnit==='mmol'?'mmol/5m':'mg/5m');
+  document.getElementById('v-target').textContent        = fmtBG(inp.target, dBG) + ' ' + u;
+  document.getElementById('v-iob').textContent    = fmt(inp.iob,1) + ' U';
+  document.getElementById('v-peak').textContent   = inp.peak + ' min';
+  document.getElementById('v-normTarget').textContent = fmtBG(inp.normTarget, dBG) + ' ' + u;
+  document.getElementById('v-bgCap').textContent  = fmtBG(inp.bgCap, dBG) + ' ' + u;
+  document.getElementById('v-velocity').textContent = Math.round(inp.velocity*100) + '%';
+  document.getElementById('v-tddAdj').textContent  = Math.round(inp.tddAdj*100) + '%';
+  document.getElementById('v-sensRatio').textContent = fmt(inp.sensRatio, 2);
+  const circHour = parseInt(document.getElementById('s-circHour').value);
+  document.getElementById('v-circHour').textContent = String(circHour).padStart(2,'0') + ':00';
+  document.getElementById('v-scale').textContent  = fmt(inp.scale, 2);
+  document.getElementById('v-maxIob').textContent = fmt(inp.maxIob,1) + ' U';
+  document.getElementById('v-bolusMax').textContent = fmt(inp.bolusMax,1) + ' U';
+  document.getElementById('v-insulinReqPct').textContent = Math.round(inp.insulinReqPct*100) + '%';
+  document.getElementById('v-smbMin').textContent = inp.smbMin + ' min';
+  document.getElementById('v-uamSmbMin').textContent = inp.uamSmbMin + ' min';
+  document.getElementById('v-percentScale').textContent = inp.percentScaleVal + '%';
+  document.getElementById('v-activityPct').textContent   = inp.activityPct + '%';
+  document.getElementById('v-inactivityPct').textContent = inp.inactivityPct + '%';
+  document.getElementById('v-nightOffset').textContent = fmtBG(inp.nightOffset, dBG) + ' ' + u;
+  document.getElementById('v-cob').textContent = inp.cob + ' g';
+  document.getElementById('v-lastCarbAge').textContent = inp.lastCarbAge + ' min';
+  document.getElementById('v-cr').textContent  = fmt(inp.cr,1) + ' g/U';
+  document.getElementById('v-tempTargetBg').textContent = fmtBG(inp.tempTargetBg, dBG) + ' ' + u;
+
+  // Hint labels for BG sliders
+  const hintBG = (id, lo, hi, suf) => {
+    const el = document.getElementById('hints-' + id);
+    if (!el) return;
+    const loD = currentUnit==='mmol' ? (lo/MMOL).toFixed(1) : lo;
+    const hiD = currentUnit==='mmol' ? (hi/MMOL).toFixed(1) : hi;
+    el.children[0].textContent = loD + (suf||'');
+    el.children[1].textContent = hiD + (suf||'');
+  };
+  const hintISF = (id, lo, hi) => {
+    const el = document.getElementById('hints-' + id);
+    if (!el) return;
+    const loD = currentUnit==='mmol' ? (lo/MMOL).toFixed(1) : lo;
+    const hiD = currentUnit==='mmol' ? (hi/MMOL).toFixed(1) : hi;
+    el.children[0].textContent = loD;
+    el.children[1].textContent = hiD + ' ' + (currentUnit==='mmol'?'mmol/L/U':'mg/dL/U');
+  };
+  hintBG('bg',           40,  350);
+  hintBG('delta',       -10,   15, currentUnit==='mmol'?' mmol/5m':' mg/5m');
+  hintBG('shortAvgDelta',-10,  15);
+  hintBG('longAvgDelta', -10,  15);
+  hintBG('target',       72,  180);
+  hintBG('normTarget',   70,  120);
+  hintBG('bgCap',       100,  300);
+  hintBG('nightOffset',   0,   90);
+  hintBG('tempTargetBg', 72,  200);
+  hintISF('profIsf',     10,  200);
+
+  // ISF card units
+  const isfLabel = isfUnitLabel();
+  ['out-isf-unit','out-isf-unit-v1','out-isf-unit-v2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = isfLabel;
+  });
+  const badge = document.getElementById('isf-unit-badge');
+  if (badge) badge.textContent = '(' + u + ')';
+}
+
+// ════════════════════════════════════════════════════════════
 // UI update
 // ════════════════════════════════════════════════════════════
 function update() {
-  // Sync slider labels
-  const sl = (id, suffix) => {
-    const el = document.getElementById('s-' + id);
-    if (!el) return;
-    document.getElementById('v-' + id).textContent = el.value + (suffix || '');
-  };
-  sl('tdd',' U'); sl('profIsf',' mg/U'); sl('basal',' U/hr');
-  sl('bg',' mg/dL'); sl('delta',' mg/dL/5m');
-  sl('shortAvgDelta',' mg/dL/5m'); sl('longAvgDelta',' mg/dL/5m');
-  sl('target',' mg/dL'); sl('iob',' U'); sl('peak',' min');
-  sl('normTarget',' mg/dL'); sl('bgCap',' mg/dL');
-  sl('velocity','%'); sl('tddAdj','%');
-  sl('sensRatio','');
-  const circHour = parseInt(document.getElementById('s-circHour').value);
-  document.getElementById('v-circHour').textContent = `${String(circHour).padStart(2,'0')}:00`;
-  sl('scale',''); sl('maxIob',' U'); sl('bolusMax',' U');
-  sl('insulinReqPct','%'); sl('smbMin',' min'); sl('uamSmbMin',' min');
-  sl('lastCarbAge',' min'); sl('cr',' g/U');
-  sl('percentScale','%');
-  sl('activityPct','%'); sl('inactivityPct','%');
-  sl('nightOffset',' mg/dL'); sl('cob',' g');
-  sl('tempTargetBg',' mg/dL');
-
   const inp = getInputs();
-  const r = calcAll(inp);
+  const r   = calcAll(inp);
+  const u   = dispUnit();
+  const dBG = currentUnit === 'mmol' ? 1 : 0;
+  const dISF = currentUnit === 'mmol' ? 2 : 1;
+  const circHour = parseInt(document.getElementById('s-circHour').value);
+
+  updateSliderLabels(inp);
 
   // Status pills
   const pills = [];
   if (r.boostDisabledScale) pills.push({text:'Boost DISABLED (scale ≥ 3)', cls:'pill-red'});
   else                       pills.push({text:'Boost ACTIVE', cls:'pill-green'});
   if (r.ioBlock)       pills.push({text:`IOB ${fmt(inp.iob,1)}U > maxIOB ${fmt(inp.maxIob,1)}U — SMBs blocked`, cls:'pill-red'});
-  if (r.nightSuppressed) pills.push({text:`Night Mode suppressing SMBs (BG ${inp.bg} < target+${inp.nightOffset})`, cls:'pill-yellow'});
-  if (inp.bg < inp.target) pills.push({text:`BG ${fmt(inp.bg,0)} below target`, cls:'pill-yellow'});
-  if (r.bgCapped < inp.bg) pills.push({text:`BG capped at ${fmt(r.bgCapped,0)} for ISF`, cls:'pill-yellow'});
-  if (!inp.useTdd)     pills.push({text:'TDD ISF disabled — using profile ISF', cls:'pill-yellow'});
+  if (r.nightSuppressed) pills.push({text:`Night Mode suppressing SMBs (BG ${fmtBG(inp.bg,dBG)} < target+${fmtBG(inp.nightOffset,dBG)} ${u})`, cls:'pill-yellow'});
+  if (inp.bg < inp.target) pills.push({text:`BG ${fmtBG(inp.bg,dBG)} below target`, cls:'pill-yellow'});
+  if (r.bgCapped < inp.bg) pills.push({text:`BG capped at ${fmtBG(r.bgCapped,dBG)} ${u} for ISF`, cls:'pill-yellow'});
+  if (!inp.useTdd) pills.push({text:'TDD ISF disabled — using profile ISF', cls:'pill-yellow'});
   if (inp.scale >= 2.5) pills.push({text:'Scale approaching disable threshold (≥3)', cls:'pill-yellow'});
   if (r.profilePct !== 100) pills.push({text:`Profile at ${r.profilePct}% (${inp.activityState})`, cls:'pill-gray'});
-  if (inp.circadian)   pills.push({text:`Circadian factor: ×${fmt(r.circFactor,2)} at ${circHour}:00`, cls:'pill-gray'});
-  if (inp.tempTarget && r.ttRatioApplied !== 1.0) pills.push({text:`TT ISF ratio: ${fmt(r.ttRatioApplied,2)} (TT=${inp.tempTargetBg})`, cls:'pill-gray'});
+  if (inp.circadian) pills.push({text:`Circadian factor: ×${fmt(r.circFactor,2)} at ${circHour}:00`, cls:'pill-gray'});
+  if (inp.tempTarget && r.ttRatioApplied !== 1.0) pills.push({text:`TT ISF ratio: ${fmt(r.ttRatioApplied,2)} (TT=${fmtBG(inp.tempTargetBg,dBG)})`, cls:'pill-gray'});
   if (r.smbMinToUse === inp.uamSmbMin) pills.push({text:`UAM SMB minutes (${inp.uamSmbMin}m, IOB > -0.2)`, cls:'pill-gray'});
   const tierLabels = {
     'T1_COB_PRIMARY':   'Tier 1 — COB Primary (<25 min)',
@@ -1412,81 +1372,73 @@ function update() {
     'T1_COB_PRIMARY':'pill-green','T2_COB_SECONDARY':'pill-green',
     'T3_UAM_BOOST':'pill-yellow','T4_UAM_HIGH_BOOST':'pill-yellow',
     'T5_PERCENT_SCALE':'pill-yellow','T6_ACCELERATION':'pill-yellow',
-    'T7_ENHANCED_OREF1':'pill-gray','T8_REGULAR_OREF1':'pill-gray',
-    'BLOCKED':'pill-red',
+    'T7_ENHANCED_OREF1':'pill-gray','T8_REGULAR_OREF1':'pill-gray','BLOCKED':'pill-red',
   };
   pills.push({text: tierLabels[r.tier] || r.tier, cls: tierCls[r.tier] || 'pill-gray'});
   if (r.fastCarbRebound) pills.push({text:'Fast-carb protection: Tiers 3/5/6 suppressed', cls:'pill-red'});
-  pills.push({text:`δ_accl=${fmt(r.delta_accl,1)}% | UAM1=${fmt(r.uamBoost1,2)} | UAM2=${fmt(r.uamBoost2,2)} | eBG=${fmt(r.eventualBG,0)}`, cls:'pill-gray'});
-
-  document.getElementById('status-row').innerHTML = pills.map(p =>
-    `<span class="pill ${p.cls}">${p.text}</span>`).join('');
+  pills.push({text:`δ_accl=${fmt(r.delta_accl,1)}% | UAM1=${fmt(r.uamBoost1,2)} | UAM2=${fmt(r.uamBoost2,2)} | eBG=${fmtBG(r.eventualBG,dBG)} ${u}`, cls:'pill-gray'});
+  document.getElementById('status-row').innerHTML = pills.map(p => `<span class="pill ${p.cls}">${p.text}</span>`).join('');
 
   // ISF cells
-  document.getElementById('out-profIsf').textContent = fmt(inp.profIsf, 0);
-  document.getElementById('out-v1Isf').textContent = fmt(r.isfV1, 1);
-  document.getElementById('out-v2Isf').textContent = fmt(r.isfV2, 1);
+  document.getElementById('out-profIsf').textContent = fmtISF(inp.profIsf, dISF);
+  document.getElementById('out-v1Isf').textContent   = fmtISF(r.isfV1, dISF);
+  document.getElementById('out-v2Isf').textContent   = fmtISF(r.isfV2, dISF);
   document.getElementById('out-divisor').textContent = r.divisor;
   document.getElementById('out-divisor-note').textContent = `peak ${inp.peak}m → ÷${r.divisor}`;
 
   const v1Pct = ((r.isfV1 - inp.profIsf) / inp.profIsf * 100).toFixed(1);
   const v2Pct = ((r.isfV2 - inp.profIsf) / inp.profIsf * 100).toFixed(1);
-
-  const changeEl1 = document.getElementById('out-v1-change');
-  const changeEl2 = document.getElementById('out-v2-change');
-
-  function setChange(el, pct) {
+  const setChange = (el, pct) => {
     const n = parseFloat(pct);
     if (n < -2) { el.className='change-down'; el.textContent=`${pct}% vs profile (↑ more aggressive)`; }
     else if (n > 2) { el.className='change-up'; el.textContent=`+${pct}% vs profile (↓ less aggressive)`; }
-    else { el.className='change-neutral'; el.textContent=`≈ profile ISF`; }
-  }
-  setChange(changeEl1, v1Pct);
-  setChange(changeEl2, v2Pct);
+    else { el.className='change-neutral'; el.textContent='≈ profile ISF'; }
+  };
+  setChange(document.getElementById('out-v1-change'), v1Pct);
+  setChange(document.getElementById('out-v2-change'), v2Pct);
 
-  // ISF breakdown text
+  // ISF breakdown (always in mg/dL with a note if mmol mode)
   let breakdown = '';
+  const unitNote = currentUnit === 'mmol' ? ' [all values in mg/dL internally; ÷18 for display]' : '';
   if (r.profilePct !== 100) {
     breakdown += `Profile at ${r.profilePct}% (${inp.activityState}) → globalScale ×${fmt(r.globalScale,3)}\n`;
-    breakdown += `Effective basal: ${fmt(r.effectiveBasal,3)} U/hr | scaledProfileISF: ${fmt(r.scaledProfileIsf,1)}\n`;
+    breakdown += `Effective basal: ${fmt(r.effectiveBasal,3)} U/hr | scaledProfileISF: ${fmt(r.scaledProfileIsf,1)} mg/dL/U\n`;
   }
   if (inp.useTdd) {
-    breakdown += `Adjusted TDD: ${fmt(r.adjustedTdd,1)} U (${inp.tdd} × ${(inp.tddAdj*100).toFixed(0)}%)\n`;
+    breakdown += `Adjusted TDD: ${fmt(r.adjustedTdd,1)} U${unitNote}\n`;
     breakdown += `insulinDivisor: ${r.divisor} (peak ${inp.peak}min)\n`;
     const rawV1 = calcSensNormalTargetV1(r.adjustedTdd, inp.normTarget, r.divisor);
     const rawV2 = calcSensNormalTargetV2(r.adjustedTdd, inp.normTarget, r.divisor);
-    breakdown += `V1 raw sensNT: 1800÷(${fmt(r.adjustedTdd,1)}×ln(${inp.normTarget}÷${r.divisor}+1)) = ${fmt(rawV1,1)}\n`;
-    breakdown += `V2 raw sensNT: 2300÷(ln(${inp.normTarget}÷${r.divisor}+1)×${fmt(r.adjustedTdd,1)}²×0.02) = ${fmt(rawV2,1)}\n`;
-    breakdown += `After globalScale ×${fmt(r.globalScale,3)}: V1=${fmt(rawV1!=null?rawV1*r.globalScale:null,1)} V2=${fmt(rawV2!=null?rawV2*r.globalScale:null,1)}\n`;
-  } else {
-    breakdown += `TDD ISF disabled → using scaledProfileISF ${fmt(r.scaledProfileIsf,1)} mg/dL/U\n`;
+    breakdown += `V1 sensNT: 1800÷(${fmt(r.adjustedTdd,1)}×ln(${fmt(inp.normTarget,0)}÷${r.divisor}+1)) = ${fmt(rawV1,1)} mg/dL/U\n`;
+    breakdown += `V2 sensNT: 2300÷(ln(…)×${fmt(r.adjustedTdd,1)}²×0.02) = ${fmt(rawV2,1)} mg/dL/U\n`;
   }
-  if (inp.adjustSens) breakdown += `TDD Sens Adjustment: ratio=${fmt(inp.sensRatio,2)} → ISF÷${fmt(inp.sensRatio,2)}\n`;
-  if (inp.tempTarget && r.ttRatioApplied !== 1.0) breakdown += `TT adjustment: ratio=${fmt(r.ttRatioApplied,3)} (TT=${inp.tempTargetBg} vs normTarget=${inp.normTarget})\n`;
+  if (inp.adjustSens) breakdown += `TDD Sens Adjustment: ratio=${fmt(inp.sensRatio,2)}\n`;
   if (inp.circadian) breakdown += `Circadian factor at ${circHour}:00 = ×${fmt(r.circFactor,3)}\n`;
-  if (r.bgCapped < inp.bg) breakdown += `BG ${inp.bg} > cap ${inp.bgCap} → capped to ${fmt(r.bgCapped,1)}\n`;
+  if (r.bgCapped < inp.bg) breakdown += `BG ${fmt(inp.bg,0)} > cap ${fmt(inp.bgCap,0)} → capped to ${fmt(r.bgCapped,1)} mg/dL\n`;
   const scaler1 = Math.log(inp.normTarget/r.divisor+1) / Math.log(Math.max(r.bgCapped,1)/r.divisor+1);
-  breakdown += `scaler at BG ${inp.bg}: ${fmt(scaler1,3)} | V1 velocity: ${(inp.velocity*100).toFixed(0)}%\n`;
-  breakdown += `V1 ISF: ${fmt(r.sensNTV1,1)} × (1-(1-${fmt(scaler1,3)})×${fmt(inp.velocity,2)}) = ${fmt(r.isfV1,1)}\n`;
-  breakdown += `V2 ISF: ${fmt(r.sensNTV2,1)} × ${fmt(scaler1,3)} = ${fmt(r.isfV2,1)} (velocity always 1.0)`;
+  breakdown += `scaler at BG ${fmt(inp.bg,0)}: ${fmt(scaler1,3)} | V1 velocity: ${Math.round(inp.velocity*100)}%\n`;
+  breakdown += `V1 ISF: ${fmt(r.isfV1,1)} mg/dL/U`;
+  if (currentUnit === 'mmol') breakdown += ` (${fmtISF(r.isfV1,2)} mmol/L/U)`;
+  breakdown += `\nV2 ISF: ${fmt(r.isfV2,1)} mg/dL/U`;
+  if (currentUnit === 'mmol') breakdown += ` (${fmtISF(r.isfV2,2)} mmol/L/U)`;
   document.getElementById('out-isf-breakdown').textContent = breakdown;
 
   // SMB cells
-  document.getElementById('out-maxBolus').textContent = fmt(r.maxBasalBolus, 2) + ' U';
-  document.getElementById('out-insulinReq').textContent = fmt(r.insulinReqV1, 2) + ' U';
+  document.getElementById('out-maxBolus').textContent      = fmt(r.maxBasalBolus, 2) + ' U';
+  document.getElementById('out-insulinReq').textContent    = fmt(r.insulinReqV1, 2) + ' U';
   document.getElementById('out-bolusMaxDisplay').textContent = fmt(inp.bolusMax, 2) + ' U';
 
-  // ── Active tier banner ────────────────────────────────────
+  // Tier banner
   const tierMeta = {
-    'T1_COB_PRIMARY':   { label:'Tier 1 — COB Primary',        why:'COB present, carbs eaten <25 min ago',              color:'#10b981', bg:'rgba(16,185,129,0.08)', border:'#10b981' },
-    'T2_COB_SECONDARY': { label:'Tier 2 — COB Secondary',      why:'COB present, <40 min, delta >5 mg/dL/5m',          color:'#10b981', bg:'rgba(16,185,129,0.08)', border:'#10b981' },
+    'T1_COB_PRIMARY':   { label:'Tier 1 — COB Primary',        why:'COB present, carbs <25 min ago',                   color:'#10b981', bg:'rgba(16,185,129,0.08)', border:'#10b981' },
+    'T2_COB_SECONDARY': { label:'Tier 2 — COB Secondary',      why:'COB present, <40 min, delta >5',                   color:'#10b981', bg:'rgba(16,185,129,0.08)', border:'#10b981' },
     'T3_UAM_BOOST':     { label:'Tier 3 — UAM Boost',          why:'Strong rise: delta≥5, shortAvg≥3, uam1>1.2, uam2>2',color:'#f59e0b', bg:'rgba(245,158,11,0.08)', border:'#f59e0b' },
-    'T4_UAM_HIGH_BOOST':{ label:'Tier 4 — UAM High Boost',     why:'BG >180 with acceleration (δ_accl >5%)',            color:'#f59e0b', bg:'rgba(245,158,11,0.08)', border:'#f59e0b' },
-    'T5_PERCENT_SCALE': { label:'Tier 5 — Percent Scale',      why:'BG 98–181, delta >3, any acceleration (δ_accl >0)',  color:'#a78bfa', bg:'rgba(167,139,250,0.08)', border:'#a78bfa' },
+    'T4_UAM_HIGH_BOOST':{ label:'Tier 4 — UAM High Boost',     why:`BG >${fmtBG(180,dBG)} ${u} with acceleration`,     color:'#f59e0b', bg:'rgba(245,158,11,0.08)', border:'#f59e0b' },
+    'T5_PERCENT_SCALE': { label:'Tier 5 — Percent Scale',      why:`BG ${fmtBG(98,dBG)}–${fmtBG(181,dBG)} ${u}, delta>3, accelerating`, color:'#a78bfa', bg:'rgba(167,139,250,0.08)', border:'#a78bfa' },
     'T6_ACCELERATION':  { label:'Tier 6 — Acceleration Bolus', why:'Rapid acceleration: δ_accl >25%, delta >4',         color:'#f59e0b', bg:'rgba(245,158,11,0.08)', border:'#f59e0b' },
     'T7_ENHANCED_OREF1':{ label:'Tier 7 — Enhanced oref1',     why:'Mild rise: delta >0, δ_accl ≥0.5%',                color:'#6ee7b7', bg:'rgba(110,231,183,0.06)', border:'#334155' },
-    'T8_REGULAR_OREF1': { label:'Tier 8 — Regular oref1',      why:'Fallback: flat/falling BG or no boost conditions met',color:'#64748b', bg:'rgba(100,116,139,0.06)', border:'#334155' },
-    'BLOCKED':          { label:'SMBs Blocked',                 why: r.boostDisabledScale ? 'Boost scale ≥ 3.0' : r.ioBlock ? `IOB ${fmt(inp.iob,1)}U > maxIOB ${inp.maxIob}U` : 'Night mode active', color:'#ef4444', bg:'rgba(239,68,68,0.08)', border:'#ef4444' },
+    'T8_REGULAR_OREF1': { label:'Tier 8 — Regular oref1',      why:'Fallback: flat/falling BG or no boost conditions', color:'#64748b', bg:'rgba(100,116,139,0.06)', border:'#334155' },
+    'BLOCKED':          { label:'SMBs Blocked', why: r.boostDisabledScale ? 'Boost scale ≥ 3.0' : r.ioBlock ? `IOB > maxIOB` : 'Night mode active', color:'#ef4444', bg:'rgba(239,68,68,0.08)', border:'#ef4444' },
   };
   const tm = tierMeta[r.tier] || { label: r.tier, why:'', color:'#64748b', bg:'#1e293b', border:'#334155' };
   const banner = document.getElementById('out-tier-banner');
@@ -1495,91 +1447,46 @@ function update() {
   document.getElementById('out-tier-name').style.color = tm.color;
   document.getElementById('out-tier-name').textContent  = tm.label;
   document.getElementById('out-tier-why').textContent   = r.fastCarbRebound && ['T3_UAM_BOOST','T5_PERCENT_SCALE','T6_ACCELERATION'].includes(r.tier)
-    ? '⚠ Fast-carb rebound detected — this tier suppressed'
-    : tm.why;
-  const smbEl    = document.getElementById('out-tier-smb');
-  const smbUnitEl = document.getElementById('out-tier-smb-unit');
+    ? '⚠ Fast-carb rebound detected — this tier suppressed' : tm.why;
+  const smbEl = document.getElementById('out-tier-smb');
   smbEl.style.color = r.tier === 'BLOCKED' ? '#ef4444' : tm.color;
-  smbEl.textContent  = r.tier === 'BLOCKED' ? '0' : fmt(r.microBolus, 2);
-  smbUnitEl.textContent = r.tier === 'BLOCKED' ? 'U — no SMB' : 'U';
+  smbEl.textContent = r.tier === 'BLOCKED' ? '0' : fmt(r.microBolus, 2);
+  document.getElementById('out-tier-smb-unit').textContent = r.tier === 'BLOCKED' ? 'U — no SMB' : 'U';
 
+  // SMB breakdown text
   let smbBreak = '';
   if (r.boostDisabledScale) {
     smbBreak = `⚠ Boost disabled: scale (${inp.scale}) ≥ 3.0 → falls back to standard oref1.`;
   } else if (r.ioBlock) {
-    smbBreak = `⚠ SMBs blocked: IOB ${fmt(inp.iob,1)}U > maxIOB ${inp.maxIob}U.\n  Boost falls back to oref1 basal adjustment only.`;
+    smbBreak = `⚠ SMBs blocked: IOB ${fmt(inp.iob,1)}U > maxIOB ${inp.maxIob}U.`;
   } else if (r.nightSuppressed) {
-    smbBreak = `⚠ Night Mode suppressing SMBs:\n  BG ${inp.bg} < target(${inp.target}) + offset(${inp.nightOffset}) = ${inp.target+inp.nightOffset}\n  `;
-    smbBreak += inp.nightModeCob && inp.cob > 0 ? `(would unblock with COB ${inp.cob}g — but Disable NM if COB is OFF)` : `(re-enable: raise offset, or turn on "Disable NM if COB>0" with COB present)`;
+    smbBreak = `⚠ Night Mode suppressing SMBs:\n  BG ${fmtBG(inp.bg,dBG)} ${u} < target(${fmtBG(inp.target,dBG)}) + offset(${fmtBG(inp.nightOffset,dBG)}) = ${fmtBG(inp.target+inp.nightOffset,dBG)} ${u}`;
   } else {
-    smbBreak = `insulinReq: (${inp.bg} - ${inp.target}) ÷ ISF ${fmt(r.isfV1,1)} = ${fmt(r.insulinReqV1,3)} U\n`;
-    smbBreak += `δ=${inp.delta} | shortAvg=${inp.shortAvgDelta} | longAvg=${inp.longAvgDelta} → δ_accl=${fmt(r.delta_accl,1)}%\n`;
-    smbBreak += `uamBoost1=${fmt(r.uamBoost1,2)} | uamBoost2=${fmt(r.uamBoost2,2)} | eventualBG≈${fmt(r.eventualBG,0)} | boost_scale=${fmt(r.boost_scale,2)}\n`;
+    smbBreak  = `insulinReq: (${fmtBG(inp.bg,dBG)} − ${fmtBG(inp.target,dBG)}) ÷ ISF ${fmtISF(r.isfV1,dISF)} = ${fmt(r.insulinReqV1,3)} U [mg/dL internally]\n`;
+    smbBreak += `δ=${fmtBG(inp.delta,currentUnit==='mmol'?2:1)} | shortAvg=${fmtBG(inp.shortAvgDelta,currentUnit==='mmol'?2:1)} | longAvg=${fmtBG(inp.longAvgDelta,currentUnit==='mmol'?2:1)} → δ_accl=${fmt(r.delta_accl,1)}%\n`;
+    smbBreak += `uamBoost1=${fmt(r.uamBoost1,2)} | uamBoost2=${fmt(r.uamBoost2,2)} | eventualBG≈${fmtBG(r.eventualBG,dBG)} ${u}\n`;
     smbBreak += `Active tier: ${r.tier}\n`;
     if (r.fastCarbRebound) smbBreak += `⚠ Fast-carb rebound: Tiers 3/5/6 suppressed\n`;
-    const tierKey = r.tier;
-    if (tierKey === 'T1_COB_PRIMARY') {
-      smbBreak += `min(insulinReq÷insulinReqPCT, insulinReq) = min(${fmt(r.insulinReqV1/r.baseReqDivisor,3)}, ${fmt(r.insulinReqV1,3)}) = ${fmt(r.microBolus,2)} U`;
-    } else if (tierKey === 'T2_COB_SECONDARY') {
-      const cobMax = Math.max((inp.cob/inp.cr)/r.baseReqDivisor, inp.bolusMax);
-      smbBreak += `cobBoostMax=max(COB÷CR÷pct, bolusMax)=max(${fmt((inp.cob/inp.cr)/r.baseReqDivisor,3)}, ${inp.bolusMax})=${fmt(cobMax,3)} U\n`;
-      smbBreak += `min(insulinReq÷insulinReqPCT, cobBoostMax) = ${fmt(r.microBolus,2)} U`;
-    } else if (tierKey === 'T3_UAM_BOOST') {
-      const t3div = r.delta_accl > 1 ? r.scaledDivisor : r.baseReqDivisor;
-      smbBreak += `boost_scale×basal=min(${fmt(r.boost_scale,2)}×${fmt(r.effectiveBasal,3)}, ${inp.bolusMax})=${fmt(Math.min(r.boost_scale*r.effectiveBasal,inp.bolusMax),3)} U\n`;
-      smbBreak += `divisor=${fmt(t3div,3)} (${r.delta_accl>1?'scaled — δ_accl>1':'base'})\n`;
-      smbBreak += `SMB = ${fmt(r.microBolus,2)} U (capped at bolusMax=${inp.bolusMax} U)`;
-    } else if (tierKey === 'T4_UAM_HIGH_BOOST') {
-      smbBreak += `boost_scale×basal=min(${fmt(r.boost_scale,2)}×${fmt(r.effectiveBasal,3)}, ${inp.bolusMax})=${fmt(Math.min(r.boost_scale*r.effectiveBasal,inp.bolusMax),3)} U\n`;
-      smbBreak += `SMB = ${fmt(r.microBolus,2)} U (capped at bolusMax=${inp.bolusMax} U)`;
-    } else if (tierKey === 'T5_PERCENT_SCALE') {
-      smbBreak += `insulinDivisor = ${fmt(r.scaledDivisor,3)} (base=${fmt(r.baseReqDivisor,3)}, scale_pct=${fmt(r.scale_pct,3)})\n`;
-      smbBreak += `min(insulinReq÷insulinDivisor, bolusMax) = min(${fmt(r.insulinReqV1/r.scaledDivisor,3)}, ${inp.bolusMax}) = ${fmt(r.microBolus,2)} U`;
-    } else if (tierKey === 'T6_ACCELERATION') {
-      const div6 = r.baseReqDivisor - ((Math.abs(inp.bg-180)/72)*(r.baseReqDivisor - 2*r.scale_pct));
-      smbBreak += `div6 = insulinReqPCT − (|BG-180|÷72)×(insulinReqPCT−2×scale_pct) = ${fmt(div6,3)}\n`;
-      smbBreak += `boost_scale×basal=${fmt(Math.min(r.boost_scale*r.effectiveBasal,inp.bolusMax),3)} U ÷ div6 = ${fmt(r.microBolus,2)} U`;
-    } else if (tierKey === 'T7_ENHANCED_OREF1') {
-      smbBreak += `min(insulinReq÷insulinReqPCT, bolusMax) = min(${fmt(r.insulinReqV1/r.baseReqDivisor,3)}, ${inp.bolusMax}) = ${fmt(r.microBolus,2)} U`;
-    } else if (tierKey === 'T8_REGULAR_OREF1') {
-      smbBreak += `maxBasalBolus = ${fmt(r.effectiveBasal,3)}×${r.smbMinToUse}÷60 = ${fmt(r.maxBasalBolus,3)} U (only tier using this cap)\n`;
-      smbBreak += `min(insulinReq÷insulinReqPCT, maxBasalBolus) = min(${fmt(r.insulinReqV1/r.baseReqDivisor,3)}, ${fmt(r.maxBasalBolus,3)}) = ${fmt(r.microBolus,2)} U`;
+    if (r.tier === 'T8_REGULAR_OREF1') {
+      smbBreak += `maxBasalBolus = ${fmt(r.effectiveBasal,3)}×${r.smbMinToUse}÷60 = ${fmt(r.maxBasalBolus,3)} U\n`;
     }
+    smbBreak += `SMB: ${fmt(r.microBolus, 2)} U`;
   }
   document.getElementById('out-smb-breakdown').textContent = smbBreak;
 
-  // Percent Scaling comparison row
-  // Percent scaling fires in Tier 5 (BG 98-181, delta>3, accelerating).
-  // Tiers 1-7 cap against boost_max (bolusMax here), NOT maxBolus from uamSmbMin.
-  // Tier 8 (fallback) is the only tier using maxBolus from uamSmbMin — it does NOT use percent scaling.
-  // So the correct comparison uses bolusMax as the only cap.
+  // Percent scale row
   const psRow = document.getElementById('out-percent-scale-row');
   if (inp.percentScale && !r.boostDisabledScale && !r.ioBlock && !r.nightSuppressed) {
     psRow.style.display = 'block';
-    // Use only bolusMax (boost_max) cap — matches Tier 5 formula: min(insulinReq/insulinDivisor, boost_max)
     const unscaled = Math.max(0, Math.min(r.insulinReqV1 / r.baseReqDivisor, inp.bolusMax));
-    const scaled   = Math.max(0, Math.min(r.insulinReqV1 / r.scaledDivisor,   inp.bolusMax));
-    const diff     = scaled - unscaled;
+    const scaled   = Math.max(0, Math.min(r.insulinReqV1 / r.scaledDivisor,  inp.bolusMax));
+    const diff = scaled - unscaled;
     document.getElementById('out-ps-unscaled').textContent = fmt(unscaled, 3) + ' U';
     document.getElementById('out-ps-scaled').textContent   = fmt(scaled,   3) + ' U';
     const diffEl = document.getElementById('out-ps-diff');
-    if (Math.abs(diff) < 0.001) {
-      diffEl.style.color = '#64748b';
-      diffEl.textContent = '0 U (same)';
-    } else if (diff > 0) {
-      diffEl.style.color = '#6ee7b7';
-      diffEl.textContent = '+' + fmt(diff, 3) + ' U';
-    } else {
-      diffEl.style.color = '#f87171';
-      diffEl.textContent = fmt(diff, 3) + ' U';
-    }
-    const noteEl = document.getElementById('out-ps-note');
-    if (Math.abs(diff) < 0.001) {
-      noteEl.textContent = `Both paths hit the Boost Max Bolus cap (${fmt(inp.bolusMax,2)} U). To see the scaling difference, lower Boost Max Bolus or ensure insulinReq is small enough that the divisor change matters.`;
-    } else {
-      const pctDiff = ((diff / unscaled) * 100).toFixed(1);
-      noteEl.textContent = `Tier 5 (BG 98–181, delta>3): percent scaling ${diff > 0 ? 'increases' : 'decreases'} microbolus by ${fmt(Math.abs(diff),3)} U (${pctDiff > 0 ? '+' : ''}${pctDiff}%). insulinDivisor=${fmt(r.scaledDivisor,3)} vs base=${fmt(r.baseReqDivisor,3)}.`;
-    }
+    diffEl.style.color = Math.abs(diff) < 0.001 ? '#64748b' : diff > 0 ? '#6ee7b7' : '#f87171';
+    diffEl.textContent = Math.abs(diff) < 0.001 ? '0 U' : (diff > 0 ? '+' : '') + fmt(diff, 3) + ' U';
+    document.getElementById('out-ps-note').textContent = `insulinDivisor=${fmt(r.scaledDivisor,3)} vs base=${fmt(r.baseReqDivisor,3)}`;
   } else {
     psRow.style.display = 'none';
   }
@@ -1588,57 +1495,43 @@ function update() {
   const pct = (r.aggScore * 100).toFixed(1);
   document.getElementById('gauge-marker').style.left = pct + '%';
   let aggText = '';
-  if (r.aggScore < 0.3) aggText = `Conservative (${pct}%) — Low SMBs, high IOB protection, gentle ISF`;
-  else if (r.aggScore < 0.45) aggText = `Moderately conservative (${pct}%) — Good starting point for new Boost users`;
-  else if (r.aggScore < 0.55) aggText = `Balanced (${pct}%) — Reasonable combination of safety and effectiveness`;
-  else if (r.aggScore < 0.70) aggText = `Moderately aggressive (${pct}%) — Suitable for experienced users with well-tuned profile`;
-  else aggText = `Aggressive (${pct}%) — High delivery potential; ensure profile basal/ISF are accurate`;
+  if (r.aggScore < 0.3)       aggText = `Conservative (${pct}%) — Low SMBs, high IOB protection, gentle ISF`;
+  else if (r.aggScore < 0.45) aggText = `Moderately conservative (${pct}%)`;
+  else if (r.aggScore < 0.55) aggText = `Balanced (${pct}%)`;
+  else if (r.aggScore < 0.70) aggText = `Moderately aggressive (${pct}%)`;
+  else                         aggText = `Aggressive (${pct}%) — ensure profile basal/ISF are accurate`;
   document.getElementById('out-agg-summary').textContent = aggText;
 
-  // Reason string
-  let reason = `BG ${inp.bg} | delta ${inp.delta > 0 ? '+' : ''}${inp.delta} | target ${inp.target} | IOB ${fmt(inp.iob,1)}/${inp.maxIob}\n`;
-  reason += `V1 ISF ${fmt(r.isfV1,1)} | V2 ISF ${fmt(r.isfV2,1)} | profile ISF ${inp.profIsf}\n`;
+  // Reason
+  let reason = `BG ${fmtBG(inp.bg,dBG)} ${u} | delta ${inp.delta>=0?'+':''}${fmtBG(inp.delta,currentUnit==='mmol'?2:1)} | target ${fmtBG(inp.target,dBG)} ${u} | IOB ${fmt(inp.iob,1)}/${inp.maxIob}U\n`;
+  reason += `V1 ISF ${fmtISF(r.isfV1,dISF)} | V2 ISF ${fmtISF(r.isfV2,dISF)} | profile ISF ${fmtISF(inp.profIsf,dISF)} ${isfUnitLabel()}\n`;
   reason += `Max basal bolus (${inp.smbMin}min): ${fmt(r.maxBasalBolus,2)} U | bolusMax: ${inp.bolusMax} U\n`;
   reason += r.boostDisabledScale ? `BOOST DISABLED (scale ≥ 3.0)\n` : `Boost ACTIVE (scale ${inp.scale})\n`;
   reason += r.ioBlock ? `SMBs BLOCKED — IOB above maxIOB\n` : `SMBs eligible\n`;
   reason += `Estimated microbolus: ${fmt(r.microBolus,2)} U`;
   document.getElementById('out-reason').textContent = reason;
 
-  // SMB sensitivity analysis
-  const lines = [
+  // SMB sensitivity
+  document.getElementById('out-smb-sensitivity').innerHTML = [
     `Increasing <b>Boost Scale</b> from ${inp.scale} to ${(inp.scale*1.2).toFixed(2)}: `,
     `  Tier 3+ UAM boost amount × scale → potential SMB +${fmt((Math.min(inp.scale*1.2,inp.bolusMax)-Math.min(inp.scale,inp.bolusMax)),3)} U`,
     ``,
     `Changing <b>maxSMBBasalMinutes</b> from ${inp.smbMin}m to 60m: `,
     `  maxBolus = ${fmt(inp.basal,2)} × 60 ÷ 60 = ${fmt(inp.basal,2)} U (currently ${fmt(r.maxBasalBolus,2)} U)`,
     ``,
-    `Changing <b>Insulin Required %</b> from ${(inp.insulinReqPct*100).toFixed(0)}% to 100%: `,
-    `  divisor drops to 1.0 → full insulinReq of ${fmt(r.insulinReqV1,3)} U (currently scaled to ${fmt(r.rawMicroBolus,3)} U)`,
+    `Changing <b>Insulin Required %</b> to 100%: `,
+    `  Full insulinReq of ${fmt(r.insulinReqV1,3)} U (currently scaled to ${fmt(r.microBolus,3)} U)`,
     ``,
-    `Changing <b>Max IOB</b> from ${inp.maxIob} U to ${(inp.maxIob+2).toFixed(1)} U: `,
-    `  IOB headroom increases; ${inp.iob > inp.maxIob ? 'would unblock SMBs' : 'already unblocked'}`,
-    ``,
-    `<b>V2 vs V1</b> at current settings: `,
-    `  V1 ISF = ${fmt(r.isfV1,1)} | V2 ISF = ${fmt(r.isfV2,1)} → `,
-    `  ${r.isfV2 < r.isfV1 ? 'V2 is MORE aggressive (lower ISF) at this TDD/BG' : 'V2 is less aggressive (higher ISF) at this TDD/BG'}`,
-    `  (V2 ISF scales with TDD² — much more sensitive to TDD changes)`,
-  ];
-  document.getElementById('out-smb-sensitivity').innerHTML = lines.join('<br>');
+    `<b>V2 vs V1</b>: V1=${fmtISF(r.isfV1,dISF)} | V2=${fmtISF(r.isfV2,dISF)} ${isfUnitLabel()}`,
+    `  ${r.isfV2 < r.isfV1 ? 'V2 is MORE aggressive (lower ISF)' : 'V2 is less aggressive (higher ISF)'} at this TDD/BG`,
+  ].join('<br>');
 
-  // Charts
   drawCharts(inp, r);
 }
 
 // ════════════════════════════════════════════════════════════
-// Canvas charts
+// Charts — axis labels always in display units
 // ════════════════════════════════════════════════════════════
-function drawCharts(inp, r) {
-  drawIsfChart(inp, r);
-  drawRatioChart(inp, r);
-  drawSmbChart(inp, r);
-  drawProjectionChart(inp, r);
-}
-
 function setupCanvas(id) {
   const canvas = document.getElementById(id);
   if (!canvas) return null;
@@ -1646,115 +1539,105 @@ function setupCanvas(id) {
   const rect = canvas.getBoundingClientRect();
   const W = rect.width || canvas.offsetWidth || 600;
   const H = 300;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
   return { ctx, W, H };
+}
+
+function drawCharts(inp, r) {
+  drawIsfChart(inp, r);
+  drawRatioChart(inp, r);
+  drawSmbChart(inp, r);
+  drawProjectionChart(inp, r);
 }
 
 function drawIsfChart(inp, r) {
   const c = setupCanvas('isfChart');
   if (!c) return;
   const { ctx, W, H } = c;
-  const pad = { t:20, r:20, b:40, l:55 };
-  const bgRange = [40, 350];
+  const pad = { t:20, r:20, b:40, l:65 };
+  const mgdlRange = [40, 350];
   const divisor = r.divisor;
-  const adjustedTdd = r.adjustedTdd;
 
-  // Generate curves
-  const bgs = [], v1s = [], v2s = [];
-  for (let bg = bgRange[0]; bg <= bgRange[1]; bg += 2) {
-    bgs.push(bg);
+  const mgdls = [], v1s = [], v2s = [];
+  for (let bg = mgdlRange[0]; bg <= mgdlRange[1]; bg += 2) {
+    mgdls.push(bg);
     if (inp.useTdd && r.sensNTV1 != null) {
       v1s.push(calcIsfAtBg(bg, r.sensNTV1, inp.normTarget, divisor, inp.velocity, inp.bgCap));
       v2s.push(calcIsfAtBg(bg, r.sensNTV2, inp.normTarget, divisor, 1.0, inp.bgCap));
     } else {
-      v1s.push(inp.profIsf);
-      v2s.push(inp.profIsf);
+      v1s.push(inp.profIsf); v2s.push(inp.profIsf);
     }
   }
 
-  const allVals = [...v1s, ...v2s, inp.profIsf];
+  // Display-unit arrays
+  const dispBGs = mgdls.map(v => toDisplay(v));
+  const dispV1  = v1s.map(v => toDisplay(v));
+  const dispV2  = v2s.map(v => toDisplay(v));
+  const dispProf = toDisplay(inp.profIsf);
+  const dispCurBG = toDisplay(inp.bg);
+  const dispCapBG = toDisplay(inp.bgCap);
+
+  const allVals = [...dispV1, ...dispV2, dispProf];
   const minY = Math.max(0, Math.min(...allVals) * 0.85);
   const maxY = Math.max(...allVals) * 1.1;
 
-  const xS = bg => pad.l + (bg - bgRange[0]) / (bgRange[1] - bgRange[0]) * (W - pad.l - pad.r);
+  const xMin = dispBGs[0], xMax = dispBGs[dispBGs.length-1];
+  const xS = v => pad.l + (v - xMin) / (xMax - xMin) * (W - pad.l - pad.r);
   const yS = v => H - pad.b - (v - minY) / (maxY - minY) * (H - pad.t - pad.b);
 
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#0f1117';
-  ctx.fillRect(0, 0, W, H);
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#0f1117'; ctx.fillRect(0,0,W,H);
 
   // Grid
-  ctx.strokeStyle = '#1e2d40';
-  ctx.lineWidth = 1;
-  for (let bg = 80; bg <= 320; bg += 40) {
-    ctx.beginPath(); ctx.moveTo(xS(bg), pad.t); ctx.lineTo(xS(bg), H-pad.b); ctx.stroke();
-  }
-  for (let isf = Math.ceil(minY/10)*10; isf <= maxY; isf += 10) {
-    ctx.beginPath(); ctx.moveTo(pad.l, yS(isf)); ctx.lineTo(W-pad.r, yS(isf)); ctx.stroke();
+  ctx.strokeStyle='#1e2d40'; ctx.lineWidth=1;
+  const bgStep = currentUnit==='mmol' ? 2 : 40;
+  for (let bg = Math.ceil(xMin/bgStep)*bgStep; bg <= xMax; bg += bgStep) {
+    ctx.beginPath(); ctx.moveTo(xS(bg),pad.t); ctx.lineTo(xS(bg),H-pad.b); ctx.stroke();
   }
 
   // Profile ISF line
-  ctx.strokeStyle = 'rgba(148,163,184,0.35)';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([5, 4]);
-  ctx.beginPath(); ctx.moveTo(xS(bgRange[0]), yS(inp.profIsf)); ctx.lineTo(xS(bgRange[1]), yS(inp.profIsf)); ctx.stroke();
-  ctx.setLineDash([]);
+  ctx.strokeStyle='rgba(148,163,184,0.35)'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+  ctx.beginPath(); ctx.moveTo(xS(xMin),yS(dispProf)); ctx.lineTo(xS(xMax),yS(dispProf)); ctx.stroke(); ctx.setLineDash([]);
 
-  // V1 curve
-  ctx.strokeStyle = '#3b82f6';
-  ctx.lineWidth = 2;
+  // V1
+  ctx.strokeStyle='#3b82f6'; ctx.lineWidth=2;
   ctx.beginPath();
-  bgs.forEach((bg, i) => { i===0 ? ctx.moveTo(xS(bg),yS(v1s[i])) : ctx.lineTo(xS(bg),yS(v1s[i])); });
+  dispBGs.forEach((bg,i) => i===0 ? ctx.moveTo(xS(bg),yS(dispV1[i])) : ctx.lineTo(xS(bg),yS(dispV1[i])));
   ctx.stroke();
 
-  // V2 curve
-  ctx.strokeStyle = '#8b5cf6';
-  ctx.lineWidth = 2;
+  // V2
+  ctx.strokeStyle='#8b5cf6'; ctx.lineWidth=2;
   ctx.beginPath();
-  bgs.forEach((bg, i) => { i===0 ? ctx.moveTo(xS(bg),yS(v2s[i])) : ctx.lineTo(xS(bg),yS(v2s[i])); });
+  dispBGs.forEach((bg,i) => i===0 ? ctx.moveTo(xS(bg),yS(dispV2[i])) : ctx.lineTo(xS(bg),yS(dispV2[i])));
   ctx.stroke();
 
-  // BG cap marker
-  if (inp.bgCap < bgRange[1]) {
-    ctx.strokeStyle = 'rgba(251,146,60,0.5)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3,3]);
-    ctx.beginPath(); ctx.moveTo(xS(inp.bgCap), pad.t); ctx.lineTo(xS(inp.bgCap), H-pad.b); ctx.stroke();
-    ctx.setLineDash([]);
+  // Cap marker
+  if (dispCapBG < xMax) {
+    ctx.strokeStyle='rgba(251,146,60,0.5)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(xS(dispCapBG),pad.t); ctx.lineTo(xS(dispCapBG),H-pad.b); ctx.stroke(); ctx.setLineDash([]);
   }
 
-  // Current BG marker
-  ctx.strokeStyle = 'rgba(110,231,183,0.7)';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(xS(inp.bg), pad.t); ctx.lineTo(xS(inp.bg), H-pad.b); ctx.stroke();
-  ctx.fillStyle = 'rgba(110,231,183,0.9)';
-  ctx.font = '11px system-ui';
-  ctx.fillText(`BG ${inp.bg}`, xS(inp.bg)+4, pad.t+14);
+  // Current BG
+  ctx.strokeStyle='rgba(110,231,183,0.7)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(xS(dispCurBG),pad.t); ctx.lineTo(xS(dispCurBG),H-pad.b); ctx.stroke();
+  ctx.fillStyle='rgba(110,231,183,0.9)'; ctx.font='11px system-ui';
+  ctx.fillText(`BG ${dispCurBG.toFixed(currentUnit==='mmol'?1:0)} ${dispUnit()}`, xS(dispCurBG)+4, pad.t+14);
 
-  // Axes labels
-  ctx.fillStyle = '#475569';
-  ctx.font = '11px system-ui';
-  ctx.textAlign = 'center';
-  for (let bg = 80; bg <= 320; bg += 80) {
-    ctx.fillText(bg, xS(bg), H - pad.b + 16);
+  // Axes
+  ctx.fillStyle='#475569'; ctx.font='11px system-ui'; ctx.textAlign='center';
+  const bgTicks = currentUnit==='mmol' ? [4,6,8,10,12,14,16,18] : [80,160,240,320];
+  bgTicks.filter(v=>v>=xMin&&v<=xMax).forEach(v => ctx.fillText(v, xS(v), H-pad.b+16));
+  ctx.textAlign='right';
+  const isfStep = currentUnit==='mmol' ? 0.5 : 10;
+  for (let isf=Math.ceil(minY/isfStep)*isfStep; isf<=maxY; isf+=isfStep) {
+    if (isf>=minY&&isf<=maxY) ctx.fillText(isf.toFixed(currentUnit==='mmol'?1:0), pad.l-6, yS(isf)+4);
   }
-  ctx.textAlign = 'right';
-  for (let isf = Math.ceil(minY/10)*10; isf <= maxY; isf += 20) {
-    ctx.fillText(isf, pad.l - 6, yS(isf) + 4);
-  }
-  ctx.fillStyle = '#64748b';
-  ctx.textAlign = 'center';
-  ctx.fillText('Blood Glucose (mg/dL)', W/2, H - 8);
-  ctx.save();
-  ctx.translate(14, H/2);
-  ctx.rotate(-Math.PI/2);
-  ctx.fillText('ISF (mg/dL/U)', 0, 0);
-  ctx.restore();
+  ctx.fillStyle='#64748b'; ctx.textAlign='center';
+  ctx.fillText(`Blood Glucose (${dispUnit()})`, W/2, H-8);
+  ctx.save(); ctx.translate(14,H/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText(`ISF (${isfUnitLabel()})`, 0, 0); ctx.restore();
 }
 
 function drawRatioChart(inp, r) {
@@ -1762,83 +1645,50 @@ function drawRatioChart(inp, r) {
   if (!c) return;
   const { ctx, W, H } = c;
   const pad = { t:20, r:20, b:40, l:55 };
-  const bgRange = [40, 350];
+  const mgdlRange = [40, 350];
   const divisor = r.divisor;
 
-  const bgs = [], v1r = [], v2r = [];
-  for (let bg = bgRange[0]; bg <= bgRange[1]; bg += 2) {
-    bgs.push(bg);
-    const isfV1 = inp.useTdd && r.sensNTV1 ? calcIsfAtBg(bg, r.sensNTV1, inp.normTarget, divisor, inp.velocity, inp.bgCap) : inp.profIsf;
-    const isfV2 = inp.useTdd && r.sensNTV2 ? calcIsfAtBg(bg, r.sensNTV2, inp.normTarget, divisor, 1.0, inp.bgCap) : inp.profIsf;
-    v1r.push(isfV1 / inp.profIsf);
-    v2r.push(isfV2 / inp.profIsf);
+  const mgdls=[], v1rat=[], v2rat=[];
+  for (let bg=mgdlRange[0]; bg<=mgdlRange[1]; bg+=2) {
+    mgdls.push(bg);
+    const i1 = inp.useTdd&&r.sensNTV1 ? calcIsfAtBg(bg,r.sensNTV1,inp.normTarget,divisor,inp.velocity,inp.bgCap) : inp.profIsf;
+    const i2 = inp.useTdd&&r.sensNTV2 ? calcIsfAtBg(bg,r.sensNTV2,inp.normTarget,divisor,1.0,inp.bgCap) : inp.profIsf;
+    v1rat.push(i1/inp.profIsf); v2rat.push(i2/inp.profIsf);
   }
+  const dispBGs = mgdls.map(v=>toDisplay(v));
+  const xMin=dispBGs[0], xMax=dispBGs[dispBGs.length-1];
+  const allVals=[...v1rat,...v2rat,1.0];
+  const minY=Math.max(0,Math.min(...allVals)*0.9), maxY=Math.max(...allVals,1.5)*1.05;
+  const xS=v=>pad.l+(v-xMin)/(xMax-xMin)*(W-pad.l-pad.r);
+  const yS=v=>H-pad.b-(v-minY)/(maxY-minY)*(H-pad.t-pad.b);
 
-  const allVals = [...v1r, ...v2r, 1.0];
-  const minY = Math.max(0, Math.min(...allVals) * 0.9);
-  const maxY = Math.max(...allVals, 1.5) * 1.05;
-
-  const xS = bg => pad.l + (bg - bgRange[0]) / (bgRange[1] - bgRange[0]) * (W - pad.l - pad.r);
-  const yS = v => H - pad.b - (v - minY) / (maxY - minY) * (H - pad.t - pad.b);
-
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#0f1117';
-  ctx.fillRect(0, 0, W, H);
-
-  // Shading: below 1.0 = more aggressive
-  ctx.fillStyle = 'rgba(249,115,22,0.06)';
-  ctx.fillRect(pad.l, pad.t, W-pad.l-pad.r, yS(1.0)-pad.t);
-  ctx.fillStyle = 'rgba(59,130,246,0.06)';
-  ctx.fillRect(pad.l, yS(1.0), W-pad.l-pad.r, H-pad.b-yS(1.0));
-
-  // Grid
-  ctx.strokeStyle = '#1e2d40'; ctx.lineWidth = 1;
-  [0.5, 0.75, 1.0, 1.25, 1.5].forEach(v => {
-    if (v >= minY && v <= maxY) {
-      ctx.beginPath(); ctx.moveTo(pad.l, yS(v)); ctx.lineTo(W-pad.r, yS(v)); ctx.stroke();
-    }
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#0f1117'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(249,115,22,0.06)'; ctx.fillRect(pad.l,pad.t,W-pad.l-pad.r,yS(1.0)-pad.t);
+  ctx.fillStyle='rgba(59,130,246,0.06)'; ctx.fillRect(pad.l,yS(1.0),W-pad.l-pad.r,H-pad.b-yS(1.0));
+  ctx.strokeStyle='#1e2d40'; ctx.lineWidth=1;
+  [0.5,0.75,1.0,1.25,1.5].filter(v=>v>=minY&&v<=maxY).forEach(v=>{
+    ctx.beginPath(); ctx.moveTo(pad.l,yS(v)); ctx.lineTo(W-pad.r,yS(v)); ctx.stroke();
   });
-
-  // 1.0 reference
-  ctx.strokeStyle = 'rgba(110,231,183,0.4)';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([4,3]);
-  ctx.beginPath(); ctx.moveTo(pad.l, yS(1.0)); ctx.lineTo(W-pad.r, yS(1.0)); ctx.stroke();
-  ctx.setLineDash([]);
-
-  // V1 ratio
-  ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
-  ctx.beginPath();
-  bgs.forEach((bg,i) => { i===0 ? ctx.moveTo(xS(bg),yS(v1r[i])) : ctx.lineTo(xS(bg),yS(v1r[i])); });
-  ctx.stroke();
-
-  // V2 ratio
-  ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 2;
-  ctx.beginPath();
-  bgs.forEach((bg,i) => { i===0 ? ctx.moveTo(xS(bg),yS(v2r[i])) : ctx.lineTo(xS(bg),yS(v2r[i])); });
-  ctx.stroke();
-
-  // Current BG
-  ctx.strokeStyle = 'rgba(110,231,183,0.7)'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(xS(inp.bg), pad.t); ctx.lineTo(xS(inp.bg), H-pad.b); ctx.stroke();
-
-  // Labels
-  ctx.fillStyle = '#475569'; ctx.font = '11px system-ui'; ctx.textAlign = 'center';
-  [80,160,240,320].forEach(bg => ctx.fillText(bg, xS(bg), H-pad.b+16));
-  ctx.textAlign = 'right';
-  [0.5, 0.75, 1.0, 1.25, 1.5].forEach(v => {
-    if (v >= minY && v <= maxY) ctx.fillText(v.toFixed(2), pad.l-6, yS(v)+4);
-  });
-  ctx.fillStyle = '#64748b'; ctx.textAlign = 'center';
-  ctx.fillText('Blood Glucose (mg/dL)', W/2, H-8);
-  ctx.save(); ctx.translate(14, H/2); ctx.rotate(-Math.PI/2);
-  ctx.fillText('ISF ratio (vs profile)', 0, 0); ctx.restore();
-
-  // Annotations
-  ctx.fillStyle = 'rgba(249,115,22,0.6)'; ctx.font='10px system-ui'; ctx.textAlign='left';
-  ctx.fillText('← more aggressive', pad.l+4, yS(1.0)-6);
-  ctx.fillStyle = 'rgba(59,130,246,0.6)';
-  ctx.fillText('← more conservative', pad.l+4, yS(1.0)+14);
+  ctx.strokeStyle='rgba(110,231,183,0.4)'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(pad.l,yS(1.0)); ctx.lineTo(W-pad.r,yS(1.0)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle='#3b82f6'; ctx.lineWidth=2; ctx.beginPath();
+  dispBGs.forEach((bg,i)=>i===0?ctx.moveTo(xS(bg),yS(v1rat[i])):ctx.lineTo(xS(bg),yS(v1rat[i]))); ctx.stroke();
+  ctx.strokeStyle='#8b5cf6'; ctx.lineWidth=2; ctx.beginPath();
+  dispBGs.forEach((bg,i)=>i===0?ctx.moveTo(xS(bg),yS(v2rat[i])):ctx.lineTo(xS(bg),yS(v2rat[i]))); ctx.stroke();
+  ctx.strokeStyle='rgba(110,231,183,0.7)'; ctx.lineWidth=2;
+  const curDisp=toDisplay(inp.bg);
+  ctx.beginPath(); ctx.moveTo(xS(curDisp),pad.t); ctx.lineTo(xS(curDisp),H-pad.b); ctx.stroke();
+  ctx.fillStyle='#475569'; ctx.font='11px system-ui'; ctx.textAlign='center';
+  const bgTicks=currentUnit==='mmol'?[4,8,12,16]:[80,160,240,320];
+  bgTicks.filter(v=>v>=xMin&&v<=xMax).forEach(v=>ctx.fillText(v,xS(v),H-pad.b+16));
+  ctx.textAlign='right';
+  [0.5,0.75,1.0,1.25,1.5].filter(v=>v>=minY&&v<=maxY).forEach(v=>ctx.fillText(v.toFixed(2),pad.l-6,yS(v)+4));
+  ctx.fillStyle='#64748b'; ctx.textAlign='center';
+  ctx.fillText(`Blood Glucose (${dispUnit()})`,W/2,H-8);
+  ctx.save(); ctx.translate(14,H/2); ctx.rotate(-Math.PI/2); ctx.fillText('ISF ratio (vs profile)',0,0); ctx.restore();
+  ctx.fillStyle='rgba(249,115,22,0.6)'; ctx.font='10px system-ui'; ctx.textAlign='left';
+  ctx.fillText('← more aggressive',pad.l+4,yS(1.0)-6);
+  ctx.fillStyle='rgba(59,130,246,0.6)'; ctx.fillText('← more conservative',pad.l+4,yS(1.0)+14);
 }
 
 function drawSmbChart(inp, r) {
@@ -1846,161 +1696,141 @@ function drawSmbChart(inp, r) {
   if (!c) return;
   const { ctx, W, H } = c;
   const pad = { t:20, r:20, b:40, l:55 };
-  const bgRange = [80, 300];
+  const mgdlMin=80, mgdlMax=300;
   const divisor = r.divisor;
+  const profileScale = r.profilePct/100.0;
+  const boost_scale_c = inp.scale * profileScale;
+  const effBasal_c = inp.basal * profileScale;
+  const bRD = 1.0/inp.insulinReqPct;
+  const smbMinC = inp.iob>-0.2 ? inp.uamSmbMin : inp.smbMin;
+  const maxBB_c = effBasal_c * smbMinC / 60.0;
+  const RC=20;
 
-  // The chart shows SMB as a function of BG, holding all other inputs fixed.
-  // For each BG point, we re-run the tier decision with the current dynamics inputs.
-  // Tier 8 (fallback) caps at maxBasalBolus; all other tiers cap at bolusMax.
-  const profileScale = r.profilePct / 100.0;
-  const boost_scale_chart = inp.scale * profileScale;
-  const effectiveBasal_chart = inp.basal * profileScale;
-  const baseReqDivisor_chart = 1.0 / inp.insulinReqPct;
-  const smbMinChart = inp.iob > -0.2 ? inp.uamSmbMin : inp.smbMin;
-  const maxBasalBolus_chart = effectiveBasal_chart * smbMinChart / 60.0;
-  const RC = 20; // roundSMBTo
-
-  const bgs = [], smbs = [];
-  for (let bg = bgRange[0]; bg <= bgRange[1]; bg += 2) {
-    bgs.push(bg);
-    const isfAtBg = inp.useTdd && r.sensNTV1 ? calcIsfAtBg(bg, r.sensNTV1, inp.normTarget, divisor, inp.velocity, inp.bgCap) : inp.profIsf;
-    const insulinReq = Math.max(0, (bg - inp.target) / isfAtBg);
-    const scale_pct_c = inp.percentScale ? 100.0/(inp.percentScaleVal*profileScale) : baseReqDivisor_chart;
-    const scaledDiv = inp.percentScale
-      ? (bg < 108 ? scale_pct_c : baseReqDivisor_chart - ((Math.abs(bg-180)/72)*(baseReqDivisor_chart-scale_pct_c)))
-      : baseReqDivisor_chart;
-    const eventBG = bg + inp.longAvgDelta * 6;
-
+  const mgdls=[], smbs=[];
+  for (let bg=mgdlMin; bg<=mgdlMax; bg+=2) {
+    mgdls.push(bg);
+    const isfAtBg = inp.useTdd&&r.sensNTV1 ? calcIsfAtBg(bg,r.sensNTV1,inp.normTarget,divisor,inp.velocity,inp.bgCap) : inp.profIsf;
+    const iReq=Math.max(0,(bg-inp.target)/isfAtBg);
+    const spct=inp.percentScale?100.0/(inp.percentScaleVal*profileScale):bRD;
+    const sDiv=inp.percentScale?(bg<108?spct:bRD-((Math.abs(bg-180)/72)*(bRD-spct))):bRD;
+    const evBG=bg+inp.longAvgDelta*6;
     let smb;
-    if (inp.iob > inp.maxIob || inp.scale >= 3.0) {
-      smb = 0;
-    } else if (inp.cob > 0 && inp.lastCarbAge < 25) {
-      smb = Math.floor(Math.min(insulinReq/baseReqDivisor_chart, insulinReq) * RC) / RC;
-    } else if (inp.cob > 0 && inp.lastCarbAge < 40 && inp.delta > 5) {
-      smb = Math.floor(Math.min(insulinReq/baseReqDivisor_chart, inp.bolusMax) * RC) / RC;
-    } else if (!r.fastCarbRebound && inp.delta >= 5 && inp.shortAvgDelta >= 3 && r.uamBoost1 > 1.2 && r.uamBoost2 > 2 && inp.iob < inp.maxIob && eventBG > inp.target && bg > 80) {
-      const t3d = r.delta_accl > 1 ? scaledDiv : baseReqDivisor_chart;
-      smb = Math.floor(Math.min(insulinReq/t3d, inp.bolusMax) * RC) / RC;
-    } else if (r.delta_accl > 5 && bg > 180 && inp.iob < inp.maxIob && eventBG > inp.target && bg > 80) {
-      smb = Math.floor(Math.min(Math.min(boost_scale_chart*effectiveBasal_chart,inp.bolusMax), inp.bolusMax) * RC) / RC;
-    } else if (!r.fastCarbRebound && bg > 98 && bg < 181 && inp.delta > 3 && r.delta_accl > 0 && eventBG > inp.target && inp.iob < inp.maxIob) {
-      smb = Math.floor(Math.min(insulinReq/scaledDiv, inp.bolusMax) * RC) / RC;
-    } else if (!r.fastCarbRebound && r.delta_accl > 25 && inp.delta > 4 && inp.iob < inp.maxIob && eventBG > inp.target) {
-      const d6 = baseReqDivisor_chart - ((Math.abs(bg-180)/72)*(baseReqDivisor_chart - 2*scale_pct_c));
-      const bi = Math.min(boost_scale_chart*effectiveBasal_chart, inp.bolusMax);
-      smb = Math.floor(Math.min(bi/d6, inp.bolusMax) * RC) / RC;
-    } else if (inp.delta > 0 && r.delta_accl >= 0.5) {
-      smb = Math.floor(Math.min(insulinReq/baseReqDivisor_chart, inp.bolusMax) * RC) / RC;
+    if (inp.iob>inp.maxIob||inp.scale>=3.0) { smb=0; }
+    else if (inp.cob>0&&inp.lastCarbAge<25) { smb=Math.floor(Math.min(iReq/bRD,iReq)*RC)/RC; }
+    else if (inp.cob>0&&inp.lastCarbAge<40&&inp.delta>5) { smb=Math.floor(Math.min(iReq/bRD,inp.bolusMax)*RC)/RC; }
+    else if (!r.fastCarbRebound&&inp.delta>=5&&inp.shortAvgDelta>=3&&r.uamBoost1>1.2&&r.uamBoost2>2&&inp.iob<inp.maxIob&&evBG>inp.target&&bg>80) {
+      const t3d=r.delta_accl>1?sDiv:bRD; smb=Math.floor(Math.min(iReq/t3d,inp.bolusMax)*RC)/RC;
+    } else if (r.delta_accl>5&&bg>180&&inp.iob<inp.maxIob&&evBG>inp.target&&bg>80) {
+      smb=Math.floor(Math.min(Math.min(boost_scale_c*effBasal_c,inp.bolusMax),inp.bolusMax)*RC)/RC;
+    } else if (!r.fastCarbRebound&&bg>98&&bg<181&&inp.delta>3&&r.delta_accl>0&&evBG>inp.target&&inp.iob<inp.maxIob) {
+      smb=Math.floor(Math.min(iReq/sDiv,inp.bolusMax)*RC)/RC;
+    } else if (!r.fastCarbRebound&&r.delta_accl>25&&inp.delta>4&&inp.iob<inp.maxIob&&evBG>inp.target) {
+      const d6=bRD-((Math.abs(bg-180)/72)*(bRD-2*spct));
+      smb=Math.floor(Math.min(Math.min(boost_scale_c*effBasal_c,inp.bolusMax)/d6,inp.bolusMax)*RC)/RC;
+    } else if (inp.delta>0&&r.delta_accl>=0.5) {
+      smb=Math.floor(Math.min(iReq/bRD,inp.bolusMax)*RC)/RC;
     } else {
-      smb = Math.floor(Math.min(insulinReq/baseReqDivisor_chart, maxBasalBolus_chart) * RC) / RC;
+      smb=Math.floor(Math.min(iReq/bRD,maxBB_c)*RC)/RC;
     }
-    smbs.push(Math.max(0, smb));
+    smbs.push(Math.max(0,smb));
   }
 
-  const maxY = Math.max(...smbs, 0.5) * 1.1;
-  const xS = bg => pad.l + (bg - bgRange[0]) / (bgRange[1] - bgRange[0]) * (W - pad.l - pad.r);
-  const yS = v => H - pad.b - v / maxY * (H - pad.t - pad.b);
+  // Convert x-axis to display units
+  const dispBGs = mgdls.map(v=>toDisplay(v));
+  const dispMin=dispBGs[0], dispMax=dispBGs[dispBGs.length-1];
+  const maxY=Math.max(...smbs,0.5)*1.1;
+  const xS=v=>pad.l+(v-dispMin)/(dispMax-dispMin)*(W-pad.l-pad.r);
+  const yS=v=>H-pad.b-v/maxY*(H-pad.t-pad.b);
 
-  ctx.clearRect(0, 0, W, H); ctx.fillStyle='#0f1117'; ctx.fillRect(0,0,W,H);
-
-  // Cap lines — orange=maxBasalBolus (T8 only), red=bolusMax (T1-7)
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#0f1117'; ctx.fillRect(0,0,W,H);
   ctx.strokeStyle='rgba(249,115,22,0.4)'; ctx.lineWidth=1; ctx.setLineDash([4,3]);
-  ctx.beginPath(); ctx.moveTo(pad.l,yS(maxBasalBolus_chart)); ctx.lineTo(W-pad.r,yS(maxBasalBolus_chart)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(xS(dispMin),yS(maxBB_c)); ctx.lineTo(xS(dispMax),yS(maxBB_c)); ctx.stroke();
   ctx.strokeStyle='rgba(239,68,68,0.4)';
-  ctx.beginPath(); ctx.moveTo(pad.l,yS(inp.bolusMax)); ctx.lineTo(W-pad.r,yS(inp.bolusMax)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(xS(dispMin),yS(inp.bolusMax)); ctx.lineTo(xS(dispMax),yS(inp.bolusMax)); ctx.stroke();
   ctx.setLineDash([]);
   ctx.fillStyle='rgba(249,115,22,0.6)'; ctx.font='10px system-ui'; ctx.textAlign='right';
-  if (maxBasalBolus_chart < maxY) ctx.fillText(`maxBasalBolus ${fmt(maxBasalBolus_chart,2)}U (T8)`, W-pad.r-4, yS(maxBasalBolus_chart)-4);
-  if (inp.bolusMax < maxY) ctx.fillText(`bolusMax ${inp.bolusMax}U (T1-7)`, W-pad.r-4, yS(inp.bolusMax)-4);
-
-  // Grid
+  if (maxBB_c<maxY) ctx.fillText(`maxBasalBolus ${fmt(maxBB_c,2)}U (T8)`,xS(dispMax)-4,yS(maxBB_c)-4);
+  if (inp.bolusMax<maxY) ctx.fillText(`bolusMax ${inp.bolusMax}U (T1-7)`,xS(dispMax)-4,yS(inp.bolusMax)-4);
   ctx.strokeStyle='#1e2d40'; ctx.lineWidth=1;
-  for (let bg=100; bg<=300; bg+=50) {
-    ctx.beginPath(); ctx.moveTo(xS(bg),pad.t); ctx.lineTo(xS(bg),H-pad.b); ctx.stroke();
-  }
-
-  // SMB curve (filled)
+  const bgTicks=currentUnit==='mmol'?[5,7.5,10,12.5,15]:[100,150,200,250,300];
+  bgTicks.filter(v=>v>=dispMin&&v<=dispMax).forEach(v=>{
+    ctx.beginPath(); ctx.moveTo(xS(v),pad.t); ctx.lineTo(xS(v),H-pad.b); ctx.stroke();
+  });
   ctx.fillStyle='rgba(110,231,183,0.12)';
-  ctx.beginPath();
-  ctx.moveTo(xS(bgRange[0]), yS(0));
-  bgs.forEach((bg,i) => ctx.lineTo(xS(bg), yS(smbs[i])));
-  ctx.lineTo(xS(bgRange[1]), yS(0));
-  ctx.closePath(); ctx.fill();
-
+  ctx.beginPath(); ctx.moveTo(xS(dispMin),yS(0));
+  dispBGs.forEach((bg,i)=>ctx.lineTo(xS(bg),yS(smbs[i])));
+  ctx.lineTo(xS(dispMax),yS(0)); ctx.closePath(); ctx.fill();
   ctx.strokeStyle='#6ee7b7'; ctx.lineWidth=2.5;
   ctx.beginPath();
-  bgs.forEach((bg,i) => { i===0 ? ctx.moveTo(xS(bg),yS(smbs[i])) : ctx.lineTo(xS(bg),yS(smbs[i])); });
-  ctx.stroke();
-
-  // Current BG marker
+  dispBGs.forEach((bg,i)=>i===0?ctx.moveTo(xS(bg),yS(smbs[i])):ctx.lineTo(xS(bg),yS(smbs[i]))); ctx.stroke();
   ctx.strokeStyle='rgba(110,231,183,0.7)'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(xS(inp.bg),pad.t); ctx.lineTo(xS(inp.bg),H-pad.b); ctx.stroke();
-
-  // Labels
+  const curDisp=toDisplay(inp.bg);
+  ctx.beginPath(); ctx.moveTo(xS(curDisp),pad.t); ctx.lineTo(xS(curDisp),H-pad.b); ctx.stroke();
   ctx.fillStyle='#475569'; ctx.font='11px system-ui'; ctx.textAlign='center';
-  [100,150,200,250,300].forEach(bg => ctx.fillText(bg, xS(bg), H-pad.b+16));
-  const ySteps = maxY <= 1 ? [0.2,0.4,0.6,0.8,1.0] : [0.5,1.0,1.5,2.0,2.5,3.0].filter(v=>v<=maxY*1.05);
+  bgTicks.filter(v=>v>=dispMin&&v<=dispMax).forEach(v=>ctx.fillText(v,xS(v),H-pad.b+16));
+  const ySteps=maxY<=1?[0.2,0.4,0.6,0.8,1.0]:[0.5,1.0,1.5,2.0,2.5,3.0].filter(v=>v<=maxY*1.05);
   ctx.textAlign='right';
-  ySteps.forEach(v => ctx.fillText(v.toFixed(1)+'U', pad.l-6, yS(v)+4));
+  ySteps.forEach(v=>ctx.fillText(v.toFixed(1)+'U',pad.l-6,yS(v)+4));
   ctx.fillStyle='#64748b'; ctx.textAlign='center';
-  ctx.fillText('Blood Glucose (mg/dL)', W/2, H-8);
-  ctx.save(); ctx.translate(14,H/2); ctx.rotate(-Math.PI/2);
-  ctx.fillText('Estimated SMB (U)', 0, 0); ctx.restore();
+  ctx.fillText(`Blood Glucose (${dispUnit()})`,W/2,H-8);
+  ctx.save(); ctx.translate(14,H/2); ctx.rotate(-Math.PI/2); ctx.fillText('Estimated SMB (U)',0,0); ctx.restore();
 }
 
 // ════════════════════════════════════════════════════════════
-// Scenarios
+// Scenarios — values always stored in mg/dL
 // ════════════════════════════════════════════════════════════
-// Base defaults applied to every scenario (prevents stale values from previous scenario)
 const DEFAULTS = {
-  tdd:40, profIsf:50, basal:1.0, bg:140, delta:2, shortAvgDelta:1.5, longAvgDelta:1.0,
-  target:100, iob:0.5, peak:55,
-  useTdd:true, normTarget:99, bgCap:210, velocity:100, tddAdj:100,
-  adjustSens:false, sensRatio:1.0, circadian:false, circHour:12,
-  scale:1.0, maxIob:1.0, bolusMax:2.5, insulinReqPct:50, smbMin:30, uamSmbMin:15,
-  percentScale:false, percentScaleVal:200,
-  activityState:'normal', activityPct:80, inactivityPct:130,
-  nightMode:false, nightActive:false, nightOffset:27,
-  cob:0, lastCarbAge:60, cr:10, recentLow:false, nightModeCob:false,
-  tempTarget:false, tempTargetBg:140, highTtSens:false, lowTtSens:false,
+  tdd:40,profIsf:50,basal:1.0,bg:140,delta:2,shortAvgDelta:1.5,longAvgDelta:1.0,
+  target:100,iob:0.5,peak:55,
+  useTdd:true,normTarget:99,bgCap:210,velocity:100,tddAdj:100,
+  adjustSens:false,sensRatio:1.0,circadian:false,circHour:12,
+  scale:1.0,maxIob:1.0,bolusMax:2.5,insulinReqPct:50,smbMin:30,uamSmbMin:15,
+  percentScale:false,percentScaleVal:200,
+  activityState:'normal',activityPct:80,inactivityPct:130,
+  nightMode:false,nightActive:false,nightOffset:27,
+  cob:0,lastCarbAge:60,cr:10,recentLow:false,nightModeCob:false,
+  tempTarget:false,tempTargetBg:140,highTtSens:false,lowTtSens:false,
 };
 const scenarios = {
   default:      { ...DEFAULTS },
-  conservative: { ...DEFAULTS, velocity:50, scale:0.7, maxIob:0.5, bolusMax:1.0, insulinReqPct:35, smbMin:20, uamSmbMin:15 },
-  aggressive:   { ...DEFAULTS, bg:160, delta:4, shortAvgDelta:3.5, longAvgDelta:2.5, iob:0.2, normTarget:90, bgCap:180, tddAdj:110, scale:1.5, maxIob:3.0, bolusMax:4.0, insulinReqPct:80, smbMin:60, uamSmbMin:30 },
-  highTdd:      { ...DEFAULTS, tdd:60, profIsf:30, basal:1.5, bg:150, delta:3, shortAvgDelta:2.5, longAvgDelta:2.0, iob:0.5, maxIob:2.0, bolusMax:3.0, uamSmbMin:20 },
-  lowTdd:       { ...DEFAULTS, tdd:20, profIsf:80, basal:0.5, bg:130, delta:1, shortAvgDelta:0.8, longAvgDelta:0.5, iob:0.1, maxIob:0.5, bolusMax:1.5 },
-  // risingMeal: COB present <25min triggers T1; delta=8 with matching avgs triggers T3 once COB window passes
-  risingMeal:   { ...DEFAULTS, bg:165, delta:8, shortAvgDelta:6.0, longAvgDelta:4.0, iob:0.3, percentScale:true, percentScaleVal:200, cob:30, lastCarbAge:20, cr:10 },
-  highBgFlat:   { ...DEFAULTS, bg:240, delta:0, shortAvgDelta:0, longAvgDelta:-0.5, iob:1.5, maxIob:3.0 },
-  exercise:     { ...DEFAULTS, activityState:'active', activityPct:80, tempTarget:true, tempTargetBg:160, highTtSens:true },
-  sedentary:    { ...DEFAULTS, activityState:'inactive', inactivityPct:130 },
-  nightSleep:   { ...DEFAULTS, bg:105, delta:0, shortAvgDelta:0, longAvgDelta:0, iob:0.2, nightMode:true, nightActive:true, nightOffset:27 },
+  conservative: { ...DEFAULTS, velocity:50,scale:0.7,maxIob:0.5,bolusMax:1.0,insulinReqPct:35,smbMin:20,uamSmbMin:15 },
+  aggressive:   { ...DEFAULTS, bg:160,delta:4,shortAvgDelta:3.5,longAvgDelta:2.5,iob:0.2,normTarget:90,bgCap:180,tddAdj:110,scale:1.5,maxIob:3.0,bolusMax:4.0,insulinReqPct:80,smbMin:60,uamSmbMin:30 },
+  highTdd:      { ...DEFAULTS, tdd:60,profIsf:30,basal:1.5,bg:150,delta:3,shortAvgDelta:2.5,longAvgDelta:2.0,iob:0.5,maxIob:2.0,bolusMax:3.0,uamSmbMin:20 },
+  lowTdd:       { ...DEFAULTS, tdd:20,profIsf:80,basal:0.5,bg:130,delta:1,shortAvgDelta:0.8,longAvgDelta:0.5,iob:0.1,maxIob:0.5,bolusMax:1.5 },
+  risingMeal:   { ...DEFAULTS, bg:165,delta:8,shortAvgDelta:6.0,longAvgDelta:4.0,iob:0.3,percentScale:true,percentScaleVal:200,cob:30,lastCarbAge:20,cr:10 },
+  highBgFlat:   { ...DEFAULTS, bg:240,delta:0,shortAvgDelta:0,longAvgDelta:-0.5,iob:1.5,maxIob:3.0 },
+  exercise:     { ...DEFAULTS, activityState:'active',activityPct:80,tempTarget:true,tempTargetBg:160,highTtSens:true },
+  sedentary:    { ...DEFAULTS, activityState:'inactive',inactivityPct:130 },
+  nightSleep:   { ...DEFAULTS, bg:105,delta:0,shortAvgDelta:0,longAvgDelta:0,iob:0.2,nightMode:true,nightActive:true,nightOffset:27 },
 };
 
 function applyScenario(key) {
   const s = scenarios[key];
   if (!s) return;
+  // Apply non-BG sliders directly
+  const bgIds = new Set(BG_SLIDERS.map(b=>b.id));
   Object.keys(s).forEach(k => {
-    const sel = document.getElementById('s-' + k);
-    const tog = document.getElementById('t-' + k);
-    if (sel) sel.value = s[k];
-    if (tog) tog.checked = s[k];
+    if (bgIds.has(k)) {
+      sliderMgdlValues[k] = s[k]; // store mg/dL
+    } else {
+      const sel = document.getElementById('s-' + k);
+      const tog = document.getElementById('t-' + k);
+      if (sel) sel.value = s[k];
+      if (tog) tog.checked = s[k];
+    }
   });
-  // sync dependent visibility
-  ['adjustSens', 'circadian'].forEach(k => {
-    const deps = {'adjustSens':'ctrl-sensRatio', 'circadian':'ctrl-circHour'};
+  rebuildBgSliders();
+  ['adjustSens','circadian'].forEach(k => {
+    const deps = {adjustSens:'ctrl-sensRatio', circadian:'ctrl-circHour'};
     toggleDependent('t-'+k, deps[k]);
   });
   update();
 }
 
 function toggleDependent(toggleId, targetId) {
-  const on = document.getElementById(toggleId).checked;
   const el = document.getElementById(targetId);
-  if (el) el.style.display = on ? 'block' : 'none';
+  if (el) el.style.display = document.getElementById(toggleId).checked ? 'block' : 'none';
 }
-
 function toggleSection(header) {
   header.classList.toggle('collapsed');
   header.nextElementSibling.classList.toggle('hidden');
@@ -2013,487 +1843,340 @@ function drawProjectionChart(inp, r) {
   const c = setupCanvas('projChart');
   if (!c) return;
   const { ctx, W, H } = c;
-  const pad = { t: 24, r: 28, b: 44, l: 52 };
+  const pad = { t:24, r:28, b:44, l:58 };
 
-  // ── Build historical BG series ────────────────────────────
-  // Use real NS data if available; otherwise synthesise from current BG + deltas
   let hist;
   if (nsHistory.length >= 2) {
-    hist = [...nsHistory].sort((a, b) => a.t - b.t); // oldest first, t ≤ 0
+    hist = [...nsHistory].sort((a,b)=>a.t-b.t);
     document.getElementById('proj-data-source').textContent = 'Using Nightscout data';
   } else {
-    // Synthetic: back-project using longAvgDelta for each 5-min step
     hist = [];
-    for (let i = 5; i >= 0; i--) {
-      hist.push({ t: -(i * 5), bg: inp.bg - inp.longAvgDelta * i });
-    }
-    document.getElementById('proj-data-source').textContent = 'Manual simulation (connect Nightscout for real history)';
+    for (let i=5; i>=0; i--) hist.push({ t:-(i*5), bg:inp.bg-inp.longAvgDelta*i });
+    document.getElementById('proj-data-source').textContent = 'Manual simulation';
   }
 
-  // ── Insulin activity model ────────────────────────────────
-  // Bilinear curve: rises linearly to peak, falls linearly to DIA
-  const peak = inp.peak;        // minutes
-  const DIA  = Math.max(peak * 4.5, 270); // minutes, ~4.5× peak
-  // Returns per-minute fraction of a bolus's activity at time t (minutes post-bolus)
+  const peak=inp.peak, DIA=Math.max(peak*4.5,270);
   function activity(t) {
-    if (t <= 0 || t >= DIA) return 0;
-    if (t <= peak) return (2 * t) / (peak * DIA);
-    return (2 * (DIA - t)) / ((DIA - peak) * DIA);
+    if (t<=0||t>=DIA) return 0;
+    if (t<=peak) return (2*t)/(peak*DIA);
+    return (2*(DIA-t))/((DIA-peak)*DIA);
   }
-  // BG effect of 1U on [tFrom, tTo] — integrate activity × ISF
-  function bgEffect(tFrom, tTo) {
-    const steps = 4, dt = (tTo - tFrom) / steps;
-    let sum = 0;
-    for (let k = 0; k <= steps; k++) {
-      const w = (k === 0 || k === steps) ? 0.5 : 1;
-      sum += w * activity(tFrom + k * dt);
-    }
-    return sum * dt * r.isfV1;
+  function bgEffect(tFrom,tTo) {
+    const steps=4,dt=(tTo-tFrom)/steps; let sum=0;
+    for (let k=0;k<=steps;k++) { const w=(k===0||k===steps)?0.5:1; sum+=w*activity(tFrom+k*dt); }
+    return sum*dt*r.isfV1;
   }
-
-  // ── IOB tracking structure ────────────────────────────────
-  // Each pending bolus: { deliveredAt: minutes_from_now, units }
-  function iobRemaining(boluses, atMin) {
-    return boluses.reduce((acc, b) => {
-      const age = atMin - b.deliveredAt;
-      if (age < 0 || age >= DIA) return acc;
-      // IOB fraction remaining = 1 - integral of activity from 0 to age
-      // Approx with trapezoidal
-      const steps = Math.min(Math.ceil(age / 5), 60), dt = age / Math.max(steps, 1);
-      let used = 0;
-      for (let k = 0; k < steps; k++) used += activity(k * dt + dt / 2) * dt;
-      return acc + b.units * Math.max(0, 1 - used);
-    }, 0);
+  function iobRemaining(boluses,atMin) {
+    return boluses.reduce((acc,b)=>{
+      const age=atMin-b.deliveredAt;
+      if (age<0||age>=DIA) return acc;
+      const steps=Math.min(Math.ceil(age/5),60),dt=age/Math.max(steps,1);
+      let used=0;
+      for (let k=0;k<steps;k++) used+=activity(k*dt+dt/2)*dt;
+      return acc+b.units*Math.max(0,1-used);
+    },0);
   }
 
-  // ── Run projection simulation ─────────────────────────────
-  const STEP = 5;   // minutes per step
-  const STEPS = 13; // 0..60 min ahead
-  const noBoostBGs = [inp.bg];
-  const withBoostBGs = [inp.bg];
-  const smbEvents = []; // {t, units, bg}
+  const STEP=5, STEPS=13;
+  const noBoostBGs=[inp.bg], withBoostBGs=[inp.bg], smbEvents=[];
+  const pendingNone  = inp.iob>0?[{deliveredAt:-peak,units:inp.iob}]:[];
+  const pendingBoost = inp.iob>0?[{deliveredAt:-peak,units:inp.iob}]:[];
 
-  // Seed with current IOB as a "bolus delivered DIA/2 minutes ago" proxy
-  // so it decays correctly going forward
-  const pendingNone  = inp.iob > 0 ? [{ deliveredAt: -peak, units: inp.iob }] : [];
-  const pendingBoost = inp.iob > 0 ? [{ deliveredAt: -peak, units: inp.iob }] : [];
-
-  for (let i = 1; i < STEPS; i++) {
-    const t = i * STEP;  // minutes from now
-
-    // Trend: use longAvgDelta, decaying toward 0 over ~40 min
-    const trendDecay = Math.exp(-t / 40);
-    const trend = inp.longAvgDelta * trendDecay * STEP;
-
-    // ── No-boost projection ──
-    const iobEffNone = bgEffect(t - STEP, t) * iobRemaining(pendingNone, t - STEP);
-    const bgNone = Math.max(40, noBoostBGs[i-1] + trend - iobEffNone);
+  for (let i=1;i<STEPS;i++) {
+    const t=i*STEP;
+    const trendDecay=Math.exp(-t/40);
+    const trend=inp.longAvgDelta*trendDecay*STEP;
+    const iobEffNone=bgEffect(t-STEP,t)*iobRemaining(pendingNone,t-STEP);
+    const bgNone=Math.max(40,noBoostBGs[i-1]+trend-iobEffNone);
     noBoostBGs.push(bgNone);
-
-    // ── With-boost projection ──
-    const iobEffBoost = bgEffect(t - STEP, t) * iobRemaining(pendingBoost, t - STEP);
-    let bgWith = Math.max(40, withBoostBGs[i-1] + trend - iobEffBoost);
-
-    // Would Boost fire? Use current tier/microbolus logic scaled by insulinReq ratio
-    const iobNow = iobRemaining(pendingBoost, t);
-    if (!r.ioBlock && !r.boostDisabledScale && !r.nightSuppressed &&
-        bgWith > inp.target && iobNow < inp.maxIob && r.microBolus > 0) {
-      const scaledReq = Math.max(0, (bgWith - inp.target) / r.isfV1);
-      const scaleFactor = r.insulinReqV1 > 0 ? Math.min(1, scaledReq / r.insulinReqV1) : 0;
-      const smb = Math.floor(r.microBolus * scaleFactor * 20) / 20;
-      if (smb >= 0.05) {
-        pendingBoost.push({ deliveredAt: t, units: smb });
-        smbEvents.push({ t, units: smb, bg: bgWith });
-      }
+    const iobEffBoost=bgEffect(t-STEP,t)*iobRemaining(pendingBoost,t-STEP);
+    let bgWith=Math.max(40,withBoostBGs[i-1]+trend-iobEffBoost);
+    const iobNow=iobRemaining(pendingBoost,t);
+    if (!r.ioBlock&&!r.boostDisabledScale&&!r.nightSuppressed&&bgWith>inp.target&&iobNow<inp.maxIob&&r.microBolus>0) {
+      const scaledReq=Math.max(0,(bgWith-inp.target)/r.isfV1);
+      const scaleFactor=r.insulinReqV1>0?Math.min(1,scaledReq/r.insulinReqV1):0;
+      const smb=Math.floor(r.microBolus*scaleFactor*20)/20;
+      if (smb>=0.05) { pendingBoost.push({deliveredAt:t,units:smb}); smbEvents.push({t,units:smb,bg:bgWith}); }
     }
     withBoostBGs.push(bgWith);
   }
 
-  // ── Axis ranges ────────────────────────────────────────────
-  const allBGs = [...hist.map(h => h.bg), ...noBoostBGs, ...withBoostBGs];
-  const yMin = Math.min(...allBGs, inp.target - 20, 65) - 10;
-  const yMax = Math.max(...allBGs, inp.target + 30) + 15;
-  const xMin = hist.length ? hist[0].t : -25;
-  const xMax = 65;
+  // Display-unit axis
+  const allBGs=[...hist.map(h=>h.bg),...noBoostBGs,...withBoostBGs].map(v=>toDisplay(v));
+  const yMinDisp=Math.min(...allBGs,toDisplay(inp.target-20),toDisplay(65))-toDisplay(10);
+  const yMaxDisp=Math.max(...allBGs,toDisplay(inp.target+30))+toDisplay(15);
+  const xMin=hist.length?hist[0].t:-25, xMax=65;
+  const xS=t=>pad.l+(t-xMin)/(xMax-xMin)*(W-pad.l-pad.r);
+  const yS=b=>H-pad.b-(toDisplay(b)-yMinDisp)/(yMaxDisp-yMinDisp)*(H-pad.t-pad.b);
 
-  const xS = t => pad.l + (t - xMin) / (xMax - xMin) * (W - pad.l - pad.r);
-  const yS = b => H - pad.b - (b - yMin) / (yMax - yMin) * (H - pad.t - pad.b);
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#0f1117'; ctx.fillRect(0,0,W,H);
 
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#0f1117'; ctx.fillRect(0, 0, W, H);
-
-  // ── Background zones ──────────────────────────────────────
-  // Hypo zone (< 70)
-  if (yMin < 70) {
-    ctx.fillStyle = 'rgba(239,68,68,0.07)';
-    ctx.fillRect(pad.l, yS(70), W - pad.l - pad.r, yS(yMin) - yS(70));
+  // BG zones
+  if (yMinDisp<toDisplay(70)) {
+    ctx.fillStyle='rgba(239,68,68,0.07)';
+    ctx.fillRect(pad.l,yS(70),W-pad.l-pad.r,H-pad.b-yS(70));
   }
-  // Target zone (target ± 20)
-  ctx.fillStyle = 'rgba(16,185,129,0.05)';
-  ctx.fillRect(pad.l, yS(inp.target + 20), W - pad.l - pad.r, yS(inp.target - 20) - yS(inp.target + 20));
+  ctx.fillStyle='rgba(16,185,129,0.05)';
+  ctx.fillRect(pad.l,yS(inp.target+20),W-pad.l-pad.r,yS(inp.target-20)-yS(inp.target+20));
 
-  // ── Grid lines ────────────────────────────────────────────
-  ctx.strokeStyle = '#1e2d40'; ctx.lineWidth = 1;
-  for (let bg = Math.ceil(yMin / 20) * 20; bg <= yMax; bg += 20) {
-    ctx.beginPath(); ctx.moveTo(pad.l, yS(bg)); ctx.lineTo(W - pad.r, yS(bg)); ctx.stroke();
+  // Grid
+  ctx.strokeStyle='#1e2d40'; ctx.lineWidth=1;
+  const bgStep=currentUnit==='mmol'?1:20;
+  for (let bg=Math.ceil(yMinDisp/bgStep)*bgStep; bg<=yMaxDisp; bg+=bgStep) {
+    ctx.beginPath(); ctx.moveTo(pad.l,yS2(bg)); ctx.lineTo(W-pad.r,yS2(bg)); ctx.stroke();
   }
-  // Vertical time grid
-  for (let t = -20; t <= 60; t += 10) {
-    ctx.beginPath(); ctx.moveTo(xS(t), pad.t); ctx.lineTo(xS(t), H - pad.b); ctx.stroke();
+  function yS2(dispVal) { return H-pad.b-(dispVal-yMinDisp)/(yMaxDisp-yMinDisp)*(H-pad.t-pad.b); }
+
+  for (let t=-20;t<=60;t+=10) {
+    ctx.beginPath(); ctx.moveTo(xS(t),pad.t); ctx.lineTo(xS(t),H-pad.b); ctx.stroke();
   }
 
-  // ── Reference lines ───────────────────────────────────────
-  ctx.setLineDash([5, 4]);
-  // Target line
-  ctx.strokeStyle = 'rgba(16,185,129,0.5)'; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(pad.l, yS(inp.target)); ctx.lineTo(W - pad.r, yS(inp.target)); ctx.stroke();
-  // Hypo line
-  ctx.strokeStyle = 'rgba(239,68,68,0.4)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(pad.l, yS(70)); ctx.lineTo(W - pad.r, yS(70)); ctx.stroke();
+  // Reference lines
+  ctx.setLineDash([5,4]);
+  ctx.strokeStyle='rgba(16,185,129,0.5)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(pad.l,yS(inp.target)); ctx.lineTo(W-pad.r,yS(inp.target)); ctx.stroke();
+  ctx.strokeStyle='rgba(239,68,68,0.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad.l,yS(70)); ctx.lineTo(W-pad.r,yS(70)); ctx.stroke();
   ctx.setLineDash([]);
 
-  // ── "Now" vertical ────────────────────────────────────────
-  ctx.strokeStyle = 'rgba(148,163,184,0.35)'; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(xS(0), pad.t); ctx.lineTo(xS(0), H - pad.b); ctx.stroke();
-  ctx.fillStyle = '#475569'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
-  ctx.fillText('Now', xS(0), pad.t - 6);
+  ctx.strokeStyle='rgba(148,163,184,0.35)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(xS(0),pad.t); ctx.lineTo(xS(0),H-pad.b); ctx.stroke();
+  ctx.fillStyle='#475569'; ctx.font='10px system-ui'; ctx.textAlign='center';
+  ctx.fillText('Now',xS(0),pad.t-6);
 
-  // ── Historical BG line ────────────────────────────────────
-  ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 2.5;
+  // Historical
+  ctx.strokeStyle='#60a5fa'; ctx.lineWidth=2.5;
   ctx.beginPath();
-  hist.forEach((p, i) => i === 0 ? ctx.moveTo(xS(p.t), yS(p.bg)) : ctx.lineTo(xS(p.t), yS(p.bg)));
-  ctx.stroke();
-  // Dots on historical readings
-  hist.forEach(p => {
-    ctx.beginPath();
-    ctx.arc(xS(p.t), yS(p.bg), 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#60a5fa'; ctx.fill();
-  });
+  hist.forEach((p,i)=>i===0?ctx.moveTo(xS(p.t),yS(p.bg)):ctx.lineTo(xS(p.t),yS(p.bg))); ctx.stroke();
+  hist.forEach(p=>{ ctx.beginPath(); ctx.arc(xS(p.t),yS(p.bg),4,0,Math.PI*2); ctx.fillStyle='#60a5fa'; ctx.fill(); });
 
-  // ── No-boost projection (grey dashed) ─────────────────────
-  ctx.strokeStyle = '#475569'; ctx.lineWidth = 1.8; ctx.setLineDash([5, 4]);
+  // No-boost
+  ctx.strokeStyle='#475569'; ctx.lineWidth=1.8; ctx.setLineDash([5,4]);
   ctx.beginPath();
-  noBoostBGs.forEach((bg, i) => {
-    const t = i * STEP;
-    i === 0 ? ctx.moveTo(xS(t), yS(bg)) : ctx.lineTo(xS(t), yS(bg));
-  });
-  ctx.stroke();
+  noBoostBGs.forEach((bg,i)=>{ const t=i*STEP; i===0?ctx.moveTo(xS(t),yS(bg)):ctx.lineTo(xS(t),yS(bg)); }); ctx.stroke();
   ctx.setLineDash([]);
 
-  // ── With-boost projection (green solid) ───────────────────
-  ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2.5;
+  // With-boost
+  ctx.strokeStyle='#10b981'; ctx.lineWidth=2.5;
   ctx.beginPath();
-  withBoostBGs.forEach((bg, i) => {
-    const t = i * STEP;
-    i === 0 ? ctx.moveTo(xS(t), yS(bg)) : ctx.lineTo(xS(t), yS(bg));
-  });
-  ctx.stroke();
-
-  // Shaded area between the two projections
-  ctx.fillStyle = 'rgba(16,185,129,0.07)';
+  withBoostBGs.forEach((bg,i)=>{ const t=i*STEP; i===0?ctx.moveTo(xS(t),yS(bg)):ctx.lineTo(xS(t),yS(bg)); }); ctx.stroke();
+  ctx.fillStyle='rgba(16,185,129,0.07)';
   ctx.beginPath();
-  withBoostBGs.forEach((bg, i) => {
-    const t = i * STEP;
-    i === 0 ? ctx.moveTo(xS(t), yS(bg)) : ctx.lineTo(xS(t), yS(bg));
-  });
-  for (let i = noBoostBGs.length - 1; i >= 0; i--) {
-    ctx.lineTo(xS(i * STEP), yS(noBoostBGs[i]));
-  }
+  withBoostBGs.forEach((bg,i)=>{ const t=i*STEP; i===0?ctx.moveTo(xS(t),yS(bg)):ctx.lineTo(xS(t),yS(bg)); });
+  for (let i=noBoostBGs.length-1;i>=0;i--) ctx.lineTo(xS(i*STEP),yS(noBoostBGs[i]));
   ctx.closePath(); ctx.fill();
 
-  // ── SMB event markers ─────────────────────────────────────
-  smbEvents.forEach(ev => {
-    const x = xS(ev.t), y = yS(ev.bg);
-    // Triangle pointing up
-    ctx.beginPath();
-    ctx.moveTo(x, y - 14);
-    ctx.lineTo(x - 6, y - 4);
-    ctx.lineTo(x + 6, y - 4);
-    ctx.closePath();
-    ctx.fillStyle = '#a78bfa'; ctx.fill();
-    // Vertical tick at bottom
-    ctx.strokeStyle = 'rgba(167,139,250,0.4)'; ctx.lineWidth = 1; ctx.setLineDash([2,3]);
-    ctx.beginPath(); ctx.moveTo(x, H - pad.b); ctx.lineTo(x, y - 5); ctx.stroke();
-    ctx.setLineDash([]);
-    // Label
-    ctx.fillStyle = '#c4b5fd'; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
-    ctx.fillText(ev.units.toFixed(2) + 'U', x, y - 17);
+  // SMB markers
+  smbEvents.forEach(ev=>{
+    const x=xS(ev.t),y=yS(ev.bg);
+    ctx.beginPath(); ctx.moveTo(x,y-14); ctx.lineTo(x-6,y-4); ctx.lineTo(x+6,y-4); ctx.closePath();
+    ctx.fillStyle='#a78bfa'; ctx.fill();
+    ctx.strokeStyle='rgba(167,139,250,0.4)'; ctx.lineWidth=1; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(x,H-pad.b); ctx.lineTo(x,y-5); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#c4b5fd'; ctx.font='9px system-ui'; ctx.textAlign='center';
+    ctx.fillText(ev.units.toFixed(2)+'U',x,y-17);
   });
 
-  // ── Axis labels ────────────────────────────────────────────
-  ctx.fillStyle = '#475569'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
-  [-20, -10, 0, 10, 20, 30, 40, 50, 60].forEach(t => {
-    const label = t === 0 ? '0' : (t > 0 ? '+' + t : t.toString());
-    ctx.fillText(label + 'm', xS(t), H - pad.b + 14);
+  // Axes labels
+  ctx.fillStyle='#475569'; ctx.font='10px system-ui'; ctx.textAlign='center';
+  [-20,-10,0,10,20,30,40,50,60].forEach(t=>{
+    ctx.fillText((t===0?'0':(t>0?'+'+t:t))+'m',xS(t),H-pad.b+14);
   });
-  ctx.textAlign = 'right';
-  for (let bg = Math.ceil(yMin / 20) * 20; bg <= yMax; bg += 20) {
-    if (bg >= yMin && bg <= yMax) ctx.fillText(bg, pad.l - 6, yS(bg) + 4);
+  ctx.textAlign='right';
+  for (let bg=Math.ceil(yMinDisp/bgStep)*bgStep; bg<=yMaxDisp; bg+=bgStep) {
+    ctx.fillText(bg.toFixed(currentUnit==='mmol'?1:0),pad.l-6,yS2(bg)+4);
   }
-  // BG unit label
-  ctx.save(); ctx.translate(13, H / 2); ctx.rotate(-Math.PI / 2);
-  ctx.textAlign = 'center'; ctx.fillText('mg/dL', 0, 0); ctx.restore();
+  ctx.save(); ctx.translate(13,H/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center';
+  ctx.fillText(dispUnit(),0,0); ctx.restore();
 
-  // Current BG dot (junction of history + projection)
-  ctx.beginPath();
-  ctx.arc(xS(0), yS(inp.bg), 5, 0, Math.PI * 2);
-  ctx.fillStyle = '#6ee7b7'; ctx.fill();
+  ctx.beginPath(); ctx.arc(xS(0),yS(inp.bg),5,0,Math.PI*2); ctx.fillStyle='#6ee7b7'; ctx.fill();
+  ctx.fillStyle='rgba(16,185,129,0.7)'; ctx.font='10px system-ui'; ctx.textAlign='left';
+  ctx.fillText(`Target ${fmtBG(inp.target,currentUnit==='mmol'?1:0)} ${dispUnit()}`,pad.l+4,yS(inp.target)-4);
 
-  // Target label
-  ctx.fillStyle = 'rgba(16,185,129,0.7)'; ctx.font = '10px system-ui'; ctx.textAlign = 'left';
-  ctx.fillText(`Target ${inp.target}`, pad.l + 4, yS(inp.target) - 4);
-
-  // ── Populate SMB log ──────────────────────────────────────
-  const logEl = document.getElementById('proj-smb-log');
-  if (smbEvents.length === 0) {
-    logEl.textContent = r.tier === 'BLOCKED' || r.microBolus === 0
-      ? 'No SMBs projected — ' + (r.boostDisabledScale ? 'Boost disabled (scale≥3)' : r.ioBlock ? 'IOB at maxIOB' : r.nightSuppressed ? 'Night mode active' : 'BG at or below target')
-      : 'No further SMBs projected in the next 60 min given current trend and IOB.';
+  // SMB log
+  const logEl=document.getElementById('proj-smb-log');
+  if (smbEvents.length===0) {
+    logEl.textContent = r.tier==='BLOCKED'||r.microBolus===0
+      ? 'No SMBs projected — '+(r.boostDisabledScale?'Boost disabled':r.ioBlock?'IOB at maxIOB':r.nightSuppressed?'Night mode active':'BG at or below target')
+      : 'No further SMBs projected in the next 60 min.';
   } else {
-    const totalU = smbEvents.reduce((s, e) => s + e.units, 0);
-    const finalBG = withBoostBGs[withBoostBGs.length - 1];
-    logEl.innerHTML = smbEvents.map(ev =>
-      `+${ev.t}min: <b style="color:#a78bfa">${ev.units.toFixed(2)} U</b> (BG ≈ ${Math.round(ev.bg)} mg/dL, ${r.tier})`
-    ).join('<br>') +
-    `<br><span style="color:#64748b">Total projected: ${totalU.toFixed(2)} U over 60 min &nbsp;·&nbsp; ` +
-    `Projected BG at +60 min: <b style="color:${finalBG < 70 ? '#f87171' : finalBG < inp.target + 30 ? '#6ee7b7' : '#f59e0b'}">${Math.round(finalBG)} mg/dL</b></span>`;
+    const totalU=smbEvents.reduce((s,e)=>s+e.units,0);
+    const finalBG=withBoostBGs[withBoostBGs.length-1];
+    logEl.innerHTML=smbEvents.map(ev=>
+      `+${ev.t}min: <b style="color:#a78bfa">${ev.units.toFixed(2)} U</b> (BG ≈ ${fmtBG(ev.bg,currentUnit==='mmol'?1:0)} ${dispUnit()}, ${r.tier})`
+    ).join('<br>')+
+    `<br><span style="color:#64748b">Total: ${totalU.toFixed(2)} U over 60 min · ` +
+    `Proj. BG at +60 min: <b style="color:${finalBG<70?'#f87171':finalBG<inp.target+30?'#6ee7b7':'#f59e0b'}">${fmtBG(finalBG,currentUnit==='mmol'?1:0)} ${dispUnit()}</b></span>`;
   }
 }
 
 function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    const tabs = ['isf','curve','smb','proj'];
-    t.classList.toggle('active', tabs[i] === name);
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const tabs=['isf','curve','smb','proj'];
+    t.classList.toggle('active',tabs[i]===name);
   });
-  document.querySelectorAll('.tab-page').forEach(p => {
-    p.classList.toggle('active', p.id === 'tab-' + name);
-  });
-  setTimeout(() => { const inp = getInputs(); drawCharts(inp, calcAll(inp)); }, 50);
+  document.querySelectorAll('.tab-page').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));
+  setTimeout(()=>{ const inp=getInputs(); drawCharts(inp,calcAll(inp)); },50);
 }
 
 // ════════════════════════════════════════════════════════════
-// Nightscout integration
+// Nightscout
 // ════════════════════════════════════════════════════════════
-let nsUrl = '', nsToken = '';
-let nsHistory = []; // [{t: offsetMinutes, bg: value}], t=0 is current, negative = past
+let nsUrl='', nsToken='';
+let nsHistory=[];
 
-function closeNsModal() {
-  document.getElementById('ns-modal-overlay').style.display = 'none';
-}
-
-function setNsMsg(msg, cls) {
-  const el = document.getElementById('ns-status-msg');
-  el.textContent = msg;
-  el.className = cls || '';
-}
+function closeNsModal() { document.getElementById('ns-modal-overlay').style.display='none'; }
+function setNsMsg(msg,cls) { const el=document.getElementById('ns-status-msg'); el.textContent=msg; el.className=cls||''; }
 
 async function connectNightscout() {
-  const rawUrl   = document.getElementById('ns-url-input').value.trim();
-  const rawToken = document.getElementById('ns-token-input').value.trim();
-
-  if (!rawUrl) {
-    // No URL — just go to manual mode
-    closeNsModal();
-    return;
-  }
-
-  const btn = document.getElementById('ns-connect-btn');
-  btn.disabled = true;
-  btn.textContent = 'Connecting…';
-  setNsMsg('Fetching data from Nightscout…', 'loading');
-
+  const rawUrl=document.getElementById('ns-url-input').value.trim();
+  const rawToken=document.getElementById('ns-token-input').value.trim();
+  if (!rawUrl) { closeNsModal(); return; }
+  const btn=document.getElementById('ns-connect-btn');
+  btn.disabled=true; btn.textContent='Connecting…';
+  setNsMsg('Fetching data from Nightscout…','loading');
   try {
-    await fetchAndApplyNs(rawUrl, rawToken);
-    nsUrl   = rawUrl;
-    nsToken = rawToken;
-    localStorage.setItem('ns_url',   nsUrl);
-    localStorage.setItem('ns_token', nsToken);
-    closeNsModal();
-    showNsBar();
-  } catch (e) {
-    setNsMsg('Error: ' + e.message, 'err');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Connect & Load Data';
-  }
+    await fetchAndApplyNs(rawUrl,rawToken);
+    nsUrl=rawUrl; nsToken=rawToken;
+    localStorage.setItem('ns_url',nsUrl); localStorage.setItem('ns_token',nsToken);
+    closeNsModal(); showNsBar();
+  } catch(e) { setNsMsg('Error: '+e.message,'err'); }
+  finally { btn.disabled=false; btn.textContent='Connect & Load Data'; }
 }
 
-async function fetchAndApplyNs(url, token) {
-  const base = url.replace(/\/+$/, '');
-  function apiUrl(path, extra) {
-    const qs = new URLSearchParams();
-    if (token) qs.set('token', token);
-    if (extra) Object.entries(extra).forEach(([k,v]) => qs.set(k, v));
+async function fetchAndApplyNs(url,token) {
+  const base=url.replace(/\/+$/,'');
+  function apiUrl(path,extra) {
+    const qs=new URLSearchParams();
+    if (token) qs.set('token',token);
+    if (extra) Object.entries(extra).forEach(([k,v])=>qs.set(k,v));
     return `${base}${path}?${qs}`;
   }
-
-  // ── Fetch entries (BG readings) ───────────────────────────
-  const entRes = await fetch(apiUrl('/api/v1/entries.json', { count: 12 }));
+  const entRes=await fetch(apiUrl('/api/v1/entries.json',{count:12}));
   if (!entRes.ok) throw new Error(`Entries ${entRes.status}: check URL and token`);
-  const entries = await entRes.json();
-  if (!entries || entries.length < 2) throw new Error('Not enough BG readings in Nightscout');
-
-  // ── Fetch device status (IOB, COB) ────────────────────────
-  let ds = null;
-  try {
-    const dsRes = await fetch(apiUrl('/api/v1/devicestatus.json', { count: 1 }));
-    if (dsRes.ok) { const arr = await dsRes.json(); ds = arr && arr[0]; }
-  } catch (_) {}
-
-  // ── Fetch profile (basal, ISF, CR, target) ────────────────
-  let profile = null;
-  try {
-    const prRes = await fetch(apiUrl('/api/v1/profile.json'));
-    if (prRes.ok) profile = await prRes.json();
-  } catch (_) {}
-
-  applyNsData(entries, ds, profile);
+  const entries=await entRes.json();
+  if (!entries||entries.length<2) throw new Error('Not enough BG readings');
+  let ds=null;
+  try { const dsRes=await fetch(apiUrl('/api/v1/devicestatus.json',{count:1})); if(dsRes.ok){const arr=await dsRes.json();ds=arr&&arr[0];} } catch(_){}
+  let profile=null;
+  try { const prRes=await fetch(apiUrl('/api/v1/profile.json')); if(prRes.ok) profile=await prRes.json(); } catch(_){}
+  applyNsData(entries,ds,profile);
 }
 
-// Normalise a per-5-min delta from two entries that may be any time apart
-function entryDelta(a, b) {
-  const dt = (a.date - b.date) / 60000; // minutes
-  if (dt <= 0 || dt > 15) return null;
-  return (a.sgv - b.sgv) * (5 / dt);
+function entryDelta(a,b) {
+  const dt=(a.date-b.date)/60000;
+  if (dt<=0||dt>15) return null;
+  return (a.sgv-b.sgv)*(5/dt);
 }
-
-// Average rate over a window (expressed as per-5-min)
-function avgDeltaOverWindow(entries, windowMin) {
-  const cutoff = entries[0].date - windowMin * 60000 - 30000;
-  const slice  = entries.filter(e => e.date >= cutoff);
-  if (slice.length < 2) return entryDelta(entries[0], entries[1]);
-  const oldest = slice[slice.length - 1];
-  const dt = (entries[0].date - oldest.date) / 60000;
-  if (dt <= 0) return 0;
-  return (entries[0].sgv - oldest.sgv) * (5 / dt);
+function avgDeltaOverWindow(entries,windowMin) {
+  const cutoff=entries[0].date-windowMin*60000-30000;
+  const slice=entries.filter(e=>e.date>=cutoff);
+  if (slice.length<2) return entryDelta(entries[0],entries[1]);
+  const oldest=slice[slice.length-1];
+  const dt=(entries[0].date-oldest.date)/60000;
+  if (dt<=0) return 0;
+  return (entries[0].sgv-oldest.sgv)*(5/dt);
 }
-
-function getProfileValueAt(schedule, nowMs) {
-  // schedule: [{time:"HH:MM", value:x}, ...] sorted by time
-  if (!schedule || !schedule.length) return null;
-  const midnight = new Date(nowMs); midnight.setHours(0,0,0,0);
-  const secsFromMidnight = (nowMs - midnight.getTime()) / 1000;
-  let val = schedule[0].value;
+function getProfileValueAt(schedule,nowMs) {
+  if (!schedule||!schedule.length) return null;
+  const midnight=new Date(nowMs); midnight.setHours(0,0,0,0);
+  const secsFromMidnight=(nowMs-midnight.getTime())/1000;
+  let val=schedule[0].value;
   for (const slot of schedule) {
-    const parts = slot.time.split(':').map(Number);
-    const slotSecs = parts[0]*3600 + parts[1]*60;
-    if (slotSecs <= secsFromMidnight) val = slot.value;
-    else break;
+    const parts=slot.time.split(':').map(Number);
+    const slotSecs=parts[0]*3600+parts[1]*60;
+    if (slotSecs<=secsFromMidnight) val=slot.value; else break;
   }
   return val;
 }
 
-function setSlider(id, value, min, max) {
-  const el = document.getElementById('s-' + id);
+function setSliderMgdl(id,mgdlValue,mgdlMin,mgdlMax) {
+  const clamped=Math.max(mgdlMin,Math.min(mgdlMax,mgdlValue));
+  sliderMgdlValues[id]=clamped;
+  const el=document.getElementById('s-'+id);
   if (!el) return;
-  el.value = Math.max(parseFloat(el.min || min), Math.min(parseFloat(el.max || max), value));
+  if (currentUnit==='mmol') el.value=(clamped/MMOL).toFixed(2);
+  else el.value=clamped;
+}
+function setSlider(id,value,min,max) {
+  const el=document.getElementById('s-'+id);
+  if (!el) return;
+  el.value=Math.max(parseFloat(el.min||min),Math.min(parseFloat(el.max||max),value));
 }
 
-function applyNsData(entries, ds, profileData) {
-  const nowMs = Date.now();
-
-  // ── Store BG history for projection chart ─────────────────
-  // entries are newest-first; convert to offset-from-now in minutes
-  const t0 = entries[0].date;
-  nsHistory = entries.slice(0, 8).map(e => ({
-    t:  (e.date - t0) / 60000, // 0 = current, negative = past
-    bg: e.sgv,
-  }));
-
-  // ── BG and deltas ─────────────────────────────────────────
-  const bg        = entries[0].sgv;
-  const delta     = entryDelta(entries[0], entries[1]) ?? 0;
-  const shortAvg  = avgDeltaOverWindow(entries, 15) ?? delta;
-  const longAvg   = avgDeltaOverWindow(entries, 30) ?? delta * 0.7;
-
-  setSlider('bg',            bg,       40,  350);
-  setSlider('delta',         +delta.toFixed(1),  -10, 15);
-  setSlider('shortAvgDelta', +shortAvg.toFixed(1), -10, 15);
-  setSlider('longAvgDelta',  +longAvg.toFixed(1),  -10, 15);
-
-  // ── IOB and COB from device status ────────────────────────
+function applyNsData(entries,ds,profileData) {
+  const nowMs=Date.now();
+  const t0=entries[0].date;
+  nsHistory=entries.slice(0,8).map(e=>({t:(e.date-t0)/60000,bg:e.sgv}));
+  const bg=entries[0].sgv;
+  const delta=entryDelta(entries[0],entries[1])??0;
+  const shortAvg=avgDeltaOverWindow(entries,15)??delta;
+  const longAvg=avgDeltaOverWindow(entries,30)??(delta*0.7);
+  setSliderMgdl('bg',bg,40,350);
+  setSliderMgdl('delta',+delta.toFixed(1),-10,15);
+  setSliderMgdl('shortAvgDelta',+shortAvg.toFixed(1),-10,15);
+  setSliderMgdl('longAvgDelta',+longAvg.toFixed(1),-10,15);
   if (ds) {
-    const oas = ds.openaps || {};
-    const iob = oas.iob?.iob ?? oas.suggested?.IOB ?? oas.enacted?.IOB;
-    const cob = oas.suggested?.COB ?? oas.enacted?.COB ?? oas.iob?.activity;
-    if (iob != null && isFinite(iob)) setSlider('iob', +iob.toFixed(2), -1, 15);
-    if (cob != null && isFinite(cob) && cob >= 0) setSlider('cob', Math.round(cob), 0, 100);
-    // TDD – AAPS may put it in various locations
-    const tdd = oas.suggested?.TDD ?? oas.enacted?.TDD ?? oas.iob?.TDD ?? ds.tdd;
-    if (tdd != null && isFinite(tdd) && tdd > 5) setSlider('tdd', +tdd.toFixed(1), 10, 100);
+    const oas=ds.openaps||{};
+    const iob=oas.iob?.iob??oas.suggested?.IOB??oas.enacted?.IOB;
+    const cob=oas.suggested?.COB??oas.enacted?.COB??oas.iob?.activity;
+    const tdd=oas.suggested?.TDD??oas.enacted?.TDD??oas.iob?.TDD??ds.tdd;
+    if (iob!=null&&isFinite(iob)) setSlider('iob',+iob.toFixed(2),-1,15);
+    if (cob!=null&&isFinite(cob)&&cob>=0) setSlider('cob',Math.round(cob),0,100);
+    if (tdd!=null&&isFinite(tdd)&&tdd>5) setSlider('tdd',+tdd.toFixed(1),10,100);
   }
-
-  // ── Profile: basal, ISF, CR, target ──────────────────────
   if (profileData) {
-    // Nightscout profile.json can be a single object or array; take first/current
-    const rec  = Array.isArray(profileData) ? profileData[0] : profileData;
-    const store = rec?.store;
-    const defaultName = rec?.defaultProfile || (store && Object.keys(store)[0]);
-    const prof = store?.[defaultName];
+    const rec=Array.isArray(profileData)?profileData[0]:profileData;
+    const store=rec?.store;
+    const defaultName=rec?.defaultProfile||(store&&Object.keys(store)[0]);
+    const prof=store?.[defaultName];
     if (prof) {
-      const basal  = getProfileValueAt(prof.basal,     nowMs);
-      const isf    = getProfileValueAt(prof.sens,      nowMs); // sens = ISF in NS profile
-      const cr     = getProfileValueAt(prof.carbratio, nowMs);
-      const tgLow  = getProfileValueAt(prof.target_low,  nowMs);
-      const tgHigh = getProfileValueAt(prof.target_high, nowMs);
-      if (basal != null) setSlider('basal',   +basal.toFixed(2), 0.1, 5);
-      if (isf   != null) setSlider('profIsf', Math.round(isf),   10,  200);
-      if (cr    != null) setSlider('cr',      +cr.toFixed(1),    3,   30);
-      if (tgLow != null && tgHigh != null) {
-        setSlider('target', Math.round((tgLow + tgHigh) / 2), 72, 180);
-      }
+      const basal=getProfileValueAt(prof.basal,nowMs);
+      const isf=getProfileValueAt(prof.sens,nowMs);
+      const cr=getProfileValueAt(prof.carbratio,nowMs);
+      const tgLow=getProfileValueAt(prof.target_low,nowMs);
+      const tgHigh=getProfileValueAt(prof.target_high,nowMs);
+      if (basal!=null) setSlider('basal',+basal.toFixed(2),0.1,5);
+      if (isf!=null) setSliderMgdl('profIsf',Math.round(isf),10,200);
+      if (cr!=null) setSlider('cr',+cr.toFixed(1),3,30);
+      if (tgLow!=null&&tgHigh!=null) setSliderMgdl('target',Math.round((tgLow+tgHigh)/2),72,180);
     }
   }
-
   update();
 }
 
 function showNsBar() {
-  const bar = document.getElementById('ns-live-bar');
-  bar.style.display = 'flex';
-  const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-  document.getElementById('ns-live-label').textContent = `Nightscout live · loaded ${now}`;
+  const bar=document.getElementById('ns-live-bar'); bar.style.display='flex';
+  document.getElementById('ns-live-label').textContent=`Nightscout live · loaded ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
 }
-
 async function refreshNsData() {
   if (!nsUrl) return;
-  const lbl = document.getElementById('ns-live-label');
-  const prev = lbl.textContent;
-  lbl.textContent = 'Refreshing…';
-  try {
-    await fetchAndApplyNs(nsUrl, nsToken);
-    const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    lbl.textContent = `Nightscout live · refreshed ${now}`;
-  } catch (e) {
-    lbl.textContent = prev + ' (refresh failed)';
-  }
+  const lbl=document.getElementById('ns-live-label'); const prev=lbl.textContent; lbl.textContent='Refreshing…';
+  try { await fetchAndApplyNs(nsUrl,nsToken); lbl.textContent=`Nightscout live · refreshed ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`; }
+  catch(e) { lbl.textContent=prev+' (refresh failed)'; }
 }
-
 function disconnectNs() {
-  nsUrl = ''; nsToken = '';
-  localStorage.removeItem('ns_url');
-  localStorage.removeItem('ns_token');
-  document.getElementById('ns-live-bar').style.display = 'none';
+  nsUrl=''; nsToken=''; localStorage.removeItem('ns_url'); localStorage.removeItem('ns_token');
+  document.getElementById('ns-live-bar').style.display='none';
 }
 
-// ── On load: restore saved URL/token, show modal ─────────
-(function initNs() {
-  const savedUrl   = localStorage.getItem('ns_url')   || '';
-  const savedToken = localStorage.getItem('ns_token') || '';
-  document.getElementById('ns-url-input').value   = savedUrl;
-  document.getElementById('ns-token-input').value = savedToken;
-  // If saved credentials exist, try to auto-connect; otherwise just show modal
+// ════════════════════════════════════════════════════════════
+// Init
+// ════════════════════════════════════════════════════════════
+(function init() {
+  initSliderValues();
+  patchBgSliderHandlers();
+  const savedUrl=localStorage.getItem('ns_url')||'';
+  const savedToken=localStorage.getItem('ns_token')||'';
+  document.getElementById('ns-url-input').value=savedUrl;
+  document.getElementById('ns-token-input').value=savedToken;
   if (savedUrl) {
-    nsUrl = savedUrl; nsToken = savedToken;
-    fetchAndApplyNs(savedUrl, savedToken)
-      .then(() => { closeNsModal(); showNsBar(); })
-      .catch(() => { /* show modal so user can fix credentials */ });
+    nsUrl=savedUrl; nsToken=savedToken;
+    fetchAndApplyNs(savedUrl,savedToken).then(()=>{closeNsModal();showNsBar();}).catch(()=>{});
   }
+  window.addEventListener('resize',()=>{ const inp=getInputs(); drawCharts(inp,calcAll(inp)); });
+  update();
 })();
-
-// Initial render
-window.addEventListener('resize', () => { const inp = getInputs(); drawCharts(inp, calcAll(inp)); });
-update();
 </script>
 </body>
 </html>
