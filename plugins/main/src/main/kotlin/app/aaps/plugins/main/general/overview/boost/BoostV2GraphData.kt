@@ -74,7 +74,7 @@ class BoostV2GraphData @Inject constructor(
         /** Now line — white at 10 % opacity */
         val NOW_LINE = Color.argb(26, 255, 255, 255)
 
-        /** Target line — white at 15 % opacity */
+        /** Target line — white at 40 % opacity */
         val TARGET_LINE = Color.argb(102, 255, 255, 255)
 
         /** IOB line colour — blue #60a5fa */
