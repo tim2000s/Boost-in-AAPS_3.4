@@ -59,7 +59,8 @@
   <h1>Boost Analyser <span class="v6">— V1 vs V6, on your own data</span></h1>
   <p class="sub">Every Boost build since the multi-user shadow beta logs <em>both</em> engines' decisions every cycle:
   what your running engine delivered, and what the other engine decided on identical inputs. This page reads that
-  telemetry straight from your Nightscout and shows you the real, paired comparison.</p>
+  telemetry straight from your Nightscout and shows you the real, paired comparison. Works with AAPS Boost builds
+  <em>and</em> the Trio (iOS) Boost port — the site type is auto-detected from the data.</p>
 
   <div class="banner"><b>What this is — and is not.</b> This compares what the two engines <em>decided</em> on your
   real history (doses, meal detection, timing). It does <b>not</b> simulate what your glucose would have been —
@@ -92,6 +93,7 @@
   </div>
 
   <div id="results">
+    <div class="banner" id="modeBanner" style="display:none"></div>
     <h2>Your actual glycaemia (on the engine you were running)</h2>
     <div class="row" style="align-items:stretch">
       <div class="card" style="flex:1.25;min-width:340px;margin:0">
@@ -105,28 +107,28 @@
     </div>
     <p class="muted" id="modeLine"></p>
 
-    <h2>Dose decisions: V1 vs V6</h2>
+    <h2 id="doseHead">Dose decisions: V1 vs V6</h2>
     <div class="stats" id="doseStats"></div>
     <div class="card">
       <canvas id="histCanvas" width="1000" height="220"></canvas>
-      <div class="legend">Per-cycle dose difference (V6 − V1), all paired cycles. Left of centre = V6 decided less
+      <div class="legend" id="histLegend">Per-cycle dose difference (V6 − V1), all paired cycles. Left of centre = V6 decided less
       insulin than V1; right = more. The big bar at zero is both engines agreeing.</div>
     </div>
     <div class="card">
       <table id="splitTable"></table>
-      <div class="legend">Night = 22:00–07:00 in your browser's timezone. “V6 extra at night, unannounced” is the
+      <div class="legend" id="splitLegend">Night = 22:00–07:00 in your browser's timezone. “V6 extra at night, unannounced” is the
       pattern the V6 night gate (July 2026) now suppresses on current builds.</div>
     </div>
 
     <h2>How the engines dose a meal, on average <span class="muted" id="epCount"></span></h2>
-    <p class="muted">All auto-detected rises (≥50 mg/dL within 90 min) aligned at onset. Lines are the <b>mean
+    <p class="muted" id="mealBlurb">All auto-detected rises (≥50 mg/dL within 90 min) aligned at onset. Lines are the <b>mean
     cumulative insulin</b> each engine decided from 30 min before onset — the shape difference IS the story:
     V6 holds, fires its commit-shot, then tapers; V1 ramps steadily. The gap is shaded
     (<span style="color:var(--accent)">cyan</span> where V6 has delivered more,
     <span style="color:var(--amber)">amber</span> where V1 has). Modal V6 state underneath.</p>
     <div class="card">
       <canvas id="mealDoseCanvas" width="1000" height="280"></canvas>
-      <div class="legend"><span><span class="dot" style="background:#94a3b8"></span>V1 cumulative (mean)</span>
+      <div class="legend" id="mealLegend"><span><span class="dot" style="background:#94a3b8"></span>V1 cumulative (mean)</span>
         <span><span class="dot" style="background:#00d4ff"></span>V6 cumulative (mean)</span>
         <span>ribbon: modal V6 state</span></div>
     </div>
@@ -189,6 +191,13 @@
         that isn't present are counted as unpaired and excluded from dose deltas.</li>
         <li>If your build predates the shadow telemetry (~May 2026), no <code>boostV5_*</code> fields exist and this
         page can't compare — update Boost first.</li>
+        <li><b>Trio sites</b> are auto-detected per dataset: structured <code>boostV5_*</code> fields → AAPS; the
+        <code>boostV5[…]</code> tag in <code>suggested.reason</code> (or the <code>device: "Trio"</code> signature)
+        → Trio, where stock trio-oref is the acting engine and Boost V6 runs in shadow. The acting dose is
+        trio-oref's suggested SMB (<code>suggested.units</code>; absent = 0), Boost V6 is parsed from the tag.
+        AAPS-only telemetry (Phase-3 gate fields, cap values, the <code>base would=</code> counterfactual) has no
+        Trio equivalent and is shown as n/a; Boost-ACTIVE Trio cycles don't log the oref counterfactual and are
+        counted unpaired. Mixed windows (uploader switched) are analysed per cycle in each record's own mode.</li>
         <li>TING = Time In Normo-glycaemia, 3.5–7.8 mmol/L (63–140 mg/dL), reported alongside standard TIR 70–180.</li>
       </ul>
     </div>
@@ -199,6 +208,68 @@
 /* ================================ CORE ================================
    Pure functions — no DOM, no fetch. Node-testable. */
 
+/* ---- Trio (iOS Boost port) support ----
+   On Trio sites the ACTING engine is stock trio-oref and Boost V6 runs in SHADOW, logged as a
+   compact tag APPENDED to openaps.suggested.reason (Trio BoostV5Adapter.reasonTag):
+     boostV5[<off|shadow|active>]: state=<STATE> score=<s> wouldSMB=<u>U; ml(hypo=<x|n/a> meal=<x|n/a>)[ exercise| postEx][ asleep]
+   There are NO structured boostV5_* fields on Trio. Trio's NS uploader only rewrites
+   ISF/Target/Dev/BGI/predBG patterns for mmol users, so the tag survives verbatim. */
+function parseTrioTag(reason) {
+  const m = String(reason || "").match(
+    /boostV5\[(off|shadow|active)\]:\s*state=([A-Z]+)\s+score=(-?[\d.]+)\s+wouldSMB=(-?[\d.]+)U;\s*ml\(hypo=([\d.]+|n\/a)\s+meal=([\d.]+|n\/a)\)((?:\s+(?:exercise|postEx|asleep))*)/);
+  if (!m) return null;
+  const flags = m[7].trim().split(/\s+/).filter(Boolean);
+  return {
+    mode: m[1], state: m[2],
+    score: parseFloat(m[3]), wouldSMB: parseFloat(m[4]),
+    mlHypo: m[5] === "n/a" ? null : parseFloat(m[5]),
+    mlMeal: m[6] === "n/a" ? null : parseFloat(m[6]),
+    exercise: flags.indexOf("exercise") >= 0,
+    postEx: flags.indexOf("postEx") >= 0,
+    asleep: flags.indexOf("asleep") >= 0
+  };
+}
+
+// Per-record source sniff: structured boostV5_* fields → AAPS Boost build; the boostV5[…] reason
+// tag or the Trio device signature (NightscoutStatus.device = "Trio") → Trio build; else unknown.
+function classifyRecordSource(d) {
+  const sug = d && d.openaps && d.openaps.suggested;
+  if (!sug) return null;
+  if (sug.boostV5_state !== undefined || sug.boostV5_finalDose !== undefined ||
+      sug.boostV5_score !== undefined) return "aaps";
+  if (parseTrioTag(sug.reason)) return "trio";
+  if (/^trio\b/i.test(String(d.device || ""))) return "trio";   // Trio site, Boost off this cycle
+  return "unknown";
+}
+
+// Dataset-level detection, per fetched dataset (never a user toggle). mixed = uploader switched
+// mid-window; the analysis stays per-cycle so each segment is handled in its own mode.
+function detectSources(dsList) {
+  const counts = { aaps: 0, trio: 0, unknown: 0 };
+  for (const d of dsList) {
+    const s = classifyRecordSource(d);
+    if (s) counts[s]++;
+  }
+  const mode = counts.aaps && counts.trio ? "mixed" : counts.trio ? "trio" : counts.aaps ? "aaps" : "none";
+  return { counts, mode };
+}
+
+// Trio uploads suggested.ISF in mg/dL·U⁻¹; guard against a profile-unit leak (mmol ISFs are <15).
+function trioIsfMgdl(v) { return v === null ? null : (v < 15 ? v * 18.016 : v); }
+
+// Contiguous same-source runs over the (sorted, deduped) cycles, for the mixed-site banner.
+function sourceSegments(cycles) {
+  const segs = [];
+  for (const c of cycles) {
+    const s = c.src || "unknown";
+    if (s === "unknown") continue;
+    const last = segs.length ? segs[segs.length - 1] : null;
+    if (last && last.src === s) { last.toTs = c.ts; last.n++; }
+    else segs.push({ src: s, fromTs: c.ts, toTs: c.ts, n: 1 });
+  }
+  return segs;
+}
+
 function parseCycles(dsList) {
   // devicestatus -> one record per openaps.suggested, newest or oldest order tolerated
   const out = [];
@@ -208,7 +279,30 @@ function parseCycles(dsList) {
     const ts = Date.parse(sug.timestamp);
     if (!isFinite(ts)) continue;
     const reason = String(sug.reason || "");
+    const src = classifyRecordSource(d) || "unknown";
+    if (src === "trio") {
+      // Trio record: everything Boost comes from the reason tag; no structured fields exist.
+      const tag = parseTrioTag(reason);
+      out.push({
+        ts, bg: numOrNull(sug.bg),
+        units: numOrNull(sug.units),          // trio-oref's suggested SMB; absent = no SMB decided
+        state: tag ? tag.state : null,
+        age: null,                            // no age in the tag — reconstructed from state runs below
+        score: tag ? tag.score : null,
+        budget: null,                         // AAPS-only telemetry
+        fd: tag ? tag.wouldSMB : null,
+        active: !!tag && tag.mode === "active",
+        gates: null,                          // AAPS-only telemetry
+        boostActive: undefined,
+        isf: trioIsfMgdl(numOrNull(sug.ISF)),
+        ccap: null, fcap: null,               // AAPS-only telemetry
+        ml: tag ? { hypo: tag.mlHypo, meal: tag.mlMeal } : null,
+        src, reason
+      });
+      continue;
+    }
     out.push({
+      src,
       ts, bg: numOrNull(sug.bg),
       units: numOrNull(sug.units),
       state: sug.boostV5_state || null,
@@ -236,15 +330,31 @@ function parseCycles(dsList) {
     if (seen.has(b)) continue;
     seen.add(b); ded.push(c);
   }
+  // Trio: reconstruct the state age (cycles spent in the current consecutive state run) — the tag
+  // carries no boostV5_age, and the commit-shot stats key on age === 0 (first CONFIRMED cycle).
+  let prev = null;
+  for (const c of ded) {
+    if (c.src === "trio" && c.state !== null)
+      c.age = (prev && prev.src === "trio" && prev.state === c.state && prev.age !== null)
+        ? prev.age + 1 : 0;
+    prev = c;
+  }
   return ded;
 }
 
 function numOrNull(v) { return (typeof v === "number" && isFinite(v)) ? v : null; }
 
 // Pair each cycle into {v1, v6}. Returns null for unpaired.
+// On Trio records "v1" is the ACTING trio-oref SMB and "v6" the tag's shadow wouldSMB.
 function pairDoses(c) {
   if (c.fd === null) return null;                    // no V6 telemetry
   const v6 = c.fd;
+  if (c.src === "trio") {
+    // shadow: trio-oref delivered; absent suggested.units = oref decided NO SMB (0), not missing data
+    if (!c.active) return { v1: c.units === null ? 0 : c.units, v6 };
+    // Boost-ACTIVE Trio cycle: the oref counterfactual isn't logged on Trio — unpaired
+    return null;
+  }
   if (!c.active) {
     // shadow build: delivered units ARE V1's dose
     return (c.units === null) ? null : { v1: c.units, v6 };
@@ -313,6 +423,16 @@ function isNightLocal(ts) { const h = new Date(ts).getHours(); return h >= 22 ||
 
 function analyse(cycles, entries, episodes) {
   const gly = glycaemia(entries);
+  // Site mode + series labels: AAPS = V1 acting / V6 shadow; Trio = trio-oref acting / Boost V6
+  // shadow (from the reason tag). All maths below is per-cycle, so mixed sites are analysed
+  // correctly segment-by-segment for free — the labels just have to say so.
+  const sources = { aaps: 0, trio: 0, unknown: 0 };
+  for (const c of cycles) sources[c.src || "unknown"]++;
+  const siteMode = sources.aaps && sources.trio ? "mixed"
+                 : sources.trio ? "trio" : sources.aaps ? "aaps" : "none";
+  const labels = siteMode === "trio" ? { v1: "Trio oref", v6: "Boost V6" }
+               : siteMode === "mixed" ? { v1: "V1/oref", v6: "Boost V6" }
+               : { v1: "V1", v6: "V6" };
   const paired = [];
   let unpaired = 0, withV6 = 0;
   const stateCount = {}; const gateCount = {};
@@ -359,13 +479,15 @@ function analyse(cycles, entries, episodes) {
   const days = cycles.length ? (cycles[cycles.length - 1].ts - cycles[0].ts) / 86400000 : 0;
   const activeMode = (cycles.filter(c=>c.active).length) > cycles.length/2;
   const cfDeltas = counterfactualDeltas(cycles);
-  const nearMiss = nearMissAnalysis(cycles, entries, cfDeltas);
+  const nearMiss = nearMissAnalysis(cycles, entries, cfDeltas, labels);
   const modelStub = { episodes: eps, nearMiss, night: mk(night), gly };
-  const hints = leverHints(modelStub, cycles, activeMode);
+  const hints = leverHints(modelStub, cycles, activeMode, labels);
   const cfSeries = counterfactualSeries(entries, cycles);
   return {
+    siteMode, sources, labels, segments: sourceSegments(cycles),
+    cfN: cfDeltas.length,
     nearMiss,
-    cfPeaks: counterfactualPeaks(cycles, entries, cfDeltas),
+    cfPeaks: counterfactualPeaks(cycles, entries, cfDeltas, labels),
     hints,
     dailyAgp: { act: agpBins(cfSeries, x => x.bg), cf: agpBins(cfSeries, x => x.cf) },
     cfGly: cfGlycaemia(cfSeries),
@@ -415,7 +537,8 @@ function findNadirs(entries) {
 
 // For each nadir: net counterfactual-minus-actual insulin in the prior 3h, absorption-weighted
 // to the nadir, × median logged ISF → projected nadir shift. active=true → counterfactual is V1.
-function nearMissAnalysis(cycles, entries, deltas) {
+function nearMissAnalysis(cycles, entries, deltas, labels) {
+  const L = labels || { v1: "V1", v6: "V6" };
   const nadirs = findNadirs(entries);
   const events = [];
   for (const nd of nadirs) {
@@ -436,7 +559,7 @@ function nearMissAnalysis(cycles, entries, deltas) {
     const pf = x => x < 40 ? "<40" : String(Math.round(x));
     const projRange = (projHi < 40 && projLo < 40) ? "well under 40" : ("~" + pf(Math.min(projHi, projLo)) + "\u2013" + pf(Math.max(projHi, projLo)));
     let verdict = null;
-    const cf = activeMode ? "V1" : "V6", ran = activeMode ? "V6" : "V1";
+    const cf = activeMode ? L.v1 : L.v6, ran = activeMode ? L.v6 : L.v1;
     if (extra > 0) {
       if (nd.bg >= 54 && projHi < 54) verdict = `${ran} likely avoided a SEVERE low (${cf} pressure → ${projRange})`;
       else if (nd.bg >= 70 && projHi < 70) verdict = `${ran} likely avoided a low (${cf} pressure → ${projRange})`;
@@ -469,7 +592,8 @@ function findPeaks(entries) {
   return peaks;
 }
 
-function counterfactualPeaks(cycles, entries, deltas) {
+function counterfactualPeaks(cycles, entries, deltas, labels) {
+  const L = labels || { v1: "V1", v6: "V6" };
   const out = [];
   for (const pk of findPeaks(entries)) {
     const win = deltas.filter(x => x.ts >= pk.t - 180 * 60000 && x.ts < pk.t);
@@ -482,7 +606,7 @@ function counterfactualPeaks(cycles, entries, deltas) {
     const isf = isfs[Math.floor(isfs.length / 2)];
     const shiftHi = extra * isf, shiftLo = shiftHi * 0.5;
     const projHi = pk.bg - shiftHi, projLo = pk.bg - shiftLo;
-    const cf = activeMode ? "V1" : "V6", ran = activeMode ? "V6" : "V1";
+    const cf = activeMode ? L.v1 : L.v6, ran = activeMode ? L.v6 : L.v1;
     const rng = "~" + Math.round(Math.min(projHi, projLo)) + "\u2013" + Math.round(Math.max(projHi, projLo));
     let verdict;
     if (extra < 0)
@@ -495,7 +619,8 @@ function counterfactualPeaks(cycles, entries, deltas) {
 }
 
 // ---- Lever hints: map observed patterns to the user-adjustable Boost settings ----
-function leverHints(model, cycles, activeMode) {
+function leverHints(model, cycles, activeMode, labels) {
+  const L = labels || { v1: "V1", v6: "V6" };
   const hints = [];
   const eps = model.episodes || [];
   // sharp onset helper: max BG step in the first 30 min of the episode
@@ -530,7 +655,7 @@ function leverHints(model, cycles, activeMode) {
   const v6Pressure = (model.nearMiss || []).filter(e => e.v6ExtraU > 0.2 && e.nadir < 80);
   if (v6Pressure.length >= 1)
     hints.push({ lever: "Aggression ↓ or Hypo Caution ↑", dir: "gentler",
-      why: `${v6Pressure.length} low/near-low event(s) where V6's extra dosing was the low-side pressure — see the lows panel for the occasions.` });
+      why: `${v6Pressure.length} low/near-low event(s) where ${L.v6}'s extra dosing was the low-side pressure — see the lows panel for the occasions.` });
   // 5. maxIOB clamp binding during highs
   const iobClamp = cycles.filter(c => (c.gates || "").includes("maxIOB") && (c.bg || 0) > 200).length;
   if (iobClamp >= 3)
@@ -540,7 +665,7 @@ function leverHints(model, cycles, activeMode) {
   const nightHi = model.night && model.night.n > 24 && model.gly && model.night.v6 < model.night.v1 - 1.0;
   if (nightHi)
     hints.push({ lever: "Night mode window / basal profile", dir: "review",
-      why: `overnight, V6 decided ${fmt2(model.night.v1 - model.night.v6)}U less than V1 (by design — the night gate). If nights run high, the fix is the night window end or basal, not Boost aggression.` });
+      why: `overnight, ${L.v6} decided ${fmt2(model.night.v1 - model.night.v6)}U less than ${L.v1} (by design — the night gate). If nights run high, the fix is the night window end or basal, not Boost aggression.` });
   // 7. nothing binding → profile, not Boost
   const bigPeaks = eps.filter(e => e.peakBg >= 220).length;
   if (bigPeaks >= 3 && hints.length === 0)
@@ -854,6 +979,50 @@ function drawDailyAgp(canvas, act, cf) {
 
 function render(model, entries) {
   const g = model.gly;
+  const L = model.labels || { v1: "V1", v6: "V6" };
+  const isTrio = model.siteMode === "trio", isMixed = model.siteMode === "mixed";
+  // Detected-mode banner (per fetched dataset — never a toggle)
+  const mb = $("modeBanner");
+  if (isTrio) {
+    mb.style.display = "block";
+    mb.innerHTML = `<b>Detected: Trio (oref acting) + Boost V6 shadow.</b> The acting engine on this site is
+      stock trio-oref; Boost V6's decision is parsed from the <code>boostV5[…]</code> tag it appends to each
+      cycle's reason. The comparison below answers: <b>how would the dose decisions have differed if Boost V6
+      drove the SMB instead of oref?</b> As everywhere on this page, that is a dose-decision comparison, not a
+      glucose-outcome simulation. AAPS-only telemetry (Phase-3 gate fields, caps, the “base would=”
+      counterfactual) is shown as n/a.`;
+  } else if (isMixed) {
+    const segName = s => (s.src === "trio" ? "Trio" : "AAPS") + " " +
+      new Date(s.fromTs).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + "–" +
+      new Date(s.toTs).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ` (${s.n} cycles)`;
+    const segs = (model.segments || []).slice(0, 6).map(segName).join(" · ");
+    mb.style.display = "block";
+    mb.innerHTML = `<b>Detected: MIXED window — AAPS and Trio records</b> (${model.sources.aaps} AAPS +
+      ${model.sources.trio} Trio cycles; the uploader switched mid-window). Every cycle is analysed in its own
+      mode and all the maths is per-cycle, so totals remain valid. On Trio segments the acting engine is stock
+      trio-oref; on AAPS segments it is Boost V1 — Boost V6 is the shadow on both.
+      Segments: ${segs}${(model.segments || []).length > 6 ? " · …" : ""}.`;
+  } else if (model.siteMode === "aaps") {
+    mb.style.display = "block";
+    mb.innerHTML = `<b>Detected: AAPS Boost build</b> — V1 acting, Boost V6 shadow
+      (structured <code>boostV5_*</code> telemetry).`;
+  } else { mb.style.display = "none"; }
+  // Relabel the static series text on Trio/mixed sites (AAPS keeps the original wording untouched)
+  if (isTrio || isMixed) {
+    $("doseHead").textContent = `Dose decisions: ${L.v1} (acting) vs ${L.v6} (shadow)`;
+    $("histLegend").textContent = `Per-cycle dose difference (${L.v6} − ${L.v1}), all paired cycles. ` +
+      `Left of centre = ${L.v6} decided less insulin than ${L.v1}; right = more. The big bar at zero is both engines agreeing.`;
+    $("splitLegend").textContent = `Night = 22:00–07:00 in your browser's timezone. “${L.v6} extra at night, ` +
+      `unannounced” is the pattern the Boost night gate (July 2026) suppresses on current builds.`;
+    $("mealBlurb").innerHTML = `All auto-detected rises (≥50 mg/dL within 90 min) aligned at onset. Lines are the
+      <b>mean cumulative insulin</b> each engine decided from 30 min before onset — the shape difference IS the
+      story: ${L.v6} holds, fires its commit-shot, then tapers; ${L.v1} ramps steadily. The gap is shaded
+      (<span style="color:var(--accent)">cyan</span> where ${L.v6} has delivered more,
+      <span style="color:var(--amber)">amber</span> where ${L.v1} has). Modal ${L.v6} state underneath.`;
+    $("mealLegend").innerHTML = `<span><span class="dot" style="background:#94a3b8"></span>${L.v1} cumulative (mean)</span>
+      <span><span class="dot" style="background:#00d4ff"></span>${L.v6} cumulative (mean)</span>
+      <span>ribbon: modal ${L.v6} state</span>`;
+  }
   // Time in Ranges — Clarity-style: thin rounded bar + legend rows (chip, name, range, %, h/min per day)
   const tb = model.tirBands;
   const BANDS = [
@@ -886,23 +1055,33 @@ function render(model, entries) {
     stat("CV", g.cv.toFixed(0) + "%", g.cv <= 36 ? "good" : "warn"),
   ].join("");
   const shr = model.activeShare;
-  const mode = model.withV6 === 0 ? "no V6 telemetry found — update your Boost build"
-             : shr > 0.85 ? "V6 ACTIVE (V1 reconstructed from reason text)"
-             : shr < 0.15 ? "V1 active, V6 running in shadow"
-             : `MIXED — V6 was the active doser on ${(100 * shr).toFixed(0)}% of cycles (all maths is per-cycle, so this is handled correctly)`;
+  let mode;
+  if (isTrio) {
+    mode = model.withV6 === 0 ? "Trio site, but no boostV5[…] tag found — enable Boost shadow mode in Trio"
+         : shr > 0.85 ? "Trio — Boost V6 ACTIVE (oref counterfactual not logged on Trio; those cycles are unpaired)"
+         : shr < 0.15 ? "Trio — oref acting, Boost V6 in shadow (tag-parsed)"
+         : `Trio — Boost drove ${(100 * shr).toFixed(0)}% of cycles (only shadow cycles pair; active ones are unpaired)`;
+  } else if (isMixed) {
+    mode = `MIXED SITE — ${model.sources.aaps} AAPS + ${model.sources.trio} Trio cycles, each analysed in its own mode (see banner above)`;
+  } else {
+    mode = model.withV6 === 0 ? "no V6 telemetry found — update your Boost build"
+         : shr > 0.85 ? "V6 ACTIVE (V1 reconstructed from reason text)"
+         : shr < 0.15 ? "V1 active, V6 running in shadow"
+         : `MIXED — V6 was the active doser on ${(100 * shr).toFixed(0)}% of cycles (all maths is per-cycle, so this is handled correctly)`;
+  }
   $("modeLine").textContent =
     `${model.days.toFixed(1)} days · ${model.cycles} cycles (5-min deduped) · mode: ${mode} · paired dose decisions: ${model.paired}` +
     (model.unpaired ? ` (${model.unpaired} unpaired excluded)` : "");
   const t = model.totals, perDay = x => model.days ? x / model.days : 0;
   $("doseStats").innerHTML = [
-    stat("V1 decided", fmtU(perDay(t.v1)) + " U/d", "", "total " + fmtU(t.v1)),
-    stat("V6 decided", fmtU(perDay(t.v6)) + " U/d", "hi", "total " + fmtU(t.v6)),
-    stat("V6 vs V1", (t.v6 >= t.v1 ? "+" : "") + fmtU(perDay(t.v6 - t.v1)) + " U/d",
+    stat(`${L.v1} decided`, fmtU(perDay(t.v1)) + " U/d", "", "total " + fmtU(t.v1)),
+    stat(`${L.v6} decided`, fmtU(perDay(t.v6)) + " U/d", "hi", "total " + fmtU(t.v6)),
+    stat(`${L.v6} vs ${L.v1}`, (t.v6 >= t.v1 ? "+" : "") + fmtU(perDay(t.v6 - t.v1)) + " U/d",
          Math.abs(t.v6 - t.v1) / Math.max(t.v1, 0.1) > 0.2 ? "warn" : ""),
-    stat("Cycles V6 > V1", String(t.v6MoreN), "", `V1 &gt; V6: ${t.v1MoreN}`),
+    stat(`Cycles ${L.v6} > ${L.v1}`, String(t.v6MoreN), "", `${L.v1} &gt; ${L.v6}: ${t.v1MoreN}`),
   ].join("");
   drawHist($("histCanvas"), model.deltas);
-  const rows = [["", "cycles", "V1 (U)", "V6 (U)", "V6−V1 (U)"],
+  const rows = [["", "cycles", `${L.v1} (U)`, `${L.v6} (U)`, `${L.v6}−${L.v1} (U)`],
     ["Night (22–07)", model.night.n, fmtU(model.night.v1), fmtU(model.night.v6), fmtU(model.night.v6 - model.night.v1)],
     ["Day (07–22)", model.dayStats.n, fmtU(model.dayStats.v1), fmtU(model.dayStats.v6), fmtU(model.dayStats.v6 - model.dayStats.v1)],
     ["In meal episodes", model.meal.n, fmtU(model.meal.v1), fmtU(model.meal.v6), fmtU(model.meal.v6 - model.meal.v1)]];
@@ -911,7 +1090,7 @@ function render(model, entries) {
   // meal dose-difference curves + compact episode table
   $("epCount").textContent = `(${model.episodes.length} detected)`;
   drawMealDose($("mealDoseCanvas"), model.mealDose);
-  $("epTable").innerHTML = `<tr><th>when</th><th class="num">rise</th><th class="num">V1 (U)</th><th class="num">V6 (U)</th><th class="num">confirmed</th><th class="num">shot (U)</th></tr>` +
+  $("epTable").innerHTML = `<tr><th>when</th><th class="num">rise</th><th class="num">${L.v1} (U)</th><th class="num">${L.v6} (U)</th><th class="num">confirmed</th><th class="num">shot (U)</th></tr>` +
     model.episodes.slice().reverse().map(ep => {
       const d = new Date(ep.onsetT);
       const when = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) +
@@ -925,7 +1104,11 @@ function render(model, entries) {
   const cg = model.cfGly;
   const amberBins = model.dailyAgp.cf.filter(b => b.p25 !== null && b.p25 < 70).length;
   const cyanBins = model.dailyAgp.cf.filter((b, i) => b.p50 !== null && model.dailyAgp.act[i].p50 !== null && b.p50 < model.dailyAgp.act[i].p50 - 10).length;
-  $("cfStats").innerHTML = !cg ? "" : [
+  $("cfStats").innerHTML = !cg ? ""
+    : ((isTrio || isMixed) && !model.cfN)
+    ? `<div class="muted" style="grid-column:1/-1">Counterfactual projection n/a — this dataset has no per-cycle
+       ISF telemetry to project with (the cyan band below simply mirrors your actual BG).</div>`
+    : [
     stat("Actual time <70", cg.actBelow70.toFixed(1) + "%", cg.actBelow70 < 4 ? "good" : "warn"),
     stat("Low-side pressure window", (amberBins / 2).toFixed(1) + " h/day", amberBins ? "warn" : "good", "other engine p25 < 70"),
     stat("Other engine runs lower", (cyanBins / 2).toFixed(1) + " h/day", "", "median gap ≥ 10"),
@@ -974,13 +1157,13 @@ function render(model, entries) {
 
   // states + gates
   const sc = model.stateCount, total = Object.values(sc).reduce((a, b) => a + b, 0) || 1;
-  $("stateTable").innerHTML = `<tr><th>V6 state</th><th class="num">cycles</th><th class="num">share</th></tr>` +
+  $("stateTable").innerHTML = `<tr><th>${L.v6} state</th><th class="num">cycles</th><th class="num">share</th></tr>` +
     ["IDLE", "OBSERVING", "CONFIRMED", "COMMITTED", "RECOVERING"].map(s =>
       `<tr><td><span class="dot" style="background:${STATE_COLORS[s]}"></span>${s}</td><td class="num">${sc[s] || 0}</td><td class="num">${(100 * (sc[s] || 0) / total).toFixed(1)}%</td></tr>`).join("");
   const gc = Object.entries(model.gateCount).sort((a, b) => b[1] - a[1]);
   $("gateTable").innerHTML = `<tr><th>Phase-3 gate fired</th><th class="num">cycles</th></tr>` +
     (gc.length ? gc.map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join("")
-               : `<tr><td class="muted" colspan="2">none recorded</td></tr>`);
+               : `<tr><td class="muted" colspan="2">${isTrio ? "n/a on Trio sites — gate telemetry is AAPS-only" : "none recorded"}</td></tr>`);
   const shots = model.commitShots;
   $("confirmLine").textContent = model.confirms
     ? `CONFIRMED commit-shots: ${model.confirms} (${(model.confirms / Math.max(model.days, 0.1)).toFixed(1)}/day) · ` +
@@ -1014,7 +1197,7 @@ async function run() {
     const { entries, ds } = await fetchAll(base, token, sinceMs, progress);
     progress(`Analysing ${ds.length} device statuses / ${entries.length} BG readings…`);
     const cycles = parseCycles(ds);
-    if (!cycles.length) throw new Error("No AAPS device status with openaps.suggested found in this window.");
+    if (!cycles.length) throw new Error("No AAPS or Trio device status with openaps.suggested found in this window.");
     const episodes = detectEpisodes(entries);
     const model = analyse(cycles, entries, episodes);
     render(model, entries);
