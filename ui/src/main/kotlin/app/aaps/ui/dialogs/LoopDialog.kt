@@ -117,6 +117,7 @@ class LoopDialog : DaggerDialogFragment() {
         binding.overviewDisable.setOnClickListener { if (showOkCancel) onClickOkCancelEnabled(it) else onClick(it); dismiss() }
         binding.overviewResume.setOnClickListener { if (showOkCancel) onClickOkCancelEnabled(it) else onClick(it); dismiss() }
         binding.overviewReconnect.setOnClickListener { if (showOkCancel) onClickOkCancelEnabled(it) else onClick(it); dismiss() }
+        binding.overviewSuspend15m.setOnClickListener { if (showOkCancel) onClickOkCancelEnabled(it) else onClick(it); dismiss() }
         binding.overviewSuspend1h.setOnClickListener { if (showOkCancel) onClickOkCancelEnabled(it) else onClick(it); dismiss() }
         binding.overviewSuspend2h.setOnClickListener { if (showOkCancel) onClickOkCancelEnabled(it) else onClick(it); dismiss() }
         binding.overviewSuspend3h.setOnClickListener { if (showOkCancel) onClickOkCancelEnabled(it) else onClick(it); dismiss() }
@@ -212,6 +213,7 @@ class LoopDialog : DaggerDialogFragment() {
             R.id.overview_disable        -> description = rh.gs(app.aaps.core.ui.R.string.disableloop)
             R.id.overview_resume         -> description = rh.gs(R.string.resume)
             R.id.overview_reconnect      -> description = rh.gs(R.string.reconnect)
+            R.id.overview_suspend_15m    -> description = rh.gs(R.string.suspendloopfor15m)
             R.id.overview_suspend_1h     -> description = rh.gs(R.string.suspendloopfor1h)
             R.id.overview_suspend_2h     -> description = rh.gs(R.string.suspendloopfor2h)
             R.id.overview_suspend_3h     -> description = rh.gs(R.string.suspendloopfor3h)
@@ -256,6 +258,11 @@ class LoopDialog : DaggerDialogFragment() {
             R.id.overview_resume, R.id.overview_reconnect -> {
                 loop.handleRunningModeChange(newRM = RM.Mode.RESUME, action = if (v.id == R.id.overview_resume) Action.RESUME else Action.RECONNECT, source = Sources.LoopDialog, profile = profile)
                 preferences.put(BooleanNonKey.ObjectivesReconnectUsed, true)
+                return true
+            }
+
+            R.id.overview_suspend_15m                     -> {
+                loop.handleRunningModeChange(newRM = RM.Mode.SUSPENDED_BY_USER, durationInMinutes = 15, action = Action.SUSPEND, source = Sources.LoopDialog, profile = profile)
                 return true
             }
 

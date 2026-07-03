@@ -207,6 +207,18 @@
                 android:orientation="horizontal">
 
                 <app.aaps.core.ui.elements.SingleClickButton
+                    android:id="@+id/overview_suspend_15m"
+                    style="@style/ButtonSmallFontStyle"
+                    android:layout_width="0px"
+                    android:layout_height="fill_parent"
+                    android:layout_marginEnd="@dimen/gray_material_button_margin_horizontal"
+                    android:layout_weight="0.5"
+                    android:drawableTop="@drawable/ic_loop_paused"
+                    android:paddingStart="5dp"
+                    android:paddingEnd="5dp"
+                    android:text="@string/duration15m" />
+
+                <app.aaps.core.ui.elements.SingleClickButton
                     android:id="@+id/overview_suspend_1h"
                     style="@style/ButtonSmallFontStyle"
                     android:layout_width="0px"

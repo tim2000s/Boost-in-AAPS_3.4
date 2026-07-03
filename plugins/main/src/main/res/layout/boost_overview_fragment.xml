@@ -77,14 +77,32 @@
                         android:textColor="?android:attr/textColorSecondary"
                         android:importantForAccessibility="no"
                         tools:text="🔋 72%" />
-                    <TextView
-                        android:id="@+id/pump_ages"
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textSize="13sp"
-                        android:textColor="?android:attr/textColorTertiary"
-                        android:importantForAccessibility="no"
-                        tools:text="🩹 1.4d  📡 4.2d" />
+                        android:orientation="horizontal"
+                        android:importantForAccessibility="no">
+                        <TextView
+                            android:id="@+id/pump_cannula_age"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="13sp"
+                            android:importantForAccessibility="no"
+                            tools:text="🩹 1d 4h" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="13sp"
+                            android:text="  "
+                            android:importantForAccessibility="no" />
+                        <TextView
+                            android:id="@+id/pump_sensor_age"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="13sp"
+                            android:importantForAccessibility="no"
+                            tools:text="📡 4d 2h" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <!-- BG Bobble -->
@@ -207,6 +225,16 @@
                             android:textSize="12sp"
                             android:textStyle="bold"
                             tools:text="Percent Scale" />
+                        <TextView
+                            android:id="@+id/panel_boost_fast_carb"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFF9800"
+                            android:text="Fast Carb"
+                            android:visibility="gone"
+                            tools:ignore="HardcodedText" />
                     </LinearLayout>
 
                     <!-- DynISF panel -->
@@ -459,6 +487,36 @@
                             android:layout_marginStart="30dp"
                             android:layout_marginTop="8dp"
                             android:text="IOB"
+                            android:textSize="11sp"
+                            android:textColor="?android:attr/textColorSecondary"
+                            android:letterSpacing="0.05"
+                            android:importantForAccessibility="no"
+                            tools:ignore="HardcodedText" />
+
+                    </RelativeLayout>
+
+                    <!-- ═══ HR / Steps graph (hidden unless enabled in chart menu) ═══ -->
+                    <RelativeLayout
+                        android:id="@+id/hr_steps_graph_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone">
+
+                        <com.jjoe64.graphview.GraphView
+                            android:id="@+id/hr_steps_graph"
+                            android:layout_width="match_parent"
+                            android:layout_height="130dp"
+                            android:contentDescription="Heart rate and steps" />
+
+                        <TextView
+                            android:id="@+id/hr_steps_graph_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentTop="true"
+                            android:layout_alignParentStart="true"
+                            android:layout_marginStart="30dp"
+                            android:layout_marginTop="8dp"
+                            android:text="HR / Steps"
                             android:textSize="11sp"
                             android:textColor="?android:attr/textColorSecondary"
                             android:letterSpacing="0.05"

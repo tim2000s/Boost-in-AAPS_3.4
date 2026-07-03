@@ -75,6 +75,9 @@ enum class BooleanKey(
     ApsBoostNightModeDisableWithCob("boost_night_mode_disable_with_cob", false, defaultedBySM = true),
     ApsBoostNightModeDisableWithLowTt("boost_night_mode_disable_with_low_tt", false, defaultedBySM = true),
     ApsBoostBypassVersionCheck("boost_bypass_version_check", false, defaultedBySM = true),
+    ApsBoostPostExerciseRecoveryEnabled("boost_post_exercise_recovery_enabled", false, defaultedBySM = true),
+    ApsBoostHrIntegrationEnabled("boost_hr_integration_enabled", false, defaultedBySM = true),
+    ApsBoostHrStressDetection("boost_hr_stress_detection", false, defaultedBySM = true),
 
     MaintenanceEnableFabric("enable_fabric2", true, defaultedBySM = true, hideParentScreenIfHidden = true),
 
@@ -132,5 +135,14 @@ enum class BooleanKey(
     WizardIncludeTrend("wizard_include_trend_bg", defaultValue = false),
     SiteRotationManagePump("site_rotation_manage_pump", defaultValue = false),
     SiteRotationManageCgm("site_rotation_manage_cgm", defaultValue = false),
+
+    // Export destination settings
+    ExportAllCloudEnabled("export_all_cloud_enabled", defaultValue = false),
+    ExportLogEmailEnabled("export_log_email_enabled", defaultValue = true),
+    ExportLogCloudEnabled("export_log_cloud_enabled", defaultValue = false),
+    ExportSettingsLocalEnabled("export_settings_local_enabled", defaultValue = true),
+    ExportSettingsCloudEnabled("export_settings_cloud_enabled", defaultValue = false),
+    ExportCsvLocalEnabled("export_csv_local_enabled", defaultValue = true),
+    ExportCsvCloudEnabled("export_csv_cloud_enabled", defaultValue = false),
 
 }

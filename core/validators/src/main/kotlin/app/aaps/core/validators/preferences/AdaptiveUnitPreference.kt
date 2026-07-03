@@ -50,7 +50,7 @@ class AdaptiveUnitPreference(
         preferenceKey = unitKey ?: preferences.get(key) as UnitDoublePreferenceKey
 
         // convert to current unit
-        val value = profileUtil.valueInCurrentUnitsDetect(preferences.get(preferenceKey)).toString()
+        val value = preferences.get(preferenceKey).toString()
         val precision = if (profileUtil.units == GlucoseUnit.MGDL) 0 else 1
         converted = BigDecimal(value).setScale(precision, RoundingMode.HALF_UP)
         summary = converted.toPlainString()

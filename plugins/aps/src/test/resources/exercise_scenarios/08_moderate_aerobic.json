@@ -1,0 +1,17 @@
+{
+  "scenario": "08_moderate_aerobic",
+  "description": "Moderate steps + zone 3 HR → MODERATE_AEROBIC",
+  "type": "hr_classification",
+  "input": {
+    "avgBpm": 120,
+    "hrMax": 180,
+    "hrResting": 60,
+    "stepsLast15Min": 200,
+    "stressDetection": false
+  },
+  "expected": {
+    "exerciseState": "MODERATE_AEROBIC",
+    "hrZone": "zone3",
+    "confidence": "HIGH"
+  }
+}

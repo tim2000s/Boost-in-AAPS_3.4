@@ -79,6 +79,17 @@ data class OapsProfileBoost(
     var recentSteps30Minutes: Int,
     var recentSteps60Minutes: Int,
 
+    // Boost-specific: recent glucose nadir (minimum BG in last 60 minutes, mg/dL)
+    // Used to detect fast-carb rebound: if BG was recently very low and is now rising fast,
+    // suppress UAM boost to avoid stacking insulin onto an unannounced carb rescue.
+    var recentLowBG: Double,
+
+    // Boost-specific: braking signal (max |delta|×improvement across consecutive CGM triplets
+    // while BG was still falling, over last 60 minutes). Captures rapid deceleration of a falling
+    // glucose caused by fast-acting carb absorption — catches "candy without a preceding low"
+    // that recentLowBG misses. Threshold ~800 distinguishes fast-carb braking from IOB decay.
+    var recentBrakingProduct: Double,
+
     // Boost debug context (not used by algorithm, displayed in Script Debug)
     var boostDebugReason: String = "",
     var isfDebugReason: String = ""

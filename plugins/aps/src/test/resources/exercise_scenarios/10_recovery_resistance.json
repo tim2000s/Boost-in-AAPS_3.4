@@ -1,0 +1,16 @@
+{
+  "scenario": "10_recovery_resistance",
+  "type": "recovery_parameters",
+  "description": "RESISTANCE exercise: longest window, raised target, moderate SMB scale",
+  "input": {
+    "exerciseState": "RESISTANCE",
+    "baseRecoveryHours": 2.0,
+    "baseTargetMgdl": 144.0,
+    "baseScale": 0.5
+  },
+  "expected": {
+    "windowMinutes": 180,
+    "targetMgdl": 154.0,
+    "scale": 0.6
+  }
+}

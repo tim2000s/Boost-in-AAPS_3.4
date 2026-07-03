@@ -1,8 +1,10 @@
 package app.aaps.plugins.main.general.overview.boost
 
 import app.aaps.core.interfaces.aps.Loop
+import app.aaps.core.interfaces.aps.RT
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.iob.IobCobCalculator
+import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
 import app.aaps.core.interfaces.stats.TddCalculator
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.data.model.TE
@@ -19,6 +21,7 @@ import javax.inject.Singleton
 @Singleton
 class BoostOverviewHelper @Inject constructor(
     private val loop: Loop,
+    private val processedDeviceStatusData: ProcessedDeviceStatusData,
     private val iobCobCalculator: IobCobCalculator,
     private val tddCalculator: TddCalculator,
     private val persistenceLayer: PersistenceLayer,
@@ -50,6 +53,7 @@ class BoostOverviewHelper @Inject constructor(
         val scriptDebugText: String = "",
         val cannulaAgeDays: Double = -1.0,
         val sensorAgeDays: Double = -1.0,
+        val fastCarbProtection: Boolean = false,
     )
 
     enum class BoostTier(val label: String, val colorHex: Long) {
@@ -110,9 +114,12 @@ class BoostOverviewHelper @Inject constructor(
 
     private fun computeBoostStatus(): BoostStatus {
         val request = loop.lastRun?.request
+        // AAPSClient fallback: when Loop isn't running locally, read the RT
+        // object received from Nightscout via ProcessedDeviceStatusData
+        val rt: RT? = (request as? RT) ?: processedDeviceStatusData.openAPSData.suggested
         val json = try { request?.json() } catch (_: Exception) { null }
-        val reason = request?.reason ?: ""
-        val scriptDebug = request?.scriptDebug ?: emptyList()
+        val reason = request?.reason ?: rt?.reason?.toString() ?: ""
+        val scriptDebug = request?.scriptDebug ?: rt?.consoleLog ?: emptyList()
         val debugText = scriptDebug.joinToString("\n")
         // Combine all text sources for parsing — scriptDebug, reason, and JSON reason field
         val allText = "$debugText\n$reason"
@@ -122,14 +129,14 @@ class BoostOverviewHelper @Inject constructor(
         val tier = tierResult.first
         val tierLabel = tierResult.second
 
-        val deltaAccl = json?.optDouble("delta_accl", 0.0) ?: 0.0
+        val deltaAccl = json?.optDouble("delta_accl", 0.0) ?: rt?.deltaAcceleration ?: 0.0
 
         // Parse activity/exercise mode from all text (e.g. "Inactive - 140% profile")
         val activityResult = parseActivityFromText(allText)
         val activityMode = activityResult.first
         val activityDetail = activityResult.second
 
-        val profilePct = json?.optInt("current_profile_percentage", 0) ?: 0
+        val profilePct = json?.optInt("current_profile_percentage", 0) ?: rt?.boostProfileSwitch ?: 0
         // Parse profile % from scriptDebug header: "Boost V2 (...) | Profile: 140%"
         val profileFromDebug = PROFILE_HEADER_REGEX.find(debugText)
             ?.groupValues?.get(1)?.toIntOrNull() ?: 0
@@ -146,17 +153,20 @@ class BoostOverviewHelper @Inject constructor(
 
         val lastBg = iobCobCalculator.ads.actualBg()?.recalculated ?: 0.0
 
-        // Use actual DynISF values from the running APS algorithm
+        // Use actual DynISF values from the running APS algorithm, with NS RT fallback
         val oapsProfile = request?.oapsProfile
-        val variableSens = request?.variableSens ?: 0.0
-        val apsTdd = oapsProfile?.TDD ?: 0.0
+        val variableSens = request?.variableSens ?: rt?.variable_sens ?: 0.0
+        val apsTdd = oapsProfile?.TDD ?: rt?.tdd ?: 0.0
         val apsInsulinDivisor = oapsProfile?.insulinDivisor ?: 0
 
         // Use the algorithm's actual target
-        val targetBgMgdl = request?.targetBG ?: 0.0
+        val targetBgMgdl = request?.targetBG ?: rt?.targetBG ?: 0.0
 
         // Autosens ratio
-        val autosensRatio = request?.autosensResult?.ratio ?: 1.0
+        val autosensRatio = request?.autosensResult?.ratio ?: rt?.sensitivityRatio ?: 1.0
+
+        // Fast-carb protection state
+        val fastCarbProtection = rt?.fastCarbProtection ?: false
 
         // Try to parse TDD from scriptDebug (Boost may write "TDD: 48.3" or similar)
         val tddFromDebug = parseTddFromText(allText)
@@ -176,7 +186,8 @@ class BoostOverviewHelper @Inject constructor(
             deltaAccl = deltaAccl, variableSens = variableSens,
             scriptDebugText = debugText,
             cannulaAgeDays = getAgeDays(TE.Type.CANNULA_CHANGE),
-            sensorAgeDays = getAgeDays(TE.Type.SENSOR_CHANGE)
+            sensorAgeDays = getAgeDays(TE.Type.SENSOR_CHANGE),
+            fastCarbProtection = fastCarbProtection,
         )
     }
 

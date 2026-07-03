@@ -51,6 +51,7 @@ data class RT(
     // Boost-specific: tier dosing decision (uploaded to Nightscout)
     var boostTier: String? = null,               // Which tier was triggered (e.g. "UAM_BOOST", "PERCENT_SCALE", etc.)
     var boostActive: Boolean? = null,            // Whether Boost was in its active time window
+    var fastCarbProtection: Boolean? = null,     // Whether fast-carb rebound protection suppressed UAM/Accel tiers this cycle
 
     // Boost-specific: DynamicISF data (uploaded to Nightscout)
     var dynamicISF: Double? = null,              // Dosing ISF (future_sens) used for insulin requirement

@@ -63,6 +63,7 @@ import app.aaps.receivers.ChargingStateReceiver
 import app.aaps.receivers.KeepAliveWorker
 import app.aaps.receivers.TimeDateOrTZChangeReceiver
 import app.aaps.ui.activityMonitor.ActivityMonitor
+import app.aaps.plugins.main.general.overview.boost.widget.BoostWidget
 import app.aaps.ui.widget.Widget
 import app.aaps.utils.configureLeakCanary
 import com.google.firebase.Firebase
@@ -193,6 +194,7 @@ class MainApp : DaggerApplication() {
         refreshWidget = Runnable {
             handler.postDelayed(refreshWidget, 60000)
             Widget.updateWidget(this@MainApp, "ScheduleEveryMin")
+            BoostWidget.updateWidget(this@MainApp, "ScheduleEveryMin")
         }
         handler.postDelayed(refreshWidget, 60000)
         config.appInitialized = true
@@ -391,6 +393,17 @@ class MainApp : DaggerApplication() {
                     preferences.put(ProfileComposedDoubleKey.LocalProfileNumberedDia, SafeParse.stringToInt(number), value = value as Double)
                 sp.remove(key)
             }
+        }
+
+        // Migrate Tidepool from username/password to OAuth2
+        if (sp.contains("tidepool_username") || sp.contains("tidepool_password")) {
+            sp.remove("tidepool_username")
+            sp.remove("tidepool_password")
+            sp.remove("tidepool_test_login")
+            // Clear OAuth2 state to force re-authentication
+            sp.remove("tidepool_auth_state")
+            sp.remove("tidepool_service_configuration")
+            sp.remove("tidepool_subscription_id")
         }
 
         // Migrate loop mode

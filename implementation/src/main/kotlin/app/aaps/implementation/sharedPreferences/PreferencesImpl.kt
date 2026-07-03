@@ -144,11 +144,11 @@ class PreferencesImpl @Inject constructor(
     }
 
     override fun get(key: UnitDoublePreferenceKey): Double =
-        if (simpleMode && key.defaultedBySM) profileUtil.get().valueInCurrentUnitsDetect(key.defaultValue)
-        else profileUtil.get().valueInCurrentUnitsDetect(sp.getDouble(key.key, key.defaultValue))
+        if (simpleMode && key.defaultedBySM) profileUtil.get().fromMgdlToUnits(key.defaultValue, profileUtil.get().units)
+        else profileUtil.get().fromMgdlToUnits(sp.getDouble(key.key, key.defaultValue), profileUtil.get().units)
 
     override fun getIfExists(key: UnitDoublePreferenceKey): Double? =
-        if (sp.contains(key.key)) profileUtil.get().valueInCurrentUnitsDetect(sp.getDouble(key.key, key.defaultValue)) else null
+        if (sp.contains(key.key)) profileUtil.get().fromMgdlToUnits(sp.getDouble(key.key, key.defaultValue), profileUtil.get().units) else null
 
     override fun put(key: UnitDoublePreferenceKey, value: Double) {
         sp.putDouble(key.key, value)

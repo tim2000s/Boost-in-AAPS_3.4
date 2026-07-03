@@ -9,6 +9,8 @@ import app.aaps.plugins.main.general.overview.OverviewDataImpl
 import app.aaps.plugins.main.general.overview.OverviewFragment
 import app.aaps.plugins.main.general.overview.OverviewMenusImpl
 import app.aaps.plugins.main.general.overview.boost.BoostOverviewFragment
+import app.aaps.plugins.main.general.overview.boost.widget.BoostWidget
+import app.aaps.plugins.main.general.overview.boost.widget.BoostWidgetConfigureActivity
 import app.aaps.plugins.main.general.overview.graphData.GraphData
 import app.aaps.plugins.main.general.overview.notifications.receivers.DismissNotificationReceiver
 import dagger.Binds
@@ -28,6 +30,8 @@ abstract class OverviewModule {
     @ContributesAndroidInjector abstract fun contributesDismissNotificationReceiver(): DismissNotificationReceiver
     @ContributesAndroidInjector abstract fun contributesOverviewFragment(): OverviewFragment
     @ContributesAndroidInjector abstract fun contributesBoostOverviewFragment(): BoostOverviewFragment
+    @ContributesAndroidInjector abstract fun contributesBoostWidget(): BoostWidget
+    @ContributesAndroidInjector abstract fun contributesBoostWidgetConfigureActivity(): BoostWidgetConfigureActivity
     @ContributesAndroidInjector abstract fun graphDataInjector(): GraphData
 
     @Module

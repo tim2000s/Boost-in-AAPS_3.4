@@ -1,0 +1,16 @@
+{
+  "scenario": "12_recovery_default",
+  "type": "recovery_parameters",
+  "description": "ACTIVE (default) exercise: baseline window, unchanged target, unchanged scale",
+  "input": {
+    "exerciseState": "ACTIVE",
+    "baseRecoveryHours": 2.0,
+    "baseTargetMgdl": 144.0,
+    "baseScale": 0.5
+  },
+  "expected": {
+    "windowMinutes": 120,
+    "targetMgdl": 144.0,
+    "scale": 0.5
+  }
+}

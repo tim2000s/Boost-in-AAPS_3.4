@@ -1,0 +1,17 @@
+{
+  "scenario": "04_resting",
+  "description": "Low steps + zone 1 HR → INACTIVE",
+  "type": "hr_classification",
+  "input": {
+    "avgBpm": 62,
+    "hrMax": 180,
+    "hrResting": 60,
+    "stepsLast15Min": 5,
+    "stressDetection": false
+  },
+  "expected": {
+    "exerciseState": "INACTIVE",
+    "hrZone": "zone1",
+    "confidence": "HIGH"
+  }
+}

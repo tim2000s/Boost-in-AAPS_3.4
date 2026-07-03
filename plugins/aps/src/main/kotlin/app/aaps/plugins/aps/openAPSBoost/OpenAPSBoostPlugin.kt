@@ -11,8 +11,12 @@ import androidx.preference.SwitchPreference
 import app.aaps.core.data.aps.SMBDefaults
 import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.model.GlucoseUnit
+import app.aaps.core.data.model.TT
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.time.T
+import app.aaps.core.data.ue.Action
+import app.aaps.core.data.ue.Sources
+import app.aaps.core.data.ue.ValueWithUnit
 import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.aps.AutosensResult
@@ -37,8 +41,12 @@ import app.aaps.core.interfaces.profile.ProfileFunction
 import app.aaps.core.interfaces.profile.ProfileUtil
 import app.aaps.core.interfaces.profiling.Profiler
 import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.rx.AapsSchedulers
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventAPSCalculationFinished
+import app.aaps.core.interfaces.rx.events.EventCalibrationDetected
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.plusAssign
 import app.aaps.core.interfaces.stats.TddCalculator
 import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.interfaces.utils.DateUtil
@@ -74,6 +82,7 @@ import org.json.JSONObject
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Provider
 import javax.inject.Singleton
@@ -86,6 +95,7 @@ import kotlin.math.min
 @Singleton
 open class OpenAPSBoostPlugin @Inject constructor(
     aapsLogger: AAPSLogger,
+    private val aapsSchedulers: AapsSchedulers,
     private val rxBus: RxBus,
     private val constraintsChecker: ConstraintsChecker,
     rh: ResourceHelper,
@@ -125,6 +135,26 @@ open class OpenAPSBoostPlugin @Inject constructor(
     override val algorithm = APSResult.Algorithm.BOOST
     override var lastAPSResult: APSResult? = null
 
+    // ---- Calibration SMB block ----
+    private val disposable = CompositeDisposable()
+    @Volatile private var calibrationBlockedUntil: Long = 0L
+
+    override fun onStart() {
+        super.onStart()
+        disposable += rxBus
+            .toObservable(EventCalibrationDetected::class.java)
+            .observeOn(aapsSchedulers.io)
+            .subscribe({
+                calibrationBlockedUntil = dateUtil.now() + 15 * 60_000L
+                aapsLogger.debug(LTag.APS, "Boost SMB block set: calibration detected, blocked until ${dateUtil.dateAndTimeString(calibrationBlockedUntil)}")
+            }, { aapsLogger.error(LTag.APS, "EventCalibrationDetected error", it) })
+    }
+
+    override fun onStop() {
+        disposable.clear()
+        super.onStop()
+    }
+
     // ---- Boost-specific preference getters ----
 
     // Dynamic ISF
@@ -152,9 +182,32 @@ open class OpenAPSBoostPlugin @Inject constructor(
     private val inactivityPct; get() = preferences.get(DoubleKey.ApsBoostInactivityPct)
     private val sleepInSteps; get() = preferences.get(IntKey.ApsBoostSleepInSteps)
     private val activitySteps5; get() = preferences.get(IntKey.ApsBoostActivitySteps5)
+    private val activitySteps15; get() = preferences.get(IntKey.ApsBoostActivitySteps15)
     private val activitySteps30; get() = preferences.get(IntKey.ApsBoostActivitySteps30)
     private val activitySteps60; get() = preferences.get(IntKey.ApsBoostActivitySteps60)
     private val activityPct; get() = preferences.get(DoubleKey.ApsBoostActivityPct)
+
+    // Heart rate integration
+    private val hrIntegrationEnabled; get() = preferences.get(BooleanKey.ApsBoostHrIntegrationEnabled)
+    private val hrMaxBpm; get() = preferences.get(IntKey.ApsBoostHrMaxBpm)
+    private val hrRestingBpm; get() = preferences.get(IntKey.ApsBoostHrRestingBpm)
+    private val hrWindowMinutes; get() = preferences.get(IntKey.ApsBoostHrWindowMinutes)
+    private val hrStressDetection; get() = preferences.get(BooleanKey.ApsBoostHrStressDetection)
+
+    // Post-exercise recovery
+    private val postExerciseRecoveryEnabled; get() = preferences.get(BooleanKey.ApsBoostPostExerciseRecoveryEnabled)
+    private val postExerciseRecoveryHours; get() = preferences.get(DoubleKey.ApsBoostPostExerciseRecoveryHours)
+    private val postExerciseRecoveryTarget; get() = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.ApsBoostPostExerciseRecoveryTarget))
+    private val postExerciseRecoveryScale; get() = preferences.get(DoubleKey.ApsBoostPostExerciseRecoveryScale)
+    private val postExerciseMinDuration; get() = preferences.get(IntKey.ApsBoostPostExerciseMinDuration)
+
+    // ---- Post-exercise recovery state ----
+    @Volatile private var recoveryWindowEnd: Long = 0L
+    @Volatile private var wasExerciseActive: Boolean = false
+    @Volatile private var exerciseStartTime: Long = 0L
+    @Volatile private var lastExerciseStateAtTransition: String = "ACTIVE"
+    @Volatile private var activeRecoveryScale: Double = 0.5
+    @Volatile private var activeRecoveryTargetOffset: Double = 0.0
 
     // ---- Lifecycle ----
 
@@ -348,6 +401,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
         val minBg: Double,
         val maxBg: Double,
         val targetBg: Double,
+        val activityState: String = "none",
         val debugReason: String = ""
     )
 
@@ -415,28 +469,144 @@ open class OpenAPSBoostPlugin @Inject constructor(
         if (boostActive) {
             val activityBgTarget = 150.0
             val isActive = recentSteps5Min > activitySteps5
+                || recentSteps15Min > activitySteps15
                 || recentSteps30Min > activitySteps30
                 || recentSteps60Min > activitySteps60
-                || (recentSteps5Min < activitySteps5 && recentSteps15Min > activitySteps5)
+
+            // ---- HR-augmented classification (opt-in, additive only) ----
+            val hrClassification: HrActivityCalculator.HrClassificationResult? =
+                if (hrIntegrationEnabled) {
+                    val windowMs = hrWindowMinutes * 60_000L
+                    val hrReadings = persistenceLayer.getHeartRatesFromTime(now - windowMs)
+                    HrActivityCalculator.classify(
+                        hrReadings = hrReadings,
+                        nowMillis = now,
+                        hrWindowMinutes = hrWindowMinutes,
+                        hrMax = hrMaxBpm,
+                        hrResting = hrRestingBpm,
+                        stepsLast15Min = recentSteps15Min,
+                        stressDetection = hrStressDetection,
+                        aapsLogger = aapsLogger,
+                    ).takeIf { it.hrZone != HrActivityCalculator.HrZone.NONE } // null if no HR data
+                } else null
+
+            if (hrClassification != null) {
+                debug.append("\nHR: ${hrClassification.debugInfo}")
+            }
 
             if (isActive) {
-                activityState = "ACTIVE"
-                if (currentProfileSwitch == 100) {
-                    currentProfileSwitch = activityPct.toInt()
-                    aapsLogger.debug(LTag.APS, "Profile changed to $activityPct% due to activity")
+                // Step-only path detected activity; use HR to refine classification
+                when (hrClassification?.exerciseState) {
+                    HrActivityCalculator.ExerciseState.VIGOROUS_AEROBIC -> {
+                        // High intensity aerobic: reduce profile more aggressively, raise target
+                        activityState = "VIGOROUS_AEROBIC"
+                        if (currentProfileSwitch == 100) {
+                            // Use a more conservative profile reduction (cap at activityPct - 10, min 50%)
+                            currentProfileSwitch = (activityPct - 10.0).coerceAtLeast(50.0).toInt()
+                            aapsLogger.debug(LTag.APS, "Profile changed to $currentProfileSwitch% due to vigorous aerobic (HR z${hrClassification.hrZone.label})")
+                        }
+                        if (!tempTargetSet) {
+                            activityMinBg = activityBgTarget
+                            activityMaxBg = activityBgTarget
+                            activityTargetBg = activityBgTarget
+                        }
+                        debug.append("\nVigorous aerobic (HR ${String.format("%.0f", hrClassification.averageHrBpm)} bpm, ${hrClassification.hrZone.label}) → profile ${currentProfileSwitch}%, target $activityTargetBg")
+                    }
+                    HrActivityCalculator.ExerciseState.RESISTANCE -> {
+                        // Resistance exercise: raise target BG but do NOT reduce profile
+                        // (acute BG rise; delayed hypo risk — don't increase insulin aggressiveness now)
+                        activityState = "RESISTANCE"
+                        val resistanceBgTarget = 160.0
+                        if (!tempTargetSet) {
+                            activityMinBg = resistanceBgTarget
+                            activityMaxBg = resistanceBgTarget
+                            activityTargetBg = resistanceBgTarget
+                        }
+                        aapsLogger.debug(LTag.APS, "Resistance exercise detected via HR (${hrClassification.hrZone.label}): raising target, not reducing profile")
+                        debug.append("\nResistance exercise (HR ${String.format("%.0f", hrClassification.averageHrBpm)} bpm, ${hrClassification.hrZone.label}) → profile unchanged at ${currentProfileSwitch}%, target $activityTargetBg")
+                    }
+                    null, HrActivityCalculator.ExerciseState.MODERATE_AEROBIC,
+                    HrActivityCalculator.ExerciseState.LIGHT_AEROBIC -> {
+                        // Default step-only ACTIVE behaviour
+                        activityState = "ACTIVE"
+                        if (currentProfileSwitch == 100) {
+                            currentProfileSwitch = activityPct.toInt()
+                            aapsLogger.debug(LTag.APS, "Profile changed to $activityPct% due to activity")
+                        }
+                        if (!tempTargetSet) {
+                            activityMinBg = activityBgTarget
+                            activityMaxBg = activityBgTarget
+                            activityTargetBg = activityBgTarget
+                            aapsLogger.debug(LTag.APS, "TargetBG changed to $activityBgTarget due to activity")
+                        }
+                        debug.append("\nActivity detected → profile ${currentProfileSwitch}%, target ${activityTargetBg}")
+                    }
+                    else -> {
+                        // HR signal contradicts steps (LOW confidence) — fall back to step-only ACTIVE
+                        activityState = "ACTIVE"
+                        if (currentProfileSwitch == 100) {
+                            currentProfileSwitch = activityPct.toInt()
+                            aapsLogger.debug(LTag.APS, "Profile changed to $activityPct% due to activity (HR inconclusive)")
+                        }
+                        if (!tempTargetSet) {
+                            activityMinBg = activityBgTarget
+                            activityMaxBg = activityBgTarget
+                            activityTargetBg = activityBgTarget
+                        }
+                        debug.append("\nActivity detected (HR inconclusive: ${hrClassification.exerciseState}) → profile ${currentProfileSwitch}%, target $activityTargetBg")
+                    }
                 }
-                if (!tempTargetSet) {
-                    activityMinBg = activityBgTarget
-                    activityMaxBg = activityBgTarget
-                    activityTargetBg = activityBgTarget
-                    aapsLogger.debug(LTag.APS, "TargetBG changed to $activityBgTarget due to activity")
-                }
-                debug.append("\nActivity detected → profile ${currentProfileSwitch}%, target ${activityTargetBg}")
             } else if (currentProfileSwitch == 100 && recentSteps60Min < inactivitySteps) {
-                activityState = "INACTIVE"
-                currentProfileSwitch = inactivityPct.toInt()
-                debug.append("\nInactivity detected (60m steps $recentSteps60Min < $inactivitySteps) → profile ${currentProfileSwitch}%")
-                aapsLogger.debug(LTag.APS, "Profile changed to $inactivityPct% due to inactivity")
+                // Inactivity confirmed or no steps — check HR for stress
+                if (hrStressDetection &&
+                    hrClassification?.exerciseState == HrActivityCalculator.ExerciseState.STRESS &&
+                    hrClassification.confidence != HrActivityCalculator.Confidence.LOW
+                ) {
+                    // Stress detected: raise target BG without changing profile
+                    activityState = "STRESS"
+                    val stressBgTarget = 160.0
+                    if (!tempTargetSet) {
+                        activityMinBg = stressBgTarget
+                        activityMaxBg = stressBgTarget
+                        activityTargetBg = stressBgTarget
+                    }
+                    aapsLogger.debug(LTag.APS, "Stress/illness detected (HR ${String.format("%.0f", hrClassification.averageHrBpm)} bpm, no steps): raising target to $stressBgTarget, profile unchanged")
+                    debug.append("\nStress/illness (HR ${String.format("%.0f", hrClassification.averageHrBpm)} bpm, ${hrClassification.hrZone.label}, no movement) → target $activityTargetBg, profile unchanged")
+                } else {
+                    activityState = "INACTIVE"
+                    currentProfileSwitch = inactivityPct.toInt()
+                    debug.append("\nInactivity detected (60m steps $recentSteps60Min < $inactivitySteps) → profile ${currentProfileSwitch}%")
+                    aapsLogger.debug(LTag.APS, "Profile changed to $inactivityPct% due to inactivity")
+                }
+            } else if (!isActive &&
+                hrIntegrationEnabled &&
+                hrClassification?.exerciseState == HrActivityCalculator.ExerciseState.RESISTANCE &&
+                hrClassification.confidence != HrActivityCalculator.Confidence.LOW
+            ) {
+                // HR-only resistance detection (steps don't detect this)
+                activityState = "RESISTANCE"
+                val resistanceBgTarget = 160.0
+                if (!tempTargetSet) {
+                    activityMinBg = resistanceBgTarget
+                    activityMaxBg = resistanceBgTarget
+                    activityTargetBg = resistanceBgTarget
+                }
+                aapsLogger.debug(LTag.APS, "Resistance exercise detected via HR only (${hrClassification.hrZone.label}): raising target")
+                debug.append("\nResistance (HR-only, ${hrClassification.hrZone.label}) → target $activityTargetBg, profile unchanged")
+            } else if (!isActive &&
+                hrStressDetection &&
+                hrClassification?.exerciseState == HrActivityCalculator.ExerciseState.STRESS &&
+                hrClassification.confidence != HrActivityCalculator.Confidence.LOW
+            ) {
+                activityState = "STRESS"
+                val stressBgTarget = 160.0
+                if (!tempTargetSet) {
+                    activityMinBg = stressBgTarget
+                    activityMaxBg = stressBgTarget
+                    activityTargetBg = stressBgTarget
+                }
+                aapsLogger.debug(LTag.APS, "Stress detected via HR (${hrClassification.hrZone.label}): raising target")
+                debug.append("\nStress (HR-only, ${hrClassification.hrZone.label}) → target $activityTargetBg, profile unchanged")
             } else {
                 activityState = "normal"
                 debug.append("\nActivity: normal (no adjustment)")
@@ -455,6 +625,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
             minBg = activityMinBg,
             maxBg = activityMaxBg,
             targetBg = activityTargetBg,
+            activityState = activityState,
             debugReason = debug.toString()
         )
     }
@@ -550,7 +721,12 @@ open class OpenAPSBoostPlugin @Inject constructor(
         val iobArray = iobCobCalculator.calculateIobArrayForSMB(autosensResult, SMBDefaults.exercise_mode, SMBDefaults.half_basal_exercise_target, isTempTarget)
         val mealData = iobCobCalculator.getMealDataWithWaitingForCalculationFinish()
         val profilePercent = if (profile is ProfileSealed.EPS) profile.value.originalPercentage else 100
-        val microBolusAllowed = constraintsChecker.isSMBModeEnabled(ConstraintObject(tempBasalFallback.not(), aapsLogger)).also { inputConstraints.copyReasons(it) }.value()
+        val microBolusAllowedByConstraints = constraintsChecker.isSMBModeEnabled(ConstraintObject(tempBasalFallback.not(), aapsLogger)).also { inputConstraints.copyReasons(it) }.value()
+        val microBolusAllowed = if (dateUtil.now() < calibrationBlockedUntil) {
+            val remainingMin = (calibrationBlockedUntil - dateUtil.now()) / 60_000
+            aapsLogger.debug(LTag.APS, "Boost SMB blocked: calibration detected ${remainingMin}min ago, ${15 - remainingMin}min elapsed of 15")
+            false
+        } else microBolusAllowedByConstraints
         val flatBGsDetected = bgQualityCheck.state == BgQualityCheck.State.FLAT
 
         // ---- Boost-specific calculations ----
@@ -558,14 +734,81 @@ open class OpenAPSBoostPlugin @Inject constructor(
         // 1. Activity detection & boost time window
         val activityResult = calculateBoostActivity(now, isTempTarget, targetBg, minBg, maxBg, profilePercent)
 
+        // 1b. Post-exercise recovery transition detection
+        // HR-aware: all exercise states (aerobic, resistance) trigger recovery, not just "ACTIVE".
+        // Recovery window duration, target BG, and SMB scale are adjusted per exercise type.
+        if (postExerciseRecoveryEnabled) {
+            val exerciseStateSet = setOf("ACTIVE", "VIGOROUS_AEROBIC", "MODERATE_AEROBIC", "LIGHT_AEROBIC", "RESISTANCE")
+            val isCurrentlyActive = activityResult.activityState in exerciseStateSet
+            if (isCurrentlyActive && !wasExerciseActive) {
+                exerciseStartTime = now
+                aapsLogger.debug(LTag.APS, "Boost post-exercise: exercise started (${activityResult.activityState}) at ${dateUtil.dateAndTimeString(exerciseStartTime)}")
+            } else if (!isCurrentlyActive && wasExerciseActive) {
+                val exerciseDurationMin = (now - exerciseStartTime) / 60_000L
+                aapsLogger.debug(LTag.APS, "Boost post-exercise: exercise ended (was $lastExerciseStateAtTransition) after ${exerciseDurationMin}min")
+                if (exerciseDurationMin >= postExerciseMinDuration) {
+                    // Adjust recovery parameters based on exercise type (HR-classified or step-only).
+                    // Multipliers are evidence-based relative to the user's configured baseline:
+                    //   VIGOROUS_AEROBIC  — high immediate hypo risk: longer window, more SMB suppression
+                    //   RESISTANCE        — delayed hypo risk + acute BG rise: longest window, less SMB
+                    //                       suppression (BG runs high initially), slightly higher target
+                    //   LIGHT_AEROBIC     — minimal glycogen depletion: shorter window, less suppression
+                    //   ACTIVE/MODERATE   — baseline (no multiplier)
+                    val (windowMultiplier, targetOffsetMgdl, scaleMultiplier) = when (lastExerciseStateAtTransition) {
+                        "VIGOROUS_AEROBIC" -> Triple(1.25, 0.0,  0.8)
+                        "RESISTANCE"       -> Triple(1.5,  10.0, 1.2)
+                        "LIGHT_AEROBIC"    -> Triple(0.5,  0.0,  1.4)
+                        else               -> Triple(1.0,  0.0,  1.0)
+                    }
+                    val recoveryMillis = (postExerciseRecoveryHours * 3600_000L * windowMultiplier).toLong()
+                    val recoveryTargetMgdl = postExerciseRecoveryTarget + targetOffsetMgdl
+                    activeRecoveryScale = (postExerciseRecoveryScale * scaleMultiplier).coerceIn(0.1, 1.0)
+                    activeRecoveryTargetOffset = targetOffsetMgdl
+                    recoveryWindowEnd = now + recoveryMillis
+                    aapsLogger.debug(LTag.APS, "Boost post-exercise [$lastExerciseStateAtTransition]: window=${recoveryMillis / 60_000}min target=${recoveryTargetMgdl.toInt()}mg/dL SMBscale=$activeRecoveryScale")
+                    if (persistenceLayer.getTemporaryTargetActiveAt(now) == null) {
+                        val tt = TT(
+                            timestamp = now,
+                            duration = recoveryMillis,
+                            reason = TT.Reason.ACTIVITY,
+                            lowTarget = recoveryTargetMgdl,
+                            highTarget = recoveryTargetMgdl
+                        )
+                        disposable += persistenceLayer.insertAndCancelCurrentTemporaryTarget(
+                            temporaryTarget = tt,
+                            action = Action.TT,
+                            source = Sources.Aaps,
+                            note = rh.gs(R.string.boost_post_exercise_recovery_title),
+                            listValues = listOf(
+                                ValueWithUnit.TETTReason(TT.Reason.ACTIVITY),
+                                ValueWithUnit.Mgdl(recoveryTargetMgdl),
+                                ValueWithUnit.Minute(TimeUnit.MILLISECONDS.toMinutes(recoveryMillis).toInt())
+                            )
+                        ).subscribe(
+                            { aapsLogger.debug(LTag.APS, "Boost post-exercise: TempTarget inserted (${recoveryTargetMgdl.toInt()} mg/dL for ${TimeUnit.MILLISECONDS.toMinutes(recoveryMillis)}min)") },
+                            { aapsLogger.error(LTag.APS, "Boost post-exercise: failed to insert TempTarget", it) }
+                        )
+                    } else {
+                        aapsLogger.debug(LTag.APS, "Boost post-exercise: TempTarget already active — skipping insert")
+                    }
+                } else {
+                    aapsLogger.debug(LTag.APS, "Boost post-exercise: exercise too brief (${exerciseDurationMin}min < ${postExerciseMinDuration}min) — no recovery")
+                }
+            }
+            if (isCurrentlyActive) lastExerciseStateAtTransition = activityResult.activityState
+            wasExerciseActive = isCurrentlyActive
+        }
+
         // 2. Insulin peak / divisor calculation
         val insulin = activePlugin.activeInsulin
         val insulinPeak = insulin.peak.coerceIn(30, 75)
         val insulinDivisor = if (insulinPeak < 60) (90 - insulinPeak) + 30 else (90 - insulinPeak) + 40
 
         // 3. ISF pre-calculation
+        // Profile switch inversely scales ISF: 80% profile → 125% ISF (more sensitive),
+        // 120% profile → 83% ISF (more resistant).
         val profileScale = activityResult.profileSwitch.toDouble() / 100.0
-        val scaledProfileSens = profile.getIsfMgdl("OpenAPSBoostPlugin") * profileScale
+        val scaledProfileSens = profile.getIsfMgdl("OpenAPSBoostPlugin") / profileScale
         val isfResult = calculateBoostIsf(
             profileSens = scaledProfileSens,
             profilePercent = activityResult.profileSwitch,
@@ -585,7 +828,48 @@ open class OpenAPSBoostPlugin @Inject constructor(
             adjusted
         } else pump.baseBasalRate
 
-        // 6. Step counts
+        // 6. Recent BG nadir + braking signal (for fast-carb detection)
+        val now60MinAgo = System.currentTimeMillis() - 60 * 60 * 1000L
+        val recentBgReadings = persistenceLayer.getBgReadingsDataFromTimeToTime(now60MinAgo, System.currentTimeMillis(), true)
+        val recentLowBG = recentBgReadings.minOfOrNull { it.value }?.toDouble() ?: 999.0
+        // Braking product: max(|delta2| × (delta2 - delta1)) across consecutive triplets
+        // where delta2 < 0 (still falling) and delta2 > delta1 (deceleration).
+        // High values indicate rapid carb absorption arresting a fall — fast-carb signal
+        // even when BG never went below the low threshold.
+        val recentBrakingProduct = recentBgReadings.windowed(3).mapNotNull { w ->
+            val delta1 = w[1].value - w[0].value
+            val delta2 = w[2].value - w[1].value
+            val improvement = delta2 - delta1
+            if (delta2 < 0 && improvement > 0) Math.abs(delta2) * improvement else null
+        }.maxOrNull()?.toDouble() ?: 0.0
+
+        // 6b. Auto-cancel recovery TempTarget during hypo rescue rebound
+        // When a hypo has occurred (recentLowBG < 100) and BG is now rising above it,
+        // a post-exercise recovery TempTarget is counterproductive — it suppresses Boost
+        // via the high-TT check, preventing the algorithm from responding to the carb overshoot.
+        // Cancel the recovery TT and reset target to profile so Boost can re-engage.
+        if (recentLowBG < 100.0 && glucoseStatus.glucose > recentLowBG + 20) {
+            val activeTt = persistenceLayer.getTemporaryTargetActiveAt(now)
+            if (activeTt != null && activeTt.reason == TT.Reason.ACTIVITY) {
+                aapsLogger.debug(LTag.APS, "Boost: cancelling recovery TempTarget — hypo rebound detected (recentLow=${recentLowBG.toInt()}, BG now ${glucoseStatus.glucose.toInt()})")
+                disposable += persistenceLayer.cancelCurrentTemporaryTargetIfAny(
+                    timestamp = now,
+                    action = Action.TT_REMOVED,
+                    source = Sources.Aaps,
+                    note = "Auto-cancelled: hypo rebound (low ${recentLowBG.toInt()} mg/dL)",
+                    listValues = listOf(ValueWithUnit.TETTReason(TT.Reason.ACTIVITY))
+                ).subscribe()
+                // Also clear the recovery window so SMB reduction doesn't persist
+                recoveryWindowEnd = 0L
+                // Reset targets back to profile values
+                isTempTarget = false
+                minBg = hardLimits.verifyHardLimits(Round.roundTo(profile.getTargetLowMgdl(), 0.1), app.aaps.core.ui.R.string.profile_low_target, HardLimits.LIMIT_MIN_BG[0], HardLimits.LIMIT_MIN_BG[1])
+                maxBg = hardLimits.verifyHardLimits(Round.roundTo(profile.getTargetHighMgdl(), 0.1), app.aaps.core.ui.R.string.profile_high_target, HardLimits.LIMIT_MAX_BG[0], HardLimits.LIMIT_MAX_BG[1])
+                targetBg = hardLimits.verifyHardLimits(profile.getTargetMgdl(), app.aaps.core.ui.R.string.temp_target_value, HardLimits.LIMIT_TARGET_BG[0], HardLimits.LIMIT_TARGET_BG[1])
+            }
+        }
+
+        // 7. Step counts
         val recentSteps5Min = StepService.getRecentStepCount5Min()
         val recentSteps15Min = StepService.getRecentStepCount15Min()
         val recentSteps30Min = StepService.getRecentStepCount30Min()
@@ -650,10 +934,18 @@ open class OpenAPSBoostPlugin @Inject constructor(
             // Boost SMB fields
             boostActive = activityResult.boostActive,
             profileSwitch = activityResult.profileSwitch,
-            boost_bolus = boostBolus,
+            boost_bolus = if (postExerciseRecoveryEnabled && now < recoveryWindowEnd) {
+                val scaled = boostBolus * activeRecoveryScale
+                aapsLogger.debug(LTag.APS, "Boost post-exercise recovery [$lastExerciseStateAtTransition]: boost_bolus $boostBolus → $scaled (scale=$activeRecoveryScale)")
+                scaled
+            } else boostBolus,
             boost_maxIOB = boostMaxIob,
             Boost_InsulinReq = boostInsulinReqPct,
-            boost_scale = boostScale,
+            boost_scale = if (postExerciseRecoveryEnabled && now < recoveryWindowEnd) {
+                val scaled = boostScale * activeRecoveryScale
+                aapsLogger.debug(LTag.APS, "Boost post-exercise recovery [$lastExerciseStateAtTransition]: boost_scale $boostScale → $scaled (scale=$activeRecoveryScale)")
+                scaled
+            } else boostScale,
             boost_percent_scale = boostPercentScale,
             enableBoostPercentScale = enableBoostPercentScale,
             enableCircadianISF = enableCircadianIsf,
@@ -664,6 +956,10 @@ open class OpenAPSBoostPlugin @Inject constructor(
             recentSteps15Minutes = recentSteps15Min,
             recentSteps30Minutes = recentSteps30Min,
             recentSteps60Minutes = recentSteps60Min,
+
+            // Fast-carb rebound detection
+            recentLowBG = recentLowBG,
+            recentBrakingProduct = recentBrakingProduct,
 
             // Debug context
             boostDebugReason = activityResult.debugReason,
@@ -811,7 +1107,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
         // Check BG vs profile target + offset
         val profile = profileFunction.getProfile() ?: return false
         val profileTarget = profile.getTargetMgdl()
-        val bgOffset = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.ApsBoostNightModeBgOffset))
+        val bgOffset = profileUtil.convertToMgdl(preferences.get(UnitDoubleKey.ApsBoostNightModeBgOffset), profileUtil.units)
         return bgCurrent < profileTarget + bgOffset
     }
 
@@ -843,10 +1139,14 @@ open class OpenAPSBoostPlugin @Inject constructor(
     override fun addPreferenceScreen(preferenceManager: PreferenceManager, parent: PreferenceScreen, context: Context, requiredKey: String?) {
         if (requiredKey != null &&
             requiredKey != "absorption_smb_advanced" &&
-            requiredKey != "boost_settings" &&
+            requiredKey != "boost_default_aaps_settings" &&
+            requiredKey != "boost_dynisf_settings" &&
+            requiredKey != "boost_exercise_settings" &&
             requiredKey != "boost_stepcount_settings" &&
+            requiredKey != "boost_hr_integration_settings" &&
+            requiredKey != "boost_post_exercise_recovery_settings" &&
             requiredKey != "boost_night_mode_settings" &&
-            requiredKey != "boost_dynisf_settings"
+            requiredKey != "boost_safety_settings"
         ) return
         val category = PreferenceCategory(context)
         parent.addPreference(category)
@@ -854,24 +1154,31 @@ open class OpenAPSBoostPlugin @Inject constructor(
             key = "openapsboost_settings"
             title = rh.gs(R.string.openaps_boost)
             initialExpandedChildrenCount = 0
-            addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsMaxBasal, dialogMessage = R.string.openapsma_max_basal_summary, title = R.string.openapsma_max_basal_title))
-            addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsSmbMaxIob, dialogMessage = R.string.openapssmb_max_iob_summary, title = R.string.openapssmb_max_iob_title))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseAutosens, title = R.string.openapsama_use_autosens))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsAutoIsfHighTtRaisesSens, summary = R.string.high_temptarget_raises_sensitivity_summary, title = R.string.high_temptarget_raises_sensitivity_title))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsAutoIsfLowTtLowersSens, summary = R.string.low_temptarget_lowers_sensitivity_summary, title = R.string.low_temptarget_lowers_sensitivity_title))
 
-            // Boost-specific SMB settings
+            // ── 1. Default AAPS Settings ────────────────────────────────
+            addPreference(preferenceManager.createPreferenceScreen(context).apply {
+                key = "boost_default_aaps_settings"
+                title = rh.gs(R.string.boost_settings_default_aaps)
+                addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsMaxBasal, dialogMessage = R.string.openapsma_max_basal_summary, title = R.string.openapsma_max_basal_title))
+                addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsSmbMaxIob, dialogMessage = R.string.openapssmb_max_iob_summary, title = R.string.openapssmb_max_iob_title))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseAutosens, title = R.string.openapsama_use_autosens))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsAutoIsfHighTtRaisesSens, summary = R.string.high_temptarget_raises_sensitivity_summary, title = R.string.high_temptarget_raises_sensitivity_title))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsAutoIsfLowTtLowersSens, summary = R.string.low_temptarget_lowers_sensitivity_summary, title = R.string.low_temptarget_lowers_sensitivity_title))
+            })
+
+            // ── 2. Boost Controls (flat, not in a sub-menu) ─────────────
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostInsulinReqPct, dialogMessage = R.string.boost_insulin_req_summary, title = R.string.boost_insulin_req_title))
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostBolus, dialogMessage = R.string.boost_bolus_summary, title = R.string.boost_bolus_title))
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostPercentScale, dialogMessage = R.string.boost_percent_scale_summary, title = R.string.boost_percent_scale_title))
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostScale, dialogMessage = R.string.boost_scale_summary, title = R.string.boost_scale_title))
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostMaxIob, dialogMessage = R.string.boost_max_iob_summary, title = R.string.boost_max_iob_title))
-
-            // Boost time window
             addPreference(AdaptiveStringPreference(ctx = context, stringKey = StringKey.ApsBoostStartTime, dialogMessage = R.string.boost_start_summary, title = R.string.boost_start_title))
             addPreference(AdaptiveStringPreference(ctx = context, stringKey = StringKey.ApsBoostEndTime, dialogMessage = R.string.boost_end_summary, title = R.string.boost_end_title))
+            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostEnablePercentScale, summary = R.string.boost_enable_percent_scale_summary, title = R.string.boost_enable_percent_scale_title))
+            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostEnableCircadianIsf, summary = R.string.boost_enable_circadian_isf_summary, title = R.string.boost_enable_circadian_isf_title))
+            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostAllowWithHighTt, summary = R.string.boost_allow_high_tt_summary, title = R.string.boost_allow_high_tt_title))
 
-            // Dynamic ISF sub-screen
+            // ── 3. Dynamic ISF Controls ──────────────────────────────────
             addPreference(preferenceManager.createPreferenceScreen(context).apply {
                 key = "boost_dynisf_settings"
                 title = rh.gs(R.string.boost_dynisf_title)
@@ -883,38 +1190,52 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostDynIsfAdjustmentFactor, dialogMessage = R.string.boost_dynisf_adjust_factor_summary, title = R.string.boost_dynisf_adjust_factor_title))
             })
 
-            // SMB enables
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmb, summary = R.string.enable_smb_summary, title = R.string.enable_smb))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmbWithHighTt, summary = R.string.enable_smb_with_high_temp_target_summary, title = R.string.enable_smb_with_high_temp_target))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostAllowWithHighTt, summary = R.string.boost_allow_high_tt_summary, title = R.string.boost_allow_high_tt_title))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmbAlways, summary = R.string.enable_smb_always_summary, title = R.string.enable_smb_always))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmbWithCob, summary = R.string.enable_smb_with_cob_summary, title = R.string.enable_smb_with_cob))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmbWithLowTt, summary = R.string.enable_smb_with_temp_target_summary, title = R.string.enable_smb_with_temp_target))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmbAfterCarbs, summary = R.string.enable_smb_after_carbs_summary, title = R.string.enable_smb_after_carbs))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostEnablePercentScale, summary = R.string.boost_enable_percent_scale_summary, title = R.string.boost_enable_percent_scale_title))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostEnableCircadianIsf, summary = R.string.boost_enable_circadian_isf_summary, title = R.string.boost_enable_circadian_isf_title))
-            addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsMaxSmbFrequency, title = R.string.smb_interval_summary))
-            addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsMaxMinutesOfBasalToLimitSmb, title = R.string.smb_max_minutes_summary))
-            addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsUamMaxMinutesOfBasalToLimitSmb, dialogMessage = R.string.uam_smb_max_minutes, title = R.string.uam_smb_max_minutes_summary))
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseUam, summary = R.string.enable_uam_summary, title = R.string.enable_uam))
-            addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsCarbsRequestThreshold, dialogMessage = R.string.carbs_req_threshold_summary, title = R.string.carbs_req_threshold))
-
-            // Step count settings sub-screen
+            // ── 4. Exercise Settings (parent with nested sub-screens) ────
             addPreference(preferenceManager.createPreferenceScreen(context).apply {
-                key = "boost_stepcount_settings"
-                title = rh.gs(R.string.boost_stepcount_settings_title)
-                summary = rh.gs(R.string.boost_stepcount_settings_summary)
-                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostInactivitySteps, dialogMessage = R.string.boost_inactivity_steps_summary, title = R.string.boost_inactivity_steps_title))
-                addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostInactivityPct, dialogMessage = R.string.boost_inactivity_pct_summary, title = R.string.boost_inactivity_pct_title))
-                addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostSleepInHours, dialogMessage = R.string.boost_sleep_in_hrs_summary, title = R.string.boost_sleep_in_hrs_title))
-                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostSleepInSteps, dialogMessage = R.string.boost_sleep_in_steps_summary, title = R.string.boost_sleep_in_steps_title))
-                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostActivitySteps5, dialogMessage = R.string.boost_activity_steps_5_summary, title = R.string.boost_activity_steps_5_title))
-                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostActivitySteps30, dialogMessage = R.string.boost_activity_steps_30_summary, title = R.string.boost_activity_steps_30_title))
-                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostActivitySteps60, dialogMessage = R.string.boost_activity_steps_60_summary, title = R.string.boost_activity_steps_60_title))
-                addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostActivityPct, dialogMessage = R.string.boost_activity_pct_summary, title = R.string.boost_activity_pct_title))
+                key = "boost_exercise_settings"
+                title = rh.gs(R.string.boost_settings_exercise)
+
+                // 4a. Step Count Settings
+                addPreference(preferenceManager.createPreferenceScreen(context).apply {
+                    key = "boost_stepcount_settings"
+                    title = rh.gs(R.string.boost_stepcount_settings_title)
+                    summary = rh.gs(R.string.boost_stepcount_settings_summary)
+                    addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostInactivitySteps, dialogMessage = R.string.boost_inactivity_steps_summary, title = R.string.boost_inactivity_steps_title))
+                    addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostInactivityPct, dialogMessage = R.string.boost_inactivity_pct_summary, title = R.string.boost_inactivity_pct_title))
+                    addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostSleepInHours, dialogMessage = R.string.boost_sleep_in_hrs_summary, title = R.string.boost_sleep_in_hrs_title))
+                    addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostSleepInSteps, dialogMessage = R.string.boost_sleep_in_steps_summary, title = R.string.boost_sleep_in_steps_title))
+                    addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostActivitySteps5, dialogMessage = R.string.boost_activity_steps_5_summary, title = R.string.boost_activity_steps_5_title))
+                    addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostActivitySteps15, dialogMessage = R.string.boost_activity_steps_15_summary, title = R.string.boost_activity_steps_15_title))
+                    addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostActivitySteps30, dialogMessage = R.string.boost_activity_steps_30_summary, title = R.string.boost_activity_steps_30_title))
+                    addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostActivitySteps60, dialogMessage = R.string.boost_activity_steps_60_summary, title = R.string.boost_activity_steps_60_title))
+                    addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostActivityPct, dialogMessage = R.string.boost_activity_pct_summary, title = R.string.boost_activity_pct_title))
+                })
+
+                // 4b. Heart Rate Integration
+                addPreference(preferenceManager.createPreferenceScreen(context).apply {
+                    key = "boost_hr_integration_settings"
+                    title = rh.gs(R.string.boost_hr_integration_title)
+                    summary = rh.gs(R.string.boost_hr_integration_summary)
+                    addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostHrIntegrationEnabled, summary = R.string.boost_hr_integration_enabled_summary, title = R.string.boost_hr_integration_enabled_title))
+                    addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostHrMaxBpm, dialogMessage = R.string.boost_hr_max_bpm_summary, title = R.string.boost_hr_max_bpm_title))
+                    addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostHrRestingBpm, dialogMessage = R.string.boost_hr_resting_bpm_summary, title = R.string.boost_hr_resting_bpm_title))
+                    addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostHrWindowMinutes, dialogMessage = R.string.boost_hr_window_minutes_summary, title = R.string.boost_hr_window_minutes_title))
+                    addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostHrStressDetection, summary = R.string.boost_hr_stress_detection_summary, title = R.string.boost_hr_stress_detection_title))
+                })
+
+                // 4c. Post-Exercise Recovery
+                addPreference(preferenceManager.createPreferenceScreen(context).apply {
+                    key = "boost_post_exercise_recovery_settings"
+                    title = rh.gs(R.string.boost_post_exercise_recovery_title)
+                    addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostPostExerciseRecoveryEnabled, summary = R.string.boost_post_exercise_recovery_enabled_summary, title = R.string.boost_post_exercise_recovery_enabled_title))
+                    addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostPostExerciseRecoveryHours, dialogMessage = R.string.boost_post_exercise_recovery_hours_summary, title = R.string.boost_post_exercise_recovery_hours_title))
+                    addPreference(AdaptiveUnitPreference(ctx = context, unitKey = UnitDoubleKey.ApsBoostPostExerciseRecoveryTarget, dialogMessage = R.string.boost_post_exercise_recovery_target_summary, title = R.string.boost_post_exercise_recovery_target_title))
+                    addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostPostExerciseRecoveryScale, dialogMessage = R.string.boost_post_exercise_recovery_scale_summary, title = R.string.boost_post_exercise_recovery_scale_title))
+                    addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsBoostPostExerciseMinDuration, dialogMessage = R.string.boost_post_exercise_min_duration_summary, title = R.string.boost_post_exercise_min_duration_title))
+                })
             })
 
-            // Night Mode sub-screen
+            // ── 5. Night Mode ────────────────────────────────────────────
             addPreference(preferenceManager.createPreferenceScreen(context).apply {
                 key = "boost_night_mode_settings"
                 title = rh.gs(R.string.boost_night_mode_title)
@@ -926,13 +1247,26 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostNightModeDisableWithLowTt, summary = R.string.boost_night_mode_disable_with_low_tt_summary, title = R.string.boost_night_mode_disable_with_low_tt_title))
             })
 
-            // BG source safety
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostAllowAllBgSources, summary = R.string.boost_allow_all_bg_sources_summary, title = R.string.boost_allow_all_bg_sources_title))
+            // ── 6. Safety Settings ───────────────────────────────────────
+            addPreference(preferenceManager.createPreferenceScreen(context).apply {
+                key = "boost_safety_settings"
+                title = rh.gs(R.string.boost_settings_safety)
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmb, summary = R.string.enable_smb_summary, title = R.string.enable_smb))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmbWithHighTt, summary = R.string.enable_smb_with_high_temp_target_summary, title = R.string.enable_smb_with_high_temp_target))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmbAlways, summary = R.string.enable_smb_always_summary, title = R.string.enable_smb_always))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmbWithCob, summary = R.string.enable_smb_with_cob_summary, title = R.string.enable_smb_with_cob))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmbWithLowTt, summary = R.string.enable_smb_with_temp_target_summary, title = R.string.enable_smb_with_temp_target))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseSmbAfterCarbs, summary = R.string.enable_smb_after_carbs_summary, title = R.string.enable_smb_after_carbs))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseUam, summary = R.string.enable_uam_summary, title = R.string.enable_uam))
+                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsMaxSmbFrequency, title = R.string.smb_interval_summary))
+                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsMaxMinutesOfBasalToLimitSmb, title = R.string.smb_max_minutes_summary))
+                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsUamMaxMinutesOfBasalToLimitSmb, dialogMessage = R.string.uam_smb_max_minutes, title = R.string.uam_smb_max_minutes_summary))
+                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsCarbsRequestThreshold, dialogMessage = R.string.carbs_req_threshold_summary, title = R.string.carbs_req_threshold))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostAllowAllBgSources, summary = R.string.boost_allow_all_bg_sources_summary, title = R.string.boost_allow_all_bg_sources_title))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostBypassVersionCheck, summary = R.string.boost_bypass_version_check_summary, title = R.string.boost_bypass_version_check_title))
+            })
 
-            // Version check bypass
-            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostBypassVersionCheck, summary = R.string.boost_bypass_version_check_summary, title = R.string.boost_bypass_version_check_title))
-
-            // Advanced settings sub-screen
+            // ── 7. Advanced Settings ─────────────────────────────────────
             addPreference(preferenceManager.createPreferenceScreen(context).apply {
                 key = "absorption_smb_advanced"
                 title = rh.gs(app.aaps.core.ui.R.string.advanced_settings_title)

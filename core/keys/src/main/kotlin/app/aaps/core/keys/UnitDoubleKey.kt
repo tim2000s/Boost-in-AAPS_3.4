@@ -29,4 +29,5 @@ enum class UnitDoubleKey(
     ApsBoostDynIsfBgCap("boost_dynisf_bg_cap", 210.0, 100, 300, defaultedBySM = true),
     ApsBoostDynIsfNormalTarget("boost_dynisf_normal_target", 99.0, 70, 120, defaultedBySM = true),
     ApsBoostNightModeBgOffset("boost_night_mode_bg_offset", 27.0, 0, 90, defaultedBySM = true),
+    ApsBoostPostExerciseRecoveryTarget("boost_post_exercise_recovery_target", 144.0, 90, 200, defaultedBySM = true),
 }

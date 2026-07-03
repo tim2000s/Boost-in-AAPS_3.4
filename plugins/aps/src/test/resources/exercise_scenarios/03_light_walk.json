@@ -1,0 +1,17 @@
+{
+  "scenario": "03_light_walk",
+  "description": "Moderate steps + zone 1 HR → LIGHT_AEROBIC (steps not low, zone 1-2)",
+  "type": "hr_classification",
+  "input": {
+    "avgBpm": 95,
+    "hrMax": 180,
+    "hrResting": 60,
+    "stepsLast15Min": 150,
+    "stressDetection": false
+  },
+  "expected": {
+    "exerciseState": "LIGHT_AEROBIC",
+    "hrZone": "zone1",
+    "confidence": "MEDIUM"
+  }
+}

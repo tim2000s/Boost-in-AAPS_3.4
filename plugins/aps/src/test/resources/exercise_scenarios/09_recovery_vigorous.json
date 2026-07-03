@@ -1,0 +1,16 @@
+{
+  "scenario": "09_recovery_vigorous",
+  "type": "recovery_parameters",
+  "description": "VIGOROUS_AEROBIC exercise: longer window, unchanged target, lower SMB scale",
+  "input": {
+    "exerciseState": "VIGOROUS_AEROBIC",
+    "baseRecoveryHours": 2.0,
+    "baseTargetMgdl": 144.0,
+    "baseScale": 0.5
+  },
+  "expected": {
+    "windowMinutes": 150,
+    "targetMgdl": 144.0,
+    "scale": 0.4
+  }
+}

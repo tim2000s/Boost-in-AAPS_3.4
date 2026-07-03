@@ -1,0 +1,17 @@
+{
+  "scenario": "02_resistance_exercise",
+  "description": "Low steps + zone 4 HR → RESISTANCE",
+  "type": "hr_classification",
+  "input": {
+    "avgBpm": 145,
+    "hrMax": 180,
+    "hrResting": 60,
+    "stepsLast15Min": 10,
+    "stressDetection": false
+  },
+  "expected": {
+    "exerciseState": "RESISTANCE",
+    "hrZone": "zone4",
+    "confidence": "MEDIUM"
+  }
+}

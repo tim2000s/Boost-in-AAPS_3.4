@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boost Plugin Tuning Guide</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    padding: 32px 24px;
+    min-width: 900px;
+  }
+
+  /* ── Header ─────────────────────────────────────────────── */
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+  .header h1 span { color: #6ee7b7; }
+  .header p {
+    margin-top: 8px;
+    font-size: 0.95rem;
+    color: #94a3b8;
+  }
+  .version-badge {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #94a3b8;
+  }
+  .version-badge .v1 { color: #60a5fa; }
+  .version-badge .v2 { color: #a78bfa; }
+
+  /* ── Spectrum legend ─────────────────────────────────────── */
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: #94a3b8;
+  }
+  .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+  }
+  .dot-conservative { background: #3b82f6; }
+  .dot-neutral      { background: #6b7280; }
+  .dot-aggressive   { background: #f97316; }
+  .dot-default      { background: #22c55e; }
+
+  /* ── Section grid ────────────────────────────────────────── */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto 20px;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto 20px;
+  }
+  .full-width {
+    max-width: 1200px;
+    margin: 0 auto 20px;
+  }
+
+  /* ── Card ────────────────────────────────────────────────── */
+  .card {
+    background: #1e293b;
+    border: 1px solid #2d3748;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #2d3748;
+  }
+  .card-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+  .icon-blue   { background: #1d4ed8; }
+  .icon-orange { background: #c2410c; }
+  .icon-green  { background: #15803d; }
+  .icon-purple { background: #7c3aed; }
+  .icon-teal   { background: #0f766e; }
+  .icon-yellow { background: #a16207; }
+  .icon-red    { background: #b91c1c; }
+  .icon-slate  { background: #475569; }
+
+  .card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: 0.2px;
+  }
+  .card-subtitle {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  /* ── Setting row ─────────────────────────────────────────── */
+  .setting {
+    margin-bottom: 14px;
+  }
+  .setting:last-child { margin-bottom: 0; }
+
+  .setting-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .setting-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #cbd5e1;
+  }
+  .setting-key {
+    font-size: 0.7rem;
+    font-family: 'SF Mono', 'Cascadia Code', monospace;
+    color: #475569;
+  }
+  .setting-desc {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
+
+  /* ── Spectrum bar ────────────────────────────────────────── */
+  .spectrum-wrap {
+    position: relative;
+    height: 22px;
+  }
+  .spectrum-bar {
+    height: 8px;
+    border-radius: 99px;
+    background: linear-gradient(to right, #3b82f6 0%, #6b7280 50%, #f97316 100%);
+    margin-top: 7px;
+  }
+  .spectrum-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: #475569;
+    margin-top: 2px;
+  }
+  .default-marker {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .default-pip {
+    width: 10px; height: 10px;
+    background: #22c55e;
+    border-radius: 50%;
+    border: 2px solid #0f1117;
+    margin-top: 2px;
+  }
+  .default-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #22c55e;
+    white-space: nowrap;
+    margin-top: 0px;
+  }
+
+  /* ── Toggle row ──────────────────────────────────────────── */
+  .toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+  }
+  .toggle-row:last-child { margin-bottom: 0; }
+  .toggle-name { font-weight: 600; color: #cbd5e1; }
+  .toggle-desc { font-size: 0.72rem; color: #64748b; margin-top: 1px; }
+  .badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 99px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: 10px;
+  }
+  .badge-on-agg  { background: #431407; color: #fb923c; border: 1px solid #9a3412; }
+  .badge-off-agg { background: #1e3a5f; color: #60a5fa; border: 1px solid #1d4ed8; }
+  .badge-on-cons { background: #1e3a5f; color: #60a5fa; border: 1px solid #1d4ed8; }
+  .badge-off-cons{ background: #431407; color: #fb923c; border: 1px solid #9a3412; }
+  .badge-neutral { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+
+  /* ── Formula box ─────────────────────────────────────────── */
+  .formula-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .formula-box {
+    background: #0f1117;
+    border: 1px solid #2d3748;
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .formula-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .formula-label.v1 { color: #60a5fa; }
+  .formula-label.v2 { color: #a78bfa; }
+  .formula-text {
+    font-family: 'SF Mono', 'Cascadia Code', monospace;
+    font-size: 0.75rem;
+    color: #e2e8f0;
+    line-height: 1.5;
+  }
+  .formula-note {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+
+  /* ── Step table ──────────────────────────────────────────── */
+  .step-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .step-cell {
+    background: #0f1117;
+    border: 1px solid #2d3748;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+  .step-cell-label {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-bottom: 4px;
+  }
+  .step-cell-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f1f5f9;
+  }
+  .step-cell-unit {
+    font-size: 0.65rem;
+    color: #475569;
+    margin-top: 2px;
+  }
+
+  /* ── Summary / guidance ──────────────────────────────────── */
+  .guidance-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .guidance-box {
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .guidance-box.conservative { background: #0c1a2e; border: 1px solid #1d4ed8; }
+  .guidance-box.aggressive   { background: #1c0a00; border: 1px solid #c2410c; }
+  .guidance-box h4 {
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .guidance-box.conservative h4 { color: #60a5fa; }
+  .guidance-box.aggressive   h4 { color: #fb923c; }
+  .guidance-box ul {
+    list-style: none;
+    padding: 0;
+  }
+  .guidance-box li {
+    font-size: 0.76rem;
+    color: #94a3b8;
+    padding: 3px 0;
+    padding-left: 14px;
+    position: relative;
+    line-height: 1.35;
+  }
+  .guidance-box.conservative li::before { content: '↓'; position: absolute; left: 0; color: #3b82f6; }
+  .guidance-box.aggressive   li::before { content: '↑'; position: absolute; left: 0; color: #f97316; }
+
+  /* ── Warning banner ──────────────────────────────────────── */
+  .warning {
+    background: #1c1400;
+    border: 1px solid #854d0e;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.78rem;
+    color: #fde047;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-top: 0;
+  }
+  .warning-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+  .warning b { color: #fef08a; }
+
+  /* ── V2 diff callout ─────────────────────────────────────── */
+  .v2-diff {
+    background: #130d27;
+    border: 1px solid #7c3aed;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.77rem;
+    color: #c4b5fd;
+    margin-top: 12px;
+  }
+  .v2-diff b { color: #a78bfa; }
+
+  /* ── Footer ──────────────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    margin-top: 32px;
+    font-size: 0.72rem;
+    color: #334155;
+  }
+
+  /* ── Scenario cards ───────────────────────────────────────── */
+  .scenario-section-header {
+    text-align: center;
+    margin: 48px 0 28px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .scenario-section-header h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .scenario-section-header h2 span { color: #6ee7b7; }
+  .scenario-section-header p {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 6px;
+  }
+
+  .scenario-card {
+    max-width: 1200px;
+    margin: 0 auto 20px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid;
+  }
+  .scenario-card.hypo  { border-color: #7f1d1d; }
+  .scenario-card.plateau { border-color: #78350f; }
+  .scenario-card.stuck   { border-color: #1e3a5f; }
+
+  .scenario-banner {
+    padding: 18px 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .scenario-card.hypo    .scenario-banner { background: #1c0505; }
+  .scenario-card.plateau .scenario-banner { background: #1c0f00; }
+  .scenario-card.stuck   .scenario-banner { background: #040d1c; }
+
+  .scenario-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    line-height: 1;
+    margin-top: 2px;
+  }
+  .scenario-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .scenario-card.hypo    .scenario-title { color: #fca5a5; }
+  .scenario-card.plateau .scenario-title { color: #fcd34d; }
+  .scenario-card.stuck   .scenario-title { color: #93c5fd; }
+
+  .scenario-subtitle {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.4;
+  }
+
+  .scenario-body {
+    background: #1e293b;
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  .scenario-col-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2d3748;
+  }
+  .col-mechanism .scenario-col-title { color: #94a3b8; }
+  .col-fix       .scenario-col-title { color: #6ee7b7; }
+  .col-avoid     .scenario-col-title { color: #f97316; }
+
+  .mechanism-text {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    line-height: 1.6;
+  }
+  .mechanism-text b { color: #cbd5e1; }
+
+  .fix-list {
+    list-style: none;
+    padding: 0;
+  }
+  .fix-list li {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    padding: 5px 0 5px 14px;
+    position: relative;
+    border-bottom: 1px solid #1e293b;
+    line-height: 1.4;
+  }
+  .fix-list li:last-child { border-bottom: none; }
+  .fix-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: #6ee7b7;
+    font-weight: 700;
+  }
+  .fix-list li b { color: #f1f5f9; }
+  .fix-list li .fix-val {
+    display: inline-block;
+    margin-top: 3px;
+    font-family: monospace;
+    font-size: 0.72rem;
+    background: #0f1117;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: #6ee7b7;
+  }
+  .fix-priority {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 4px;
+    vertical-align: middle;
+    background: #064e3b;
+    color: #34d399;
+    border: 1px solid #059669;
+  }
+
+  .avoid-list {
+    list-style: none;
+    padding: 0;
+  }
+  .avoid-list li {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    padding: 5px 0 5px 14px;
+    position: relative;
+    border-bottom: 1px solid #1e293b;
+    line-height: 1.4;
+  }
+  .avoid-list li:last-child { border-bottom: none; }
+  .avoid-list li::before {
+    content: '✕';
+    position: absolute;
+    left: 0;
+    color: #f87171;
+    font-weight: 700;
+    font-size: 0.7rem;
+  }
+  .avoid-list li b { color: #fca5a5; }
+
+  /* Helper */
+  .mt8  { margin-top: 8px; }
+  .mt12 { margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  HEADER                                                    -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="header">
+  <h1>Boost Plugin <span>Tuning Guide</span></h1>
+  <p>How each setting controls aggressiveness — and how to adjust them</p>
+  <div class="version-badge">
+    <span class="v1">BOOST v1</span>
+    &nbsp;·&nbsp;
+    <span class="v2">BOOST V2</span>
+    &nbsp;— settings shared unless noted
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot dot-conservative"></div>More conservative</div>
+  <div class="legend-item"><div class="legend-dot dot-default"></div>Default value</div>
+  <div class="legend-item"><div class="legend-dot dot-aggressive"></div>More aggressive</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  ROW 1: Core delivery limits + Dynamic ISF               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="grid full-width">
+
+  <!-- Core Delivery Controls -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon icon-orange">💉</div>
+      <div>
+        <div class="card-title">Core Delivery Controls</div>
+        <div class="card-subtitle">Primary levers for how much insulin Boost delivers</div>
+      </div>
+    </div>
+
+    <!-- Boost Scale -->
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">Boost Scale</span>
+        <span class="setting-key">ApsBoostScale</span>
+      </div>
+      <div class="setting-desc">Direct multiplier on calculated Boost insulin. Values ≥ 3.0 disable Boost entirely and fall back to oref1.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar"></div>
+        <div class="default-marker" style="left: 33%">
+          <div class="default-pip"></div>
+          <div class="default-label">1.0</div>
+        </div>
+        <div class="spectrum-labels"><span>0.1 (min)</span><span>3.0 disables Boost</span></div>
+      </div>
+    </div>
+
+    <!-- Max IOB -->
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">Max IOB</span>
+        <span class="setting-key">ApsBoostMaxIob</span>
+      </div>
+      <div class="setting-desc">IOB ceiling. Above this, Boost falls back to standard oref1. Acts as a hard safety limit.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar"></div>
+        <div class="default-marker" style="left: 8%">
+          <div class="default-pip"></div>
+          <div class="default-label">1.0 U</div>
+        </div>
+        <div class="spectrum-labels"><span>0.1 U</span><span>12.0 U</span></div>
+      </div>
+    </div>
+
+    <!-- Bolus Cap -->
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">Bolus Cap</span>
+        <span class="setting-key">ApsBoostBolus</span>
+      </div>
+      <div class="setting-desc">Maximum insulin per individual Boost SMB delivery regardless of other calculations.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar"></div>
+        <div class="default-marker" style="left: 24%">
+          <div class="default-pip"></div>
+          <div class="default-label">2.5 U</div>
+        </div>
+        <div class="spectrum-labels"><span>0.1 U</span><span>10.0 U</span></div>
+      </div>
+    </div>
+
+    <!-- Insulin Required % -->
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">Insulin Required %</span>
+        <span class="setting-key">ApsBoostInsulinReqPct</span>
+      </div>
+      <div class="setting-desc">What fraction of the algorithm's calculated insulin need to actually deliver as an SMB.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar"></div>
+        <div class="default-marker" style="left: 29%">
+          <div class="default-pip"></div>
+          <div class="default-label">50%</div>
+        </div>
+        <div class="spectrum-labels"><span>30% (cautious)</span><span>100% (full)</span></div>
+      </div>
+    </div>
+
+    <!-- Percent Scale -->
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">Percent Scale Factor</span>
+        <span class="setting-key">ApsBoostPercentScale</span>
+      </div>
+      <div class="setting-desc">Max scale factor when BG is 108–180 mg/dL with rising delta. Only active if Percent Scaling is enabled.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar"></div>
+        <div class="default-marker" style="left: 33%">
+          <div class="default-pip"></div>
+          <div class="default-label">200%</div>
+        </div>
+        <div class="spectrum-labels"><span>50%</span><span>500%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic ISF -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon icon-blue">📐</div>
+      <div>
+        <div class="card-title">Dynamic ISF</div>
+        <div class="card-subtitle">How insulin sensitivity is calculated from TDD and BG</div>
+      </div>
+    </div>
+
+    <!-- DynISF Velocity -->
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">BG Impact on ISF</span>
+        <span class="setting-key">ApsBoostDynIsfVelocity</span>
+      </div>
+      <div class="setting-desc">How much current BG level shifts ISF. 0% = constant ISF from TDD only. 100% = ISF scales fully with BG level. <b style="color:#a78bfa">V2: always 100%.</b></div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar"></div>
+        <div class="default-marker" style="left: 50%">
+          <div class="default-pip"></div>
+          <div class="default-label">100%</div>
+        </div>
+        <div class="spectrum-labels"><span>0% (flat)</span><span>100% (BG-reactive)</span></div>
+      </div>
+    </div>
+
+    <!-- Normal Target -->
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">DynISF Normal Target</span>
+        <span class="setting-key">ApsBoostDynIsfNormalTarget</span>
+      </div>
+      <div class="setting-desc">Reference BG used in the ISF formula. Lower = more aggressive ISF at a given BG.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar" style="background: linear-gradient(to right, #f97316, #6b7280, #3b82f6)"></div>
+        <div class="default-marker" style="left: 48%">
+          <div class="default-pip"></div>
+          <div class="default-label">99 mg/dL</div>
+        </div>
+        <div class="spectrum-labels"><span>70 (aggressive)</span><span>120 (conservative)</span></div>
+      </div>
+    </div>
+
+    <!-- BG Cap -->
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">DynISF BG Cap</span>
+        <span class="setting-key">ApsBoostDynIsfBgCap</span>
+      </div>
+      <div class="setting-desc">BG above this is softened: effective BG = cap + (actual − cap) ÷ 3. Prevents extreme ISF at very high BG.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar" style="background: linear-gradient(to right, #f97316, #6b7280, #3b82f6)"></div>
+        <div class="default-marker" style="left: 55%">
+          <div class="default-pip"></div>
+          <div class="default-label">210 mg/dL</div>
+        </div>
+        <div class="spectrum-labels"><span>100 (more softening)</span><span>300 (less softening)</span></div>
+      </div>
+    </div>
+
+    <!-- TDD Adjustment Factor -->
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">TDD Adjustment Factor</span>
+        <span class="setting-key">ApsBoostDynIsfAdjustmentFactor</span>
+      </div>
+      <div class="setting-desc">Scales the TDD used in ISF calculation. Below 100% = treats you as lower TDD = weaker ISF = less insulin.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar"></div>
+        <div class="default-marker" style="left: 33%">
+          <div class="default-pip"></div>
+          <div class="default-label">100%</div>
+        </div>
+        <div class="spectrum-labels"><span>1% (very weak ISF)</span><span>300% (very strong ISF)</span></div>
+      </div>
+    </div>
+
+    <!-- Formula callout -->
+    <div class="formula-grid mt8">
+      <div class="formula-box">
+        <div class="formula-label v1">BOOST v1 ISF Formula</div>
+        <div class="formula-text">ISF = 1800 ÷ (TDD × ln(target ÷ div + 1))</div>
+        <div class="formula-note">TDD is a blended 8h/7D/1D weighted average. Velocity scales BG sensitivity.</div>
+      </div>
+      <div class="formula-box">
+        <div class="formula-label v2">BOOST v2 ISF Formula (Chris Wilson)</div>
+        <div class="formula-text">ISF = 2300 ÷ (ln(target ÷ div + 1) × TDD² × 0.02)</div>
+        <div class="formula-note">Squares TDD — more sensitive to TDD changes. Velocity is always 1.0.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  ROW 2: Activity / Inactivity / Night                     -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="grid full-width">
+
+  <!-- Activity Detection -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon icon-green">🏃</div>
+      <div>
+        <div class="card-title">Activity Detection</div>
+        <div class="card-subtitle">Step-count thresholds and insulin adjustment when active</div>
+      </div>
+    </div>
+
+    <p style="font-size:0.77rem; color:#64748b; margin-bottom:12px;">
+      When ANY threshold below is exceeded, the <b style="color:#cbd5e1">Activity Profile %</b> is applied and BG target is set to 150 mg/dL (if no temp target is active).
+    </p>
+
+    <div class="step-grid">
+      <div class="step-cell">
+        <div class="step-cell-label">5-min window</div>
+        <div class="step-cell-value">420</div>
+        <div class="step-cell-unit">steps triggers active</div>
+      </div>
+      <div class="step-cell">
+        <div class="step-cell-label">30-min window</div>
+        <div class="step-cell-value">1,200</div>
+        <div class="step-cell-unit">steps triggers active</div>
+      </div>
+      <div class="step-cell">
+        <div class="step-cell-label">60-min window</div>
+        <div class="step-cell-value">1,800</div>
+        <div class="step-cell-unit">steps triggers active</div>
+      </div>
+    </div>
+
+    <div class="setting mt12">
+      <div class="setting-top">
+        <span class="setting-name">Activity Profile %</span>
+        <span class="setting-key">ApsBoostActivityPct</span>
+      </div>
+      <div class="setting-desc">Applied when active. &lt;100% = more insulin (treats activity as insulin-requiring). &gt;100% = less insulin.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar" style="background: linear-gradient(to right, #f97316, #6b7280, #3b82f6)"></div>
+        <div class="default-marker" style="left: 36%">
+          <div class="default-pip"></div>
+          <div class="default-label">80%</div>
+        </div>
+        <div class="spectrum-labels"><span>30% (more insulin)</span><span>150% (less insulin)</span></div>
+      </div>
+    </div>
+
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">Inactivity Profile %</span>
+        <span class="setting-key">ApsBoostInactivityPct</span>
+      </div>
+      <div class="setting-desc">Applied when steps/hr is below inactivity threshold. &gt;100% = less insulin during sedentary periods.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar" style="background: linear-gradient(to right, #f97316, #6b7280, #3b82f6)"></div>
+        <div class="default-marker" style="left: 30%">
+          <div class="default-pip"></div>
+          <div class="default-label">130%</div>
+        </div>
+        <div class="spectrum-labels"><span>100% (no change)</span><span>200% (much less insulin)</span></div>
+      </div>
+    </div>
+
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">Inactivity Threshold</span>
+        <span class="setting-key">ApsBoostInactivitySteps</span>
+      </div>
+      <div class="setting-desc">Steps per hour below which inactivity mode triggers. Higher = easier to trigger inactivity reduction.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar"></div>
+        <div class="default-marker" style="left: 50%">
+          <div class="default-pip"></div>
+          <div class="default-label">500/hr</div>
+        </div>
+        <div class="spectrum-labels"><span>1 steps/hr</span><span>1,000 steps/hr</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Night Mode + Sleep-in -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon icon-purple">🌙</div>
+      <div>
+        <div class="card-title">Night Mode &amp; Sleep-in</div>
+        <div class="card-subtitle">SMB suppression near target during sleep hours</div>
+      </div>
+    </div>
+
+    <div class="toggle-row" style="background:#0f1117; border:1px solid #2d3748">
+      <div>
+        <div class="toggle-name">Night Mode</div>
+        <div class="toggle-desc">Disables SMBs during night window when BG is near target (within BG Offset)</div>
+      </div>
+      <span class="badge badge-on-cons">Default: OFF</span>
+    </div>
+
+    <div class="setting mt12">
+      <div class="setting-top">
+        <span class="setting-name">Night Mode BG Offset</span>
+        <span class="setting-key">ApsBoostNightModeBgOffset</span>
+      </div>
+      <div class="setting-desc">SMBs suppressed when BG &lt; (profile target + offset). Higher offset = more aggressive suppression zone.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar" style="background: linear-gradient(to right, #f97316, #6b7280, #3b82f6)"></div>
+        <div class="default-marker" style="left: 30%">
+          <div class="default-pip"></div>
+          <div class="default-label">27 mg/dL</div>
+        </div>
+        <div class="spectrum-labels"><span>0 (only at target)</span><span>90 mg/dL (wide zone)</span></div>
+      </div>
+    </div>
+
+    <div class="toggle-row mt8" style="background:#0f1117; border:1px solid #2d3748">
+      <div>
+        <div class="toggle-name">Disable Night Mode if COB &gt; 0</div>
+        <div class="toggle-desc">Allow SMBs during night if carbs on board</div>
+      </div>
+      <span class="badge badge-neutral">Default: OFF</span>
+    </div>
+
+    <div class="toggle-row" style="background:#0f1117; border:1px solid #2d3748">
+      <div>
+        <div class="toggle-name">Disable Night Mode with Low TT</div>
+        <div class="toggle-desc">Allow SMBs if a low temp target is active during night window</div>
+      </div>
+      <span class="badge badge-neutral">Default: OFF</span>
+    </div>
+
+    <div style="border-top: 1px solid #2d3748; margin: 14px 0;"></div>
+
+    <div class="card-title" style="font-size:0.85rem; margin-bottom:10px;">Sleep-in Detection</div>
+
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">Sleep-in Hours</span>
+        <span class="setting-key">ApsBoostSleepInHours</span>
+      </div>
+      <div class="setting-desc">Window after Boost start time where sleep-in is detected. If still inactive during this window, inactivity mode continues.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar"></div>
+        <div class="default-marker" style="left: 11%">
+          <div class="default-pip"></div>
+          <div class="default-label">2 hrs</div>
+        </div>
+        <div class="spectrum-labels"><span>0 hrs (disabled)</span><span>18 hrs</span></div>
+      </div>
+    </div>
+
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">Sleep-in Step Threshold</span>
+        <span class="setting-key">ApsBoostSleepInSteps</span>
+      </div>
+      <div class="setting-desc">Steps/hr below which sleep-in is confirmed within the window. Higher = easier to trigger.</div>
+      <div class="spectrum-wrap">
+        <div class="spectrum-bar"></div>
+        <div class="default-marker" style="left: 25%">
+          <div class="default-pip"></div>
+          <div class="default-label">250/hr</div>
+        </div>
+        <div class="spectrum-labels"><span>1 steps/hr</span><span>1,000 steps/hr</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  ROW 3: Toggles + Time Window                             -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="grid full-width">
+
+  <!-- Feature Toggles -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon icon-teal">⚙️</div>
+      <div>
+        <div class="card-title">Feature Toggles</div>
+        <div class="card-subtitle">Enable/disable major Boost features</div>
+      </div>
+    </div>
+
+    <div class="toggle-row" style="background:#0f1117; border:1px solid #2d3748">
+      <div>
+        <div class="toggle-name">TDD-based ISF</div>
+        <div class="toggle-desc">Calculates ISF from Total Daily Dose. Required for Boost's dynamic ISF to function. Mandatory for V2.</div>
+      </div>
+      <span class="badge badge-on-agg">Default: OFF</span>
+    </div>
+
+    <div class="toggle-row" style="background:#0f1117; border:1px solid #2d3748">
+      <div>
+        <div class="toggle-name">TDD Sensitivity Adjustment</div>
+        <div class="toggle-desc">Adjusts sensitivity using 24h vs 7D TDD ratio (like Autosens). Start with OFF.</div>
+      </div>
+      <span class="badge badge-neutral">Default: OFF</span>
+    </div>
+
+    <div class="toggle-row" style="background:#0f1117; border:1px solid #2d3748">
+      <div>
+        <div class="toggle-name">Boost Percentage Scaling</div>
+        <div class="toggle-desc">Scales SMBs when BG is 108–180 mg/dL with rising delta. Uses Percent Scale Factor.</div>
+      </div>
+      <span class="badge badge-on-agg">Default: OFF</span>
+    </div>
+
+    <div class="toggle-row" style="background:#0f1117; border:1px solid #2d3748">
+      <div>
+        <div class="toggle-name">Circadian ISF</div>
+        <div class="toggle-desc">Applies time-of-day multiplier to ISF based on circadian polynomial model. Low overnight, peaks afternoon.</div>
+      </div>
+      <span class="badge badge-neutral">Default: OFF</span>
+    </div>
+
+    <div class="toggle-row" style="background:#0f1117; border:1px solid #2d3748">
+      <div>
+        <div class="toggle-name">High TT Raises Sensitivity</div>
+        <div class="toggle-desc">When exercise temp target is active, increase ISF (reduce insulin delivery).</div>
+      </div>
+      <span class="badge badge-on-cons">Default: OFF</span>
+    </div>
+
+    <div class="toggle-row" style="background:#0f1117; border:1px solid #2d3748">
+      <div>
+        <div class="toggle-name">Low TT Lowers Sensitivity</div>
+        <div class="toggle-desc">When correction temp target is active, decrease ISF (increase insulin delivery).</div>
+      </div>
+      <span class="badge badge-on-agg">Default: OFF</span>
+    </div>
+
+    <div class="toggle-row" style="background:#0f1117; border:1px solid #2d3748">
+      <div>
+        <div class="toggle-name">Allow Boost with High Temp Target</div>
+        <div class="toggle-desc">By default, Boost is disabled when a high temp target is set. Enable to override this.</div>
+      </div>
+      <span class="badge badge-on-agg">Default: OFF</span>
+    </div>
+  </div>
+
+  <!-- Time Window + Safety -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon icon-yellow">⏰</div>
+      <div>
+        <div class="card-title">Time Window &amp; Safety</div>
+        <div class="card-subtitle">When Boost is active and data source safety checks</div>
+      </div>
+    </div>
+
+    <p style="font-size:0.77rem; color:#64748b; margin-bottom:12px;">
+      Boost only runs within its configured time window. Outside the window, oref1 standard behaviour applies.
+      The default window (07:00–07:01) is effectively <b style="color:#f97316">disabled</b> — you must set a real window.
+    </p>
+
+    <div class="setting">
+      <div class="setting-top">
+        <span class="setting-name">Boost Start Time</span>
+        <span class="setting-key">ApsBoostStartTime</span>
+      </div>
+      <div class="setting-desc">Time Boost becomes active each day (24h HH:mm format).</div>
+      <div style="background:#0f1117; border:1px solid #2d3748; border-radius:8px; padding:10px; font-family:monospace; font-size:0.85rem; color:#6ee7b7; margin-top:4px;">
+        Default: 07:00 → Set to your wake-up time
+      </div>
+    </div>
+
+    <div class="setting mt12">
+      <div class="setting-top">
+        <span class="setting-name">Boost End Time</span>
+        <span class="setting-key">ApsBoostEndTime</span>
+      </div>
+      <div class="setting-desc">Time Boost deactivates. Can span midnight (end &lt; start).</div>
+      <div style="background:#0f1117; border:1px solid #2d3748; border-radius:8px; padding:10px; font-family:monospace; font-size:0.85rem; color:#6ee7b7; margin-top:4px;">
+        Default: 07:01 → Set to your end-of-day / bedtime
+      </div>
+    </div>
+
+    <div style="border-top: 1px solid #2d3748; margin: 14px 0;"></div>
+    <div class="card-title" style="font-size:0.85rem; margin-bottom:10px;">Safety Settings</div>
+
+    <div class="toggle-row" style="background:#1c0a00; border:1px solid #7f1d1d">
+      <div>
+        <div class="toggle-name" style="color:#fca5a5">Allow All BG Sources</div>
+        <div class="toggle-desc">Bypasses advanced CGM filtering. Only use with reliable, validated CGM data.</div>
+      </div>
+      <span class="badge badge-neutral">Default: OFF</span>
+    </div>
+
+    <div class="toggle-row mt8" style="background:#1c0a00; border:1px solid #7f1d1d">
+      <div>
+        <div class="toggle-name" style="color:#fca5a5">Bypass Version Expiry Check</div>
+        <div class="toggle-desc">Prevents AAPS disabling closed loop on version expiry. You accept responsibility for running old code.</div>
+      </div>
+      <span class="badge badge-neutral">Default: OFF</span>
+    </div>
+
+    <div class="warning mt12">
+      <span class="warning-icon">⚠️</span>
+      <span>Safety settings should remain OFF unless you fully understand the implications. They exist for edge cases, not routine use.</span>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  QUICK REFERENCE                                           -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="card full-width">
+  <div class="card-header">
+    <div class="card-icon icon-slate">🎯</div>
+    <div>
+      <div class="card-title">Quick Reference: Tuning Direction</div>
+      <div class="card-subtitle">Starting points when you need more or less aggressiveness</div>
+    </div>
+  </div>
+  <div class="guidance-grid">
+    <div class="guidance-box conservative">
+      <h4>To make Boost more conservative</h4>
+      <ul>
+        <li>Lower <b>Boost Scale</b> (e.g. 0.7–0.8)</li>
+        <li>Lower <b>Max IOB</b> to limit how long Boost stays active</li>
+        <li>Lower <b>Bolus Cap</b> to reduce per-SMB size</li>
+        <li>Lower <b>Insulin Required %</b> (e.g. 30–40%)</li>
+        <li>Lower <b>DynISF Velocity</b> to reduce BG reactivity</li>
+        <li>Raise <b>DynISF Normal Target</b> (less aggressive ISF reference)</li>
+        <li>Enable <b>Night Mode</b> with a larger BG Offset</li>
+        <li>Raise <b>Inactivity Profile %</b> (more suppression when sedentary)</li>
+        <li>Enable <b>High TT Raises Sensitivity</b></li>
+      </ul>
+    </div>
+    <div class="guidance-box aggressive">
+      <h4>To make Boost more aggressive</h4>
+      <ul>
+        <li>Raise <b>Boost Scale</b> (e.g. 1.2–2.0, not ≥3)</li>
+        <li>Raise <b>Max IOB</b> to allow more sustained Boost delivery</li>
+        <li>Raise <b>Bolus Cap</b> to allow larger SMBs</li>
+        <li>Raise <b>Insulin Required %</b> toward 100%</li>
+        <li>Raise <b>DynISF Velocity</b> to 100% (full BG reactivity)</li>
+        <li>Lower <b>DynISF Normal Target</b> (stronger ISF reference)</li>
+        <li>Enable <b>Percent Scaling</b> for rising-BG amplification</li>
+        <li>Enable <b>Low TT Lowers Sensitivity</b> for correction targets</li>
+        <li>Raise <b>TDD Adjustment Factor</b> above 100%</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="v2-diff">
+    <b>Boost V2 differences to keep in mind:</b> V2 uses TDD² in its ISF formula — it is <b>more sensitive to TDD changes</b> than V1 and reacts more strongly to short-term variations. BG Velocity is always 100% in V2 and cannot be reduced. Start with conservative delivery settings (lower Scale, lower Max IOB) when switching to V2.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  SCENARIO GUIDES                                           -->
+<!-- ══════════════════════════════════════════════════════════ -->
+
+<div class="scenario-section-header">
+  <h2>Common <span>Scenario Guides</span></h2>
+  <p>Specific settings responses to real-world control problems — start with the highest-priority fixes first</p>
+</div>
+
+
+<!-- ── SCENARIO 1: Hypos after food ── -->
+<div class="scenario-card hypo">
+  <div class="scenario-banner">
+    <div class="scenario-icon">📉</div>
+    <div>
+      <div class="scenario-title">Scenario 1 — Too many hypos in response to food</div>
+      <div class="scenario-subtitle">BG drops low after meals, often 2–3 hours post-eating. Boost appears to be delivering too much insulin around carb absorption.</div>
+    </div>
+  </div>
+  <div class="scenario-body">
+
+    <div class="col-mechanism">
+      <div class="scenario-col-title">What is likely happening</div>
+      <div class="mechanism-text">
+        Boost's COB tiers (Tier 1 &lt;25 min, Tier 2 &lt;40 min) deliver insulin proportional to <b>insulinReq</b>, which is driven by current ISF and the gap between BG and target. If ISF is tuned aggressively or insulinReqPct is high, these tiers stack significant insulin on top of the meal bolus.
+        <br><br>
+        If the profile <b>ISF is too low</b> (number too small), the algorithm overestimates how much insulin is needed per mg/dL correction. Combined with a large Max IOB headroom, this allows continued stacking well into absorption.
+        <br><br>
+        Boost's <b>Fast Carb Protection</b> reduces aggressiveness when a recent low + fast rise is detected, but it cannot fire if the hypo itself is triggered by the overcorrection — the protection is for pre-emptive fast carb scenarios, not post-delivery correction.
+      </div>
+    </div>
+
+    <div class="col-fix">
+      <div class="scenario-col-title">Settings to change</div>
+      <ul class="fix-list">
+        <li>
+          <b>Insulin Required %</b> <span class="fix-priority">first</span><br>
+          Reduce to 35–40%. This directly scales how much of the calculated need is acted on during COB tiers.
+          <div class="fix-val">ApsBoostInsulinReqPct → 35–40%</div>
+        </li>
+        <li>
+          <b>Max IOB</b> <span class="fix-priority">first</span><br>
+          Lower to 0.5–0.8 U. When IOB exceeds this, Boost falls back to oref1 — this prevents stacking beyond a safe ceiling.
+          <div class="fix-val">ApsBoostMaxIob → 0.5–0.8 U</div>
+        </li>
+        <li>
+          <b>Bolus Cap</b><br>
+          Reduce to 1.0–1.5 U as a hard ceiling on any single SMB delivery.
+          <div class="fix-val">ApsBoostBolus → 1.0–1.5 U</div>
+        </li>
+        <li>
+          <b>Boost Scale</b><br>
+          If hypos persist after the above, reduce scale to 0.7–0.8. This reduces the Tier 3+ UAM bolus magnitude.
+          <div class="fix-val">ApsBoostScale → 0.7–0.8</div>
+        </li>
+        <li>
+          <b>Profile ISF</b> (outside Boost settings)<br>
+          Verify ISF is not too low (too aggressive). A too-low ISF means insulinReq is overestimated at every step. Fasting basal testing first, then ISF.
+        </li>
+        <li>
+          <b>Profile CR</b> (outside Boost settings)<br>
+          A too-low CR (too aggressive) means the pre-meal bolus already overdoses before Boost fires. Check CR separately from Boost.
+        </li>
+      </ul>
+    </div>
+
+    <div class="col-avoid">
+      <div class="scenario-col-title">What not to do</div>
+      <ul class="avoid-list">
+        <li><b>Don't set Scale ≥ 3.0</b> to disable Boost as your first response — you lose all Boost benefit and revert to standard oref1 which may have worse meal coverage.</li>
+        <li><b>Don't raise the DynISF Normal Target</b> as a first fix — this makes ISF less aggressive at a given BG but doesn't address the stacking behaviour during COB tiers.</li>
+        <li><b>Don't extend Night Mode hours</b> into the day to suppress post-meal SMBs — this is a blunt instrument that will block needed corrections at other times.</li>
+        <li><b>Don't reduce smbBasalMinutes</b> in isolation — this only limits per-SMB size; if ISF is wrong, the algorithm will just deliver more frequent small SMBs instead.</li>
+        <li><b>Don't ignore profile calibration</b> — Boost amplifies what the profile tells it. A miscalibrated ISF or CR will always produce bad meal outcomes regardless of Boost settings.</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ── SCENARIO 2: High plateaus after meals ── -->
+<div class="scenario-card plateau">
+  <div class="scenario-banner">
+    <div class="scenario-icon">📊</div>
+    <div>
+      <div class="scenario-title">Scenario 2 — High plateaus after meals</div>
+      <div class="scenario-subtitle">BG rises after eating and stays elevated for 2+ hours before slowly falling. Boost does not appear to be delivering enough to bring BG back to target.</div>
+    </div>
+  </div>
+  <div class="scenario-body">
+
+    <div class="col-mechanism">
+      <div class="scenario-col-title">What is likely happening</div>
+      <div class="mechanism-text">
+        The algorithm is calculating an insulinReq but delivering only a fraction of it — either because <b>insulinReqPct is low</b>, or because <b>Max IOB is hit quickly</b> and Boost falls back to oref1 which delivers standard corrections.
+        <br><br>
+        During a post-meal plateau where BG is stable but high (flat delta), Boost uses <b>Tier 7 (mild correction)</b> or standard oref1 logic rather than the more aggressive UAM tiers, because acceleration signals are gone. The correction speed is then entirely governed by ISF and Max IOB headroom.
+        <br><br>
+        If <b>Percent Scaling is disabled</b>, the rising 108–180 mg/dL window never gets the amplified SMB it's designed to handle. Enabling this is specifically designed for this pattern.
+        <br><br>
+        A <b>too-high ISF</b> (conservative number) underestimates insulinReq — each SMB chips away slowly. Verify ISF is accurate for corrections.
+      </div>
+    </div>
+
+    <div class="col-fix">
+      <div class="scenario-col-title">Settings to change</div>
+      <ul class="fix-list">
+        <li>
+          <b>Verify Boost time window</b> <span class="fix-priority">first</span><br>
+          Confirm the window covers your meal times. The default (07:00–07:01) is essentially disabled. If Boost isn't active, you're on standard oref1 only.
+          <div class="fix-val">ApsBoostStartTime / ApsBoostEndTime</div>
+        </li>
+        <li>
+          <b>Max IOB</b> <span class="fix-priority">first</span><br>
+          Raise to 2.0–3.0 U. A low Max IOB ceiling is the most common reason Boost stops correcting early — check the loop graph for IOB hitting the ceiling.
+          <div class="fix-val">ApsBoostMaxIob → 2.0–3.0 U</div>
+        </li>
+        <li>
+          <b>Enable Percent Scaling</b><br>
+          Specifically designed for BG in the 108–180 rising range. Set Percent Scale Factor to 200–300% to amplify SMBs as BG rises through this band.
+          <div class="fix-val">ApsBoostEnablePercentScale → ON</div>
+          <div class="fix-val">ApsBoostPercentScale → 200–300%</div>
+        </li>
+        <li>
+          <b>Insulin Required %</b><br>
+          Raise to 70–80%. Delivers more of the calculated need per loop cycle rather than a conservative fraction.
+          <div class="fix-val">ApsBoostInsulinReqPct → 70–80%</div>
+        </li>
+        <li>
+          <b>maxSMBBasalMinutes</b><br>
+          Raise to 60 min. This increases the per-SMB ceiling, allowing larger individual corrections when insulinReq warrants it.
+          <div class="fix-val">maxSMBBasalMinutes → 60 min</div>
+        </li>
+        <li>
+          <b>DynISF Normal Target</b><br>
+          Lower from 99 to 90 mg/dL. This makes the ISF formula produce a stronger (lower) ISF value, increasing insulinReq for a given BG gap.
+          <div class="fix-val">ApsBoostDynIsfNormalTarget → 90 mg/dL</div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="col-avoid">
+      <div class="scenario-col-title">What not to do</div>
+      <ul class="avoid-list">
+        <li><b>Don't raise Boost Scale above 2.0</b> before verifying Max IOB and Insulin Required % are correct — scale amplifies Tier 3+ UAM boluses but has little effect on plateau corrections where acceleration is flat.</li>
+        <li><b>Don't rely on Scale alone</b> for plateaus — scale primarily affects the fast-rise UAM tiers. Once BG is flat and high, the plateau is corrected by ISF and IOB headroom, not scale.</li>
+        <li><b>Don't raise TDD Adjustment Factor aggressively</b> (e.g. 200%+) to force stronger ISF — this distorts the Dynamic ISF calculation away from your actual insulin needs and can create instability.</li>
+        <li><b>Don't ignore Boost time window</b> — it's the most common reason Boost appears not to be working. Verify in the AAPS loop view that the plugin shows "BOOST ACTIVE".</li>
+        <li><b>Don't tighten CR</b> to compensate for post-meal plateaus — if Boost is active and adequately configured, a tight CR risks pre-meal overdose. Correct the loop behaviour first.</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ── SCENARIO 3: Always stuck above target ── -->
+<div class="scenario-card stuck">
+  <div class="scenario-banner">
+    <div class="scenario-icon">🎯</div>
+    <div>
+      <div class="scenario-title">Scenario 3 — Always getting stuck above target</div>
+      <div class="scenario-subtitle">BG sits persistently above target even between meals, or returns to target only briefly. Not specifically meal-related — happens throughout the day.</div>
+    </div>
+  </div>
+  <div class="scenario-body">
+
+    <div class="col-mechanism">
+      <div class="scenario-col-title">What is likely happening</div>
+      <div class="mechanism-text">
+        Persistent above-target BG between meals usually signals a <b>profile calibration problem</b> rather than a Boost tuning problem. The algorithm can only correct what the profile's ISF and basal allow it to correct.
+        <br><br>
+        If <b>TDD-based ISF is disabled</b>, Boost uses the profile ISF directly. If that ISF is too conservative (too high a number), every correction is undersized. Dynamic ISF's purpose is to adapt — without it, the algorithm is no better than standard oref1.
+        <br><br>
+        <b>Night Mode or inactivity suppression</b> may be blocking corrections during parts of the day where BG is chronically high. If these features fire during waking hours, they prevent SMBs when they're most needed.
+        <br><br>
+        A <b>too-low Max IOB</b> hits the ceiling quickly during sustained correction periods. Autosens will attempt to compensate but is bounded by its min/max ratio limits.
+      </div>
+    </div>
+
+    <div class="col-fix">
+      <div class="scenario-col-title">Settings to change</div>
+      <ul class="fix-list">
+        <li>
+          <b>Enable TDD-based ISF</b> <span class="fix-priority">first</span><br>
+          If not already on, this is the most impactful change. Boost's Dynamic ISF is the core mechanism for adapting corrections to your actual insulin needs.
+          <div class="fix-val">ApsBoostUseTdd → ON</div>
+        </li>
+        <li>
+          <b>Verify Boost time window</b> <span class="fix-priority">first</span><br>
+          Confirm Boost is active during the problem periods. Check the AAPS loop graph — the plugin label should show "BOOST" not "SMB".
+          <div class="fix-val">ApsBoostStartTime / ApsBoostEndTime</div>
+        </li>
+        <li>
+          <b>Max IOB</b><br>
+          Raise to 2.0–3.0 U. Persistent highs often mean the algorithm is trying to correct but hitting the IOB ceiling and backing off. Check the loop graph for this pattern.
+          <div class="fix-val">ApsBoostMaxIob → 2.0–3.0 U</div>
+        </li>
+        <li>
+          <b>DynISF Normal Target</b><br>
+          Lower from 99 to 90–95 mg/dL to make the ISF formula produce stronger corrections at elevated BG.
+          <div class="fix-val">ApsBoostDynIsfNormalTarget → 90–95 mg/dL</div>
+        </li>
+        <li>
+          <b>Review Night Mode &amp; Inactivity settings</b><br>
+          Confirm Night Mode hours do not overlap with when you are awake and high. Check that inactivity % is not suppressing insulin during sedentary work hours when BG is elevated.
+          <div class="fix-val">ApsBoostNightModeStart / End — check overlap</div>
+          <div class="fix-val">ApsBoostInactivityPct → reduce if needed</div>
+        </li>
+        <li>
+          <b>Enable Low TT Lowers Sensitivity</b><br>
+          When you deliberately set a correction temp target, this makes the algorithm more aggressive. Useful for managing persistent highs intentionally.
+          <div class="fix-val">ApsAutoIsfLowTtLowersSens → ON</div>
+        </li>
+        <li>
+          <b>Profile basal and ISF</b> (outside Boost settings)<br>
+          Persistent above-target BG is often a signal that the profile basal or ISF is fundamentally too conservative. Autosens will show a persistent ratio &gt; 1.0 if it's trying to compensate. Address the root cause in the profile.
+        </li>
+      </ul>
+    </div>
+
+    <div class="col-avoid">
+      <div class="scenario-col-title">What not to do</div>
+      <ul class="avoid-list">
+        <li><b>Don't raise TDD Adjustment Factor above 150%</b> as a workaround for poor profile calibration — this forces the ISF formula to behave as if you use far more insulin than you do, creating instability and potential hypo risk when your real TDD is used.</li>
+        <li><b>Don't raise Boost Scale to near 3.0</b> — high scale inflates UAM bolus tiers but has minimal effect on persistent between-meal highs where BG is flat. It also increases hypo risk when you eventually come back on target.</li>
+        <li><b>Don't ignore autosens ratio</b> — if autosens is sitting persistently at its maximum (e.g. 1.2), it's hitting its ceiling trying to compensate for a miscalibrated profile. Widening autosens limits is not the fix; correcting the profile is.</li>
+        <li><b>Don't set a high BG target in the profile</b> to "avoid lows" — if the profile target is 130+ mg/dL, the algorithm will never drive BG below that regardless of settings. Set a correct target and use night mode for overnight protection instead.</li>
+        <li><b>Don't increase Bolus Cap</b> to try to force larger corrections — between-meal corrections are limited by insulinReq (ISF × BG gap), not bolus cap. Bolus cap only limits the ceiling; if insulinReq is already below the cap, raising the cap does nothing.</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="footer">
+  Boost Plugin Tuning Guide · AndroidAPS · Generated 2026-03-31
+</div>
+
+</body>
+</html>

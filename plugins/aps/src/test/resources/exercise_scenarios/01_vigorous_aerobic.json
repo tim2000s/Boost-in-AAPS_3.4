@@ -1,0 +1,17 @@
+{
+  "scenario": "01_vigorous_aerobic",
+  "description": "High steps + zone 4 HR → VIGOROUS_AEROBIC",
+  "type": "hr_classification",
+  "input": {
+    "avgBpm": 165,
+    "hrMax": 180,
+    "hrResting": 60,
+    "stepsLast15Min": 400,
+    "stressDetection": false
+  },
+  "expected": {
+    "exerciseState": "VIGOROUS_AEROBIC",
+    "hrZone": "zone5",
+    "confidence": "HIGH"
+  }
+}

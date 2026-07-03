@@ -71,6 +71,8 @@
     <string name="boost_sleep_in_steps_summary">Steps/hour below which user is considered still sleeping. Default: 250</string>
     <string name="boost_activity_steps_5_title">5-Minute Activity Steps</string>
     <string name="boost_activity_steps_5_summary">Steps in 5 min above which user is active. Default: 420</string>
+    <string name="boost_activity_steps_15_title">15-Minute Activity Steps</string>
+    <string name="boost_activity_steps_15_summary">Steps in 15 min above which user is active. Default: 800</string>
     <string name="boost_activity_steps_30_title">30-Minute Activity Steps</string>
     <string name="boost_activity_steps_30_summary">Steps in 30 min above which user is active. Default: 1200</string>
     <string name="boost_activity_steps_60_title">60-Minute Activity Steps</string>
@@ -93,6 +95,13 @@
     <string name="boost_dynisf_adjust_factor_title">TDD adjustment factor (%)</string>
     <string name="boost_dynisf_adjust_factor_summary">Scale the calculated TDD by this percentage. Default: 100</string>
 
+    <!-- Boost Preference Screen Sections -->
+    <string name="boost_settings_default_aaps">Default AAPS Settings</string>
+    <string name="boost_settings_boost_controls">Boost Controls</string>
+    <string name="boost_settings_exercise">Exercise Settings</string>
+    <string name="boost_settings_safety">Safety Settings</string>
+    <string name="boost_settings_summary">AAPS defaults, Boost controls, Dynamic ISF, Exercise, Night Mode, Safety, Advanced</string>
+
     <!-- Boost BG Source Safety -->
     <string name="boost_allow_all_bg_sources_title">Allow all BG sources for SMBs</string>
     <string name="boost_allow_all_bg_sources_summary">Bypass advanced filtering check. WARNING: Only use with reliable CGM data</string>
@@ -114,6 +123,33 @@
     <string name="boost_night_mode_disable_with_low_tt_title">Disable Night Mode with low temp target</string>
     <string name="boost_night_mode_disable_with_low_tt_summary">Allow SMBs during Night Mode when temp target is below profile target</string>
     <string name="boost_night_mode_smb_disabled">SMB disabled by Boost Night Mode</string>
+
+    <string name="boost_post_exercise_recovery_title">Post-Exercise Recovery</string>
+    <string name="boost_post_exercise_recovery_enabled_title">Enable Post-Exercise Recovery</string>
+    <string name="boost_post_exercise_recovery_enabled_summary">Automatically set a high TempTarget and reduce SMB aggressiveness after exercise to guard against delayed hypoglycemia</string>
+    <string name="boost_post_exercise_recovery_hours_title">Recovery Window Duration (hours)</string>
+    <string name="boost_post_exercise_recovery_hours_summary">How long the recovery TempTarget and SMB reduction remain active after exercise ends. Evidence supports 1–4h; default 2h covers the primary risk window (Riddell et al.)</string>
+    <string name="boost_post_exercise_recovery_target_title">Recovery TempTarget</string>
+    <string name="boost_post_exercise_recovery_target_summary">BG target during recovery window. ATTD 2020 consensus recommends 7–10 mmol/L (126–180 mg/dL) after aerobic exercise; default 8.0 mmol/L / 144 mg/dL</string>
+    <string name="boost_post_exercise_recovery_scale_title">SMB Reduction Factor</string>
+    <string name="boost_post_exercise_recovery_scale_summary">Multiplier (0.0–1.0) applied to boost_bolus and boost_scale during the recovery window. 0.5 = 50% reduction. Applies even if TempTarget is cancelled manually.</string>
+    <string name="boost_post_exercise_min_duration_title">Minimum Exercise Duration (min)</string>
+    <string name="boost_post_exercise_min_duration_summary">Recovery only triggers if exercise was detected for at least this many minutes. Avoids false triggers from brief activity bursts. Default: 10 min.</string>
+    <string name="boost_post_exercise_recovery_active">Post-exercise recovery active — SMB aggressiveness reduced</string>
+
+    <!-- Boost Heart Rate Integration -->
+    <string name="boost_hr_integration_title">Heart Rate Integration</string>
+    <string name="boost_hr_integration_summary">Augment step-based exercise detection using heart rate data from a paired wearable</string>
+    <string name="boost_hr_integration_enabled_title">Enable HR Integration</string>
+    <string name="boost_hr_integration_enabled_summary">Use heart rate data to classify exercise type (aerobic vs resistance) and confirm step-count signals. Requires a wearable sending HR data to AAPS. Feature is opt-in and falls back to step-only detection if no recent HR data is available.</string>
+    <string name="boost_hr_max_bpm_title">Maximum Heart Rate (HRmax)</string>
+    <string name="boost_hr_max_bpm_summary">Your maximum heart rate in BPM used for Karvonen zone calculation. Standard estimate: 220 minus age. Default 180 bpm is conservative for adults when age is unknown. Range 150–220.</string>
+    <string name="boost_hr_resting_bpm_title">Resting Heart Rate</string>
+    <string name="boost_hr_resting_bpm_summary">Your resting heart rate in BPM used for Karvonen Heart Rate Reserve method. Measure on waking before getting up. Default 60 bpm. Range 30–100.</string>
+    <string name="boost_hr_window_minutes_title">HR Averaging Window (minutes)</string>
+    <string name="boost_hr_window_minutes_summary">How many minutes of recent HR data to average for exercise classification. Default 15 min gives a stable reading. Range 5–60 min.</string>
+    <string name="boost_hr_stress_detection_title">Enable Stress Detection</string>
+    <string name="boost_hr_stress_detection_summary">Detect elevated HR without movement as possible stress or illness. Reduces insulin aggressiveness (raises target) when HR is in zone 2+ but steps are very low. Separate opt-in; disable if you experience false positives.</string>
     <string name="openapsama_bolus_snooze_dia_divisor">Bolus snooze dia divisor</string>
 
     <string name="openapsma_run">Run now</string>
