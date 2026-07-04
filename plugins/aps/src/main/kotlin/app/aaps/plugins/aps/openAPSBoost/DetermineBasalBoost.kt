@@ -28,6 +28,22 @@ class DetermineBasalBoost @Inject constructor(
     private val profileUtil: ProfileUtil
 ) {
 
+    companion object {
+
+        /**
+         * Post-rescue window threshold (mg/dL) for the 45-min rolling BG minimum
+         * (`recentLowBG45Min`). Below this, TWO aligned guards engage:
+         *  - V1 (here): the v4.4.4 Fix A v2 tier block — T3/T4 UAM tiers + T5 PERCENT_SCALE
+         *    are blocked, so the base engine's dose is hypo-restrained;
+         *  - the plugin override site (OpenAPSBoostPlugin): the V6 meal-state exemption from
+         *    the non-meal cap is suppressed, so CONFIRMED/COMMITTED can't out-dose the
+         *    hypo-restrained V1 dose (post-rescue meal-state cap, 2026-07-04).
+         * The alignment is load-bearing: sharing one constant guarantees the V6 cap engages
+         * exactly when (and only when) V1's dose is the restrained one it inherits.
+         */
+        const val POST_RESCUE_LOW_THRESHOLD_MGDL = 75.0
+    }
+
     private val consoleError = mutableListOf<String>()
     private val consoleLog = mutableListOf<String>()
 
@@ -1431,9 +1447,9 @@ class DetermineBasalBoost @Inject constructor(
                 // Blocks T3 (UAM_BOOST), T4 (UAM_HIGH_BOOST), and T5 (PERCENT_SCALE) when the
                 // 45-min rolling-min BG is below 75. See DetermineBasalBoostV3MLG3 for full
                 // backtest rationale — same 45-min window and tier scope as v4.4.4 acting layer.
-                val inPostRescueWindow = recentLowBG45Min < 75.0
+                val inPostRescueWindow = recentLowBG45Min < POST_RESCUE_LOW_THRESHOLD_MGDL
                 if (inPostRescueWindow) {
-                    consoleError.add("⚠ Post-rescue recovery: recentLowBG45Min ${round(recentLowBG45Min, 0)} < 75 — UAM tiers T3/T4 + T5 PERCENT_SCALE blocked")
+                    consoleError.add("⚠ Post-rescue recovery: recentLowBG45Min ${round(recentLowBG45Min, 0)} < ${POST_RESCUE_LOW_THRESHOLD_MGDL.toInt()} — UAM tiers T3/T4 + T5 PERCENT_SCALE blocked")
                 }
 
                 // Decision tree debug
