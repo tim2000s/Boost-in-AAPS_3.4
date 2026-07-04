@@ -171,6 +171,48 @@ open class OpenAPSBoostPlugin @Inject constructor(
             autosensWhenNoTdd -> orefAutosensRatio
             else              -> isfResultRatio
         }
+
+        /** Outcome of the V6-override dose caps: the dose to deliver plus the reason-line breadcrumb ("" when uncapped). */
+        internal data class V6OverrideCaps(val dose: Double, val capNote: String)
+
+        /**
+         * V6-override dose caps (pure — unit-tested directly):
+         *  - non-meal-state cap (2026-07-02): in IDLE/OBSERVING/RECOVERING V6 never out-doses V1;
+         *  - post-rescue meal-state cap (2026-07-04): inside the post-rescue window
+         *    (recentLowBG45Min < [DetermineBasalBoost.POST_RESCUE_LOW_THRESHOLD_MGDL]) the meal-state
+         *    exemption is suppressed, so CONFIRMED/COMMITTED are ALSO capped at V1's would-dose.
+         *
+         * Incident 2026-07-03 19:47 BST: severe hypo (nadir 40) → unannounced rescue carbs → violent
+         * rebound. V6 CONFIRMED at BG 119 delivered 2.7U while V1's 45-min post-rescue tier guard had
+         * restrained the base engine to 1.05U — the meal-state exemption discarded that restraint. BG
+         * then ran 181 → nadir 81 with zero margin, and the 2.7U tripped the 2.5U cumulative cap,
+         * silencing V6 for the following hour.
+         *
+         * DB backtest (2026-07-04): 20.4% of meal-state cycles are post-rescue; 27% of the insulin this
+         * cap removes sits directly ahead of a second low < 70 (vs 14-19% for every other lever
+         * evaluated). Cost side: 10% genuine post-hypo meals, median 0.15U under-delivery, zero
+         * double-dips. Verdict SHIP.
+         *
+         * WHY inherit V1 (alignment is load-bearing): the 75 mg/dL / 45-min window is deliberately the
+         * SAME constant + source value as V1's post-rescue tier guard (DetermineBasalBoost Fix A v2),
+         * so whenever this cap binds, v1WouldDose is by construction the hypo-restrained dose — the cap
+         * inherits V1's restraint instead of inventing a second, divergent notion of "post-rescue".
+         */
+        internal fun applyV6OverrideCaps(
+            inMealState: Boolean,
+            inPostRescueWindow: Boolean,
+            v5FinalDose: Double,
+            v1WouldDose: Double,
+            recentLowBG45Min: Double
+        ): V6OverrideCaps {
+            val dose = if (inMealState && !inPostRescueWindow) v5FinalDose else minOf(v5FinalDose, v1WouldDose)
+            val capNote = when {
+                dose >= v5FinalDose -> ""
+                inMealState         -> ", post-rescue capped from ${Round.roundTo(v5FinalDose, 0.001)}U to V1's ${Round.roundTo(v1WouldDose, 0.001)}U (45-min low ${Round.roundTo(recentLowBG45Min, 1.0)})"
+                else                -> ", non-meal-capped from ${Round.roundTo(v5FinalDose, 0.001)}U"
+            }
+            return V6OverrideCaps(dose, capNote)
+        }
     }
 
     // last values
@@ -1287,6 +1329,13 @@ open class OpenAPSBoostPlugin @Inject constructor(
             // returns — so re-check the SAME cap here (same prior-volume semantics as V1) or V5 could
             // deliver on a cycle V1 suspended for cumulative volume. (Review 2026-06-26, MEDIUM.)
             val cumulativeCapReached = cumulativeSmbCap60Min > 0.0 && recentSmbVolume60Min >= cumulativeSmbCap60Min
+            // Post-rescue window (2026-07-04) — the SAME source value (recentLowBG45Min, computed once
+            // in step 6 above and passed into determine_basal) and the SAME shared threshold as V1's
+            // Fix A v2 post-rescue tier guard, so this flag is true exactly when V1's own dose is the
+            // hypo-restrained one. Logged every cycle as boostV5_postRescueWindow (shadow and active)
+            // so the 2026-07-10 live review can audit windows without CGM reconstruction.
+            val inPostRescueWindow = recentLowBG45Min < DetermineBasalBoost.POST_RESCUE_LOW_THRESHOLD_MGDL
+            it.boostV5_postRescueWindow = inPostRescueWindow
             // Boost-inactive gate (2026-07-02): the V6/V5 override may replace the SMB ONLY when Boost
             // is active this cycle. When boostActive is false — night/sleep period, high temp target, or
             // the step-based sleep-in has fired — fall back to V1's base oref1 SMB (which respects night
@@ -1304,11 +1353,17 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 // its own spec ("standard oref dose; no meal hypothesis"); genuine meal rises still
                 // get full V6 dosing via OBSERVING→CONFIRMED.
                 val inMealState = v5decision.mealHypothesis == MealHypothesis.CONFIRMED || v5decision.mealHypothesis == MealHypothesis.COMMITTED
-                val overrideDose = if (inMealState) v5decision.finalDose else minOf(v5decision.finalDose, v1WouldDose)
-                val nonMealCapped = overrideDose < v5decision.finalDose
+                // Post-rescue meal-state cap (2026-07-04): inside the post-rescue window the meal-state
+                // exemption is suppressed and CONFIRMED/COMMITTED are ALSO capped at V1's would-dose —
+                // which is hypo-restrained by V1's aligned tier guard (same value, same threshold; see
+                // applyV6OverrideCaps KDoc for the 2026-07-03 nadir-40 incident + backtest evidence:
+                // 27% of the removed insulin sits ahead of a second low <70 vs 14-19% for other levers;
+                // cost 10% genuine post-hypo meals at 0.15U median under-delivery).
+                val caps = applyV6OverrideCaps(inMealState, inPostRescueWindow, v5decision.finalDose, v1WouldDose, recentLowBG45Min)
+                val overrideDose = caps.dose
                 it.units = overrideDose
-                it.reason.append("V6-ACTIVE drove SMB ${Round.roundTo(overrideDose, 0.001)}U (base would=${Round.roundTo(v1WouldDose, 0.001)}U, state=${v5decision.mealHypothesis}${if (nonMealCapped) ", non-meal-capped from ${Round.roundTo(v5decision.finalDose, 0.001)}U" else ""}); ")
-                aapsLogger.info(LTag.APS, "V6-ACTIVE override: SMB ${v1WouldDose} → ${overrideDose} state=${v5decision.mealHypothesis}${if (nonMealCapped) " (non-meal-capped from ${v5decision.finalDose})" else ""}")
+                it.reason.append("V6-ACTIVE drove SMB ${Round.roundTo(overrideDose, 0.001)}U (base would=${Round.roundTo(v1WouldDose, 0.001)}U, state=${v5decision.mealHypothesis}${caps.capNote}); ")
+                aapsLogger.info(LTag.APS, "V6-ACTIVE override: SMB ${v1WouldDose} → ${overrideDose} state=${v5decision.mealHypothesis}${caps.capNote}")
             } else if (v5Active && v5decision != null && cumulativeCapReached) {
                 it.units = 0.0
                 it.reason.append("V6 suppressed (cumulative SMB cap ${Round.roundTo(recentSmbVolume60Min, 0.01)}U/${Round.roundTo(cumulativeSmbCap60Min, 0.01)}U reached); ")

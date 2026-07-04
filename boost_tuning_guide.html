@@ -1318,6 +1318,9 @@
       <li><b>Commit-shot worth check</b> — the once-per-meal CONFIRMED shot only fires when the velocity-adjusted dose
       beats one routine COMMITTED hold, so a noisy pre-meal blip can't burn the meal's one catch-up shot on ~0.05 U.</li>
       <li><b>Rescue-carb guard</b> — the fast-carb path stands down for an hour after a &lt; 80 mg/dL low.</li>
+      <li><b>Post-hypo meal-state cap</b> — for 45 minutes after any BG &lt; 75 mg/dL, even a CONFIRMED/COMMITTED
+      meal state can't out-dose the hypo-restrained V1 base — a rescue-carb rebound inherits V1's post-rescue
+      restraint instead of drawing a full V6 catch-up shot.</li>
       <li><b>Fail-closed anti-stacking</b> — if recent-bolus history can't be read, SMBs pause rather than lose the cap.</li>
     </ul>
   </div>
