@@ -46,7 +46,7 @@ No glucodynamic model exists, so counterfactual BG under a higher cap is **unobs
 
 Armed users: ['tim', 'A', 'E', 'F', 'H']
 
-- total raises: **1**, total reverts: **1**
-- verdict: **CAUTION — revert-heavy**
+- total raises: **1**, total reverts: **1** (revert share **50%**)
+- verdict: **NO-GO** — trigger too rare and/or revert-heavy
 
-Read it this way: **reverts ≥ raises ⇒ the trigger churns caps at the cost of lows — stop.** Raises with rare reverts *and* a non-trivial safe-slice ⇒ worth building for those users. A near-empty safe slice everywhere ⇒ auto-config + raise-guard already is the controller.
+Read it this way: a **rare trigger** (single-digit raises over six weeks) means the lever barely engages — NO-GO on rarity alone. A **high revert share** (≥33% of cap-changes reverted) means it churns caps at the cost of lows — NO-GO on churn. Only frequent raises with a low revert share AND a non-trivial safe-slice would be worth building; otherwise auto-config + raise-guard already is the controller.

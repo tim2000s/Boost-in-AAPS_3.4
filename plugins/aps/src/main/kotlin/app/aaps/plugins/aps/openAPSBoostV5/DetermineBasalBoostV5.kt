@@ -71,6 +71,10 @@ data class V5Inputs(
     val asleep: Boolean = false,
     /** Fast-carb fast-path toggle (ApsBoostV5FastCarbConfirm). Single-cycle confirm on sharp+accel+score. */
     val fastCarbConfirmEnabled: Boolean = false,
+    /** 2026-07-17 aggressive early-confirm toggle (ApsBoostV5AggressiveEarlyConfirm, auto-config
+     *  managed). Shaves the sustained-score early-confirm path one more cycle (age −2). Default false
+     *  = the audit-validated −1 timing. See CONFIRM_MIN_OBSERVING_AGE_SCORE_READY_AGGRESSIVE. */
+    val aggressiveEarlyConfirmEnabled: Boolean = false,
     val sensorQualityOk: Boolean = true,
     /** True when inside the post-rescue window (recentLowBG45Min < 75, computed at the override
      *  seam — same source/threshold as V1's Fix A v2 tier guard). Gates the composed floor off
@@ -88,6 +92,13 @@ data class V5Inputs(
      *  the composed-floor target on qualifying cycles (see decide()); the same field then logs
      *  the uplift actually applied. Per-user activation only — TBR-gated, see the key's KDoc. */
     val composedFloorActive: Boolean = false,
+    /** 2026-07-17 velocity-budget floor ACTIVATION (BooleanKey.ApsBoostV5VelocityBudgetActive ∧ V6
+     *  active ∧ fail-closed 14d-TBR gate). False (default) = shadow: [V5Decision.velocityBudgetWouldAdd]
+     *  logs what the floor WOULD add, delivered dosing untouched. True = the delivered dose is floored
+     *  at the velocity-budget target on qualifying budget≈0 high cycles, and the cycle is flagged
+     *  [V5Decision.velocityBudgetExempt] so the override seam lets it out-dose V1 (committedCap-bounded).
+     *  Per-user opt-in only — see velocityBudgetFloorTarget + the key's KDoc. */
+    val velocityBudgetActive: Boolean = false,
 
     // Reset triggers
     val profileSwitched: Boolean = false,
@@ -131,8 +142,9 @@ data class V5Decision(
     val stateReset: Boolean,
     val aggressionBudget: AggressionBudgetResult,
     val actionMultiplier: Double,
-    val insulinToDeliver: Double,
-    val phase3: Phase3Result,
+    val velocityFactor: Double,      // 2026-07-10 telemetry: climb-velocity dose scale on the raw shot
+    val insulinToDeliver: Double,    // = dose after velocity + state cap, before Phase-3 brakes
+    val phase3: Phase3Result,        // phase3.finalDose = dose after the composed brake stack
     val newPersistedState: V5PersistedState,
     // 2026-07-03 gate telemetry (read-only; needed for the 2026-07-10 live gate review — a
     // dose-adequacy gate block was previously indistinguishable from a score fade in NS):
@@ -151,6 +163,15 @@ data class V5Decision(
      *    delivered-with-floor − what-unfloored-would-have-delivered; 0.0 when no uplift.
      *  See [composedFloorTargetDose]. */
     val floorWouldAdd: Double? = null,
+    /** 2026-07-17 velocity-budget floor telemetry — DUAL semantics keyed on
+     *  [V5Inputs.velocityBudgetActive] (→ `boostV5_velocityBudgetWouldAdd`; null when the floor's
+     *  conditions are unmet either way): toggle OFF (shadow) = extra U the floor WOULD add vs the
+     *  pipeline output; toggle ON (active) = the uplift actually applied to [finalDose]. */
+    val velocityBudgetWouldAdd: Double? = null,
+    /** 2026-07-17: true only when the ACTIVE velocity-budget floor lifted the delivered dose. The
+     *  override seam reads this to exempt the cycle from the non-meal cap (the floor doses when V1
+     *  doses ~0, so it must out-dose V1). The dose it exempts is committedCap + maxIOB bounded. */
+    val velocityBudgetExempt: Boolean = false,
 )
 
 @Singleton
@@ -224,7 +245,7 @@ class DetermineBasalBoostV5 @Inject constructor() {
         // Uses the SAME predicate step() doses with (confirmEligibleExceptDoseGate), so the two
         // can never diverge.
         val confirmGate = when {
-            !confirmEligibleExceptDoseGate(resetState, scoreResult.score, inputs.eventualBg, inputs.targetBg, scoreReadyStreak) -> "n/a"
+            !confirmEligibleExceptDoseGate(resetState, scoreResult.score, inputs.eventualBg, inputs.targetBg, scoreReadyStreak, inputs.aggressiveEarlyConfirmEnabled) -> "n/a"
             confirmDoseAdequate                                                                                                -> "pass"
             else                                                                                                               -> "blocked"
         }
@@ -245,6 +266,7 @@ class DetermineBasalBoostV5 @Inject constructor() {
             fastConfirmEnabled = fastConfirmAllowed(inputs.fastCarbConfirmEnabled, inputs.recentLowBg),
             confirmDoseAdequate = confirmDoseAdequate,
             scoreReadyStreak = scoreReadyStreak,   // 2026-07-03 sustained-score early confirm (hoisted above)
+            aggressiveEarlyConfirm = inputs.aggressiveEarlyConfirmEnabled,   // 2026-07-17 opt-in age −2
         )
 
         // Phase 2 — single decision rule
@@ -310,7 +332,7 @@ class DetermineBasalBoostV5 @Inject constructor() {
             v1WouldDoseU = inputs.v1WouldDoseU,
             hardGateFired = phase3.reductions.hardGateFired != null,
         )
-        val finalDose: Double
+        var finalDose: Double
         val floorWouldAdd: Double?
         if (!inputs.composedFloorActive) {
             // SHADOW (toggle OFF, or V6 not the active doser) — zero dosing-path effect, the field
@@ -343,6 +365,41 @@ class DetermineBasalBoostV5 @Inject constructor() {
             floorWouldAdd = floorTarget?.let { finalDose - phase3.finalDose }
         }
 
+        // 2026-07-17 velocity-budget floor (budget≈0 high tail). Mutually exclusive with the composed
+        // floor by the budget condition (composed needs budget>0, this needs budget≤0.01), so at most
+        // one target is non-null; layered here on top of the composed result. When ACTIVE and it
+        // lifts the dose, the cycle is flagged velocityBudgetExempt so the override seam lets it
+        // out-dose V1 (this floor doses when V1 doses ~0). Exposure is committedCap + maxIOB bounded;
+        // the dynamic spike cap is deliberately NOT applied (2.5×baseInsulinReq ≈ 0 here would zero it).
+        val vbTarget = velocityBudgetFloorTarget(
+            state = newHypothesisState.state,
+            bg = inputs.bg,
+            budgetU = budget.budget,
+            committedCapU = inputs.committedCapU,
+            asleep = inputs.asleep,
+            postRescueWindow = inputs.postRescueWindow,
+            hardGateFired = phase3.reductions.hardGateFired != null,
+        )
+        val velocityBudgetWouldAdd: Double?
+        var velocityBudgetExempt = false
+        if (!inputs.velocityBudgetActive) {
+            // SHADOW (toggle OFF, or V6 not the active doser) — logs what the floor WOULD add;
+            // delivered dose untouched.
+            velocityBudgetWouldAdd = vbTarget?.let { kotlin.math.max(0.0, it - phase3.finalDose) }
+        } else {
+            val vbDeliverable = vbTarget?.let { target ->
+                var f = minOf(target, kotlin.math.max(0.0, inputs.maxIob - inputs.iob))
+                if (inputs.roundSmbTo > 0.0) f = kotlin.math.floor(f / inputs.roundSmbTo + 1e-9) * inputs.roundSmbTo
+                kotlin.math.max(0.0, f)
+            } ?: 0.0
+            val lifted = kotlin.math.max(finalDose, vbDeliverable)
+            velocityBudgetExempt = vbTarget != null && lifted > finalDose
+            finalDose = lifted
+            // ACTIVE: the uplift actually applied (finalDose-before-VB == phase3.finalDose here,
+            // since composed and VB never co-fire).
+            velocityBudgetWouldAdd = vbTarget?.let { finalDose - phase3.finalDose }
+        }
+
         return V5Decision(
             finalDose = finalDose,
             score = scoreResult.score,
@@ -353,6 +410,7 @@ class DetermineBasalBoostV5 @Inject constructor() {
             stateReset = didReset,
             aggressionBudget = budget,
             actionMultiplier = actionMult,
+            velocityFactor = velocityFactor,
             insulinToDeliver = insulinToDeliver,
             phase3 = phase3,
             newPersistedState = V5PersistedState(
@@ -363,6 +421,8 @@ class DetermineBasalBoostV5 @Inject constructor() {
             confirmGate = confirmGate,
             prospectiveConfirmShot = prospectiveConfirmShot,
             floorWouldAdd = floorWouldAdd,
+            velocityBudgetWouldAdd = velocityBudgetWouldAdd,
+            velocityBudgetExempt = velocityBudgetExempt,
         )
     }
 }
@@ -552,4 +612,61 @@ internal fun composedFloorTargetDose(
     // RECOVERING: v1-bound where applicable (non-meal-state cap at the override seam).
     return if (state == MealHypothesis.RECOVERING && v1WouldDoseU != null)
         minOf(flooredDose, v1WouldDoseU) else flooredDose
+}
+
+// ===== 2026-07-17 velocity-budget floor (user H "postprandial highs") — budget≈0 high tail =====
+
+/** Velocity-budget floor: current BG must exceed this (mg/dL). Higher than the composed floor's
+ *  160 — this floor deliberately doses when oref's insulinReq is ~0 (budget≈0), so it is confined
+ *  to a genuinely high BG. */
+internal const val VELOCITY_BUDGET_MIN_BG_MGDL = 180.0
+
+/** Budget at/below this (U) is "oref says covered" (baseInsulinReq≈0) — the population the composed
+ *  floor EXCLUDES (it requires budget>0). The two floors are mutually exclusive by this condition. */
+internal const val VELOCITY_BUDGET_MAX_BUDGET_U = 0.01
+
+/** Tier-equivalent hold delivered by the velocity-budget floor (U), before the committedCap and
+ *  maxIOB bounds. ≈ V1's per-cycle velocity-tier addition (~0.5U) that V6 drops to 0 on this tail. */
+internal const val VELOCITY_BUDGET_TIER_U = 0.5
+
+/**
+ * Velocity-budget floor target dose (U), or null when its conditions are unmet. Addresses the
+ * budget≈0 high tail — cycles where oref's insulinReq ≤ 0 (the model says "covered") but the user
+ * is sitting high — the population [composedFloorTargetDose] deliberately EXCLUDES (it requires
+ * budget > 0).
+ *
+ * This floor is unique: when delivered it must OUT-DOSE V1 in a non-meal state (V1 also doses ~0
+ * when insulinReq ≤ 0), so the caller flags the cycle exempt from the override seam's non-meal cap.
+ * The exposure is bounded to ONE routine hold — target = min(tier, committedCap) — and the caller
+ * additionally clamps to maxIOB headroom + pump rounding (NOT the dynamic spike cap, which is
+ * 2.5×baseInsulinReq ≈ 0 here and would wrongly zero the floor). It NEVER bypasses a Phase-3 HARD
+ * gate (returns 0.0 when one fired) nor the cumulative-60min / boost-active / sleep / post-rescue
+ * seam guards (all upstream of the exemption). PER-USER opt-in + fail-closed 14d-TBR gate only
+ * (BooleanKey.ApsBoostV5VelocityBudgetActive ∧ composedFloorTbrAllowed) — it deliberately overrides
+ * a prediction that was right-by-outcome on the shadow data, justified only by low hypo exposure.
+ *
+ * Conditions (ALL): state ≠ RECOVERING ∧ bg > 180 ∧ budget ≤ 0.01 ∧ !asleep ∧ !postRescueWindow.
+ * - RECOVERING is EXCLUDED: dosing into a decelerating high is the RECOVERING-SMB pattern rejected
+ *   2026-07-03 (adds into a high-IOB tail → lows).
+ * - Deliberately NOT gated on "rising": the 2026-07-17 sizing showed the rising (delta>3) sub-cell
+ *   is crash-prone (10.7% pre-low, n=28) while the sustained high tail prices under the base rate
+ *   (4.3% vs 5.8%). Sustained-high is the safer target than sharp-rise.
+ */
+internal fun velocityBudgetFloorTarget(
+    state: MealHypothesis,
+    bg: Double,
+    budgetU: Double,
+    committedCapU: Double,
+    asleep: Boolean,
+    postRescueWindow: Boolean,
+    hardGateFired: Boolean,
+): Double? {
+    val conditionsMet = state != MealHypothesis.RECOVERING &&
+        bg > VELOCITY_BUDGET_MIN_BG_MGDL &&
+        budgetU <= VELOCITY_BUDGET_MAX_BUDGET_U &&
+        !asleep &&
+        !postRescueWindow
+    if (!conditionsMet) return null
+    if (hardGateFired) return 0.0
+    return minOf(VELOCITY_BUDGET_TIER_U, committedCapU)
 }

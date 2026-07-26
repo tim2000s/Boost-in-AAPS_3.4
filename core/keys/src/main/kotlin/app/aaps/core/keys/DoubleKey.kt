@@ -69,7 +69,13 @@ enum class DoubleKey(
     ApsBoostCumulativeSmbCap60Min("boost_cumulative_smb_cap_60min", 10.0, 0.0, 10.0, defaultedBySM = true),
 
     // Boost V5 — three (and only three) user-facing knobs per the minimal-settings tenet
-    ApsBoostV5Aggression("boost_v5_aggression", 1.0, 0.7, 1.3, defaultedBySM = true),
+    // 2026-07-17: range max 1.3 → 1.6 (default UNCHANGED at 1.0). Widened the same way the cap
+    // ranges were (see the confirmed/committed comment below) so a high-headroom user who wants a
+    // firmer meal response can push the CONFIRMED catch-up shot harder — the knob scales the
+    // CONFIRMED multiplier only (MealActionMultiplier.kt), still bounded above by the Phase-3 gates.
+    // Auto-config still never auto-raises above 1.0 (BoostV5AutoConfig.kt); this only affects a
+    // user who deliberately raises the slider. Field driver: user H pinned at the old 1.3 ceiling.
+    ApsBoostV5Aggression("boost_v5_aggression", 1.0, 0.7, 1.6, defaultedBySM = true),
     // Boost V5 active-dosing alpha (2026-06-11) — user-adjustable dose caps so the operator can
     // tune V5's commit/holding doses live. 2026-06-26: defaults raised to match the developer's
     // running build (confirmed 1.0→2.5, committed 0.25→0.5) and ranges widened (confirmed 5.0→7.5,

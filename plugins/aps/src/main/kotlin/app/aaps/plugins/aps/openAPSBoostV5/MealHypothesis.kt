@@ -105,7 +105,7 @@ internal const val CONFIRM_EVENTUAL_BG_OFFSET_MGDL = 30.0       // 2026-05-22: 5
 internal const val CONFIRM_MIN_OBSERVING_AGE = 2                // hysteresis: age enters OBSERVING at 0 and increments post-check, so confirm is first possible on the 4th OBSERVING cycle (age ≥ 2 checked on the 3rd increment)
 
 /**
- * 2026-07-03 sustained-score early confirm: OBSERVING → CONFIRMED may fire ONE cycle before
+ * 2026-07-03 sustained-score early confirm: OBSERVING → CONFIRMED may fire before
  * [CONFIRM_MIN_OBSERVING_AGE] when the INSTANTANEOUS score has been ≥ [CONFIRM_SCORE] on BOTH
  * this cycle and the immediately preceding one (`scoreReadyStreak` — supplied by the caller,
  * same cross-cycle-input pattern as `deltaDeclining`). All other confirm conditions (peak
@@ -117,8 +117,24 @@ internal const val CONFIRM_MIN_OBSERVING_AGE = 2                // hysteresis: a
  * exposure, vs +14–17% for added-insulin levers evaluated in the same sweep. The early path
  * requires the CURRENT score ≥ threshold (not just the tracked max) because the whole point
  * is a sustained-ready score, not a transient peak.
+ *
+ * This is the DEFAULT early path (the early-dosing audit priced the `- 1` step at 0.0pp harm).
  */
 internal const val CONFIRM_MIN_OBSERVING_AGE_SCORE_READY = CONFIRM_MIN_OBSERVING_AGE - 1
+
+/**
+ * 2026-07-17 (user H "confirm sooner") — AGGRESSIVE early confirm, one cycle earlier again
+ * (`- 2` = 0), so a meal whose score is confirm-strength on two consecutive cycles confirms as
+ * soon as it enters OBSERVING. Still MOVES the same commit-shot (no added insulin) with the
+ * scoreReadyStreak protection, BUT the pre-push backtest showed ~28% of its candidates are
+ * fizzle-catches (episodes that would have fallen back to IDLE) = new insulin at ~base rate — so
+ * it is NOT a clean cohort default. It is therefore OPT-IN and AUTO-CONFIG MANAGED
+ * (BooleanKey.ApsBoostV5AggressiveEarlyConfirm, enabled by BoostV5AutoConfig ONLY for clearly
+ * well-controlled users — the same class the fastCarbConfirm derivation gates). Threaded via the
+ * `aggressiveEarlyConfirm` flag; false (default) keeps the audit-validated `- 1` timing.
+ * See backtesting/scripts/2026-07-userh-levers/.
+ */
+internal const val CONFIRM_MIN_OBSERVING_AGE_SCORE_READY_AGGRESSIVE = CONFIRM_MIN_OBSERVING_AGE - 2
 // 2026-07-02 dose-adequacy gate: the confirm floor is committedCapU, clamped to at most this fraction
 // of confirmedCapU so a manual committedCap ≥ confirmedCap can't make the gate unsatisfiable (which
 // would silently disable V6's meal response). See DetermineBasalBoostV5.decide().
@@ -225,6 +241,9 @@ fun confirmEligibleExceptDoseGate(
     eventualBg: Double,
     targetBg: Double,
     scoreReadyStreak: Boolean = false,
+    // 2026-07-17: when true, the sustained-score early path opens ONE cycle earlier again (age −2
+    // instead of −1). Opt-in + auto-config managed — see CONFIRM_MIN_OBSERVING_AGE_SCORE_READY_AGGRESSIVE.
+    aggressiveEarlyConfirm: Boolean = false,
 ): Boolean {
     if (current.state != MealHypothesis.OBSERVING || current.committedInSession) return false
     val newMaxScore = max(current.maxScoreInObserving, score)
@@ -233,9 +252,12 @@ fun confirmEligibleExceptDoseGate(
     // 2026-07-03: age gate opens one cycle early when the score has been ≥ CONFIRM_SCORE on BOTH
     // this cycle and the previous one (see CONFIRM_MIN_OBSERVING_AGE_SCORE_READY). The early path
     // checks the CURRENT score, not the tracked max — a sustained-ready score, not a transient
-    // peak, is what justifies shaving the hysteresis.
+    // peak, is what justifies shaving the hysteresis. 2026-07-17: the aggressive opt-in shaves one
+    // more cycle (age −2).
+    val scoreReadyFloor = if (aggressiveEarlyConfirm) CONFIRM_MIN_OBSERVING_AGE_SCORE_READY_AGGRESSIVE
+    else CONFIRM_MIN_OBSERVING_AGE_SCORE_READY
     val ageEligible = age >= CONFIRM_MIN_OBSERVING_AGE ||
-        (age >= CONFIRM_MIN_OBSERVING_AGE_SCORE_READY && score >= CONFIRM_SCORE && scoreReadyStreak)
+        (age >= scoreReadyFloor && score >= CONFIRM_SCORE && scoreReadyStreak)
     return ageEligible && newMaxScore >= CONFIRM_SCORE && newMaxOffset >= CONFIRM_EVENTUAL_BG_OFFSET_MGDL
 }
 
@@ -273,6 +295,9 @@ fun step(
     // one cycle early (CONFIRM_MIN_OBSERVING_AGE_SCORE_READY). Defaults false = legacy timing for
     // all existing callers/tests.
     scoreReadyStreak: Boolean = false,
+    // 2026-07-17: aggressive early-confirm opt-in (auto-config managed). Shaves the score-ready path
+    // one more cycle (age −2). Defaults false = the audit-validated −1 timing for existing callers/tests.
+    aggressiveEarlyConfirm: Boolean = false,
 ): MealHypothesisState {
     val state = current.state
     val age = current.ageCycles
@@ -317,7 +342,7 @@ fun step(
             // Eligibility sub-conditions (age gate incl. the 2026-07-03 sustained-score early path,
             // peak score, peak offset, session lock) live in confirmEligibleExceptDoseGate — shared
             // with decide()'s boostV5_confirmGate telemetry so the two can never diverge (2026-07-03).
-            val confirmEligible = confirmEligibleExceptDoseGate(current, score, eventualBg, targetBg, scoreReadyStreak) &&
+            val confirmEligible = confirmEligibleExceptDoseGate(current, score, eventualBg, targetBg, scoreReadyStreak, aggressiveEarlyConfirm) &&
                 confirmDoseAdequate   // 2026-07-02: don't spend the token on a shot < one COMMITTED hold
             when {
                 // Fast-carb fast-path: confirm in a single OBSERVING cycle, bypassing the age +

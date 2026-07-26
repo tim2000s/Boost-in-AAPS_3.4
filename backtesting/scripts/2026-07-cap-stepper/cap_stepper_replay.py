@@ -296,16 +296,27 @@ def write_report(res, armed_res, tot_raises, tot_reverts, df, track):
                      "| high threshold 160 | 4 | 4 | 50% |\n\n"
                      "No parameterization escapes the churn.\n")
     lines.append("## Go / no-go\n")
-    verdict = ("**NO-GO / negligible**" if tot_raises == 0 else
-               ("**CAUTION — revert-heavy**" if tot_reverts >= tot_raises else
-                "**candidate — raises outweigh reverts**"))
+    # Verdict keys on trigger RARITY and revert SHARE, not raw counts — a 4-vs-3 run must not read
+    # as "candidate" (fixed 2026-07-10 audit: raw-count logic contradicted the paper's NO-GO).
+    # NO-GO if the trigger barely fires (< ~10 raises cohort-wide/6wk = too rare to matter) OR the
+    # revert share is high (churns caps at the cost of lows). Per-user revert-share also matters.
+    changes = tot_raises + tot_reverts
+    revert_share = tot_reverts / changes if changes else 0.0
+    if tot_raises < 10 or revert_share >= 0.33:
+        verdict = "**NO-GO** — trigger too rare and/or revert-heavy"
+    elif revert_share >= 0.20:
+        verdict = "**CAUTION — revert-heavy**"
+    else:
+        verdict = "**candidate — worth building for the safe-slice users**"
     lines.append(f"Armed users: {list(armed_res.user)}\n\n"
-                 f"- total raises: **{tot_raises}**, total reverts: **{tot_reverts}**\n"
+                 f"- total raises: **{tot_raises}**, total reverts: **{tot_reverts}** "
+                 f"(revert share **{100*revert_share:.0f}%**)\n"
                  f"- verdict: {verdict}\n\n"
-                 "Read it this way: **reverts ≥ raises ⇒ the trigger churns caps at the cost of "
-                 "lows — stop.** Raises with rare reverts *and* a non-trivial safe-slice ⇒ worth "
-                 "building for those users. A near-empty safe slice everywhere ⇒ auto-config + "
-                 "raise-guard already is the controller.\n")
+                 "Read it this way: a **rare trigger** (single-digit raises over six weeks) means the "
+                 "lever barely engages — NO-GO on rarity alone. A **high revert share** (≥33% of "
+                 "cap-changes reverted) means it churns caps at the cost of lows — NO-GO on churn. "
+                 "Only frequent raises with a low revert share AND a non-trivial safe-slice would be "
+                 "worth building; otherwise auto-config + raise-guard already is the controller.\n")
     with open(out, "w") as f:
         f.write("\n".join(lines))
     print(f"\nreport -> {out}")

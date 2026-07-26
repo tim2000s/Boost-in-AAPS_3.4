@@ -62,6 +62,7 @@ What doses is deterministic (state machine, multipliers, caps, composed brake-fl
 - **V1 is Boost.** Not oref. See above.
 - The high tail is **high-IOB**; adding insulin into recovering highs or late overnight bounces is the repeated source of lows. The dosing guards exist for this.
 - **Online knob-tuning does not beat static per-user auto-config.** Caps and sliders, both directions, all converged on the policy auto-config already ships. Don't rebuild it as an online loop.
+- **New dosing switches are auto-config managed** (2026-07-17 convention). Any new opt-in dosing toggle is enabled/disabled per-user by `BoostV5AutoConfig` (add it to `managedBooleanKeys` + `suggestionBoolean` in the plugin, and a derived flag on `V5Suggestion`), not shipped OFF-for-everyone requiring manual discovery. Insulin-adding switches auto-enable only for clearly well-controlled users (strict TBR cut — `WELL_CONTROLLED_MAX_TBR70/SEV54`); the user can still override manually. The seam/live gates stay as the runtime backstop.
 - **TING** = time in 3.5–7.8 mmol/L (63–140 mg/dL); report alongside TIR.
 - The user doses in **U200** (roughly 2× mass per unit); flag cross-user absolute-unit comparisons.
 - The composed brake is ~90% correct — don't loosen it.

@@ -40,7 +40,9 @@ Pricing removed insulin at FIXED hypoCaution (independent of the ratchet control
 | 1.75 | 442.1 | 81.8 | 110.9 | 18% | **0.74** |
 | 2.0 | 587.7 | 108.5 | 147.5 | 18% | **0.74** |
 
-**The ratio is flat 0.74 at every level** — the slider *magnitude* is irrelevant; the *targeting signal* (mlHypoRisk>0.30) is what's mediocre. Cohort-wide, the caution starves ~35% more legitimate doses (pre-high undershoot) than it saves pre-lows, at any strength.
+**The ratio is flat 0.74 at every level** — the slider *magnitude* is irrelevant; the *targeting signal* (mlHypoRisk>0.30) is what's mediocre.
+
+⚠️ **Audit notes (2026-07-10):** (1) The flatness is partly *definitional* — raising h only rescales the same fixed set of targeted cycles (mlHypoRisk>0.30), so pre and wrong scale together and their ratio is near-invariant by construction; read it as "magnitude doesn't change the targeted set," not as an independent empirical result. (2) The good:wrong ratio **omits the neutral majority** — at h=2.0, of 587.7 U removed, 108.5 (18%) was pre-low and 147.5 (25%) pre-high, so **~332 U (56%) was outcome-neutral** (BG stayed in range). So "starves ~35% more legit doses than it saves" compares only the two tail buckets; most removal was harmless. (3) The pooled ratio is computed over ALL users incl. the ones a TBR-gate would exclude — it correctly damns the *ungated online loop*, not the per-user static setting.
 
 ## Verdict — both NO-GO as online auto-controllers, for different reasons
 

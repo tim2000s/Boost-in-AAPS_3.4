@@ -35,6 +35,19 @@ object BoostV5AutoConfig {
     const val SEV54_HYPO_PRONE = 1.5
     const val TBR70_HYPO_PRONE = 6.0
 
+    /**
+     * 2026-07-17 — STRICT well-controlled cut-points that auto-enable the insulin-ADDING opt-in
+     * switches (aggressive early confirm, velocity-budget floor). Much tighter than the hypo-prone
+     * cut above: these switches deliberately add a little insulin, so they may only auto-engage for
+     * users with clearly low trailing low-glucose exposure. The pre-push cohort backtest
+     * (backtesting/scripts/2026-07-userh-levers/) set these — TBR<70 < 1.5% AND time<54 < 0.3%
+     * enables A/E/H (user H clean at 0.0% fizzle pre-low) and excludes B/C/F/tim. A user may still
+     * enable either switch manually; auto-config only sets a safe default and the velocity-budget
+     * floor additionally has a live fail-closed 14d-TBR gate.
+     */
+    const val WELL_CONTROLLED_MAX_TBR70 = 1.5
+    const val WELL_CONTROLLED_MAX_SEV54 = 0.3
+
     /** History window for auto-config (also used by the plugin's data pulls). */
     const val LOOKBACK_DAYS = 14L
     private const val SEV54_TARGET = 1.0      // % time <54 mg/dL
@@ -79,6 +92,9 @@ object BoostV5AutoConfig {
         val maxIobU: Double,
         val bolusCapU: Double,
         val fastCarbConfirm: Boolean,
+        // 2026-07-17 insulin-adding opt-in switches — enabled only for clearly well-controlled users.
+        val aggressiveEarlyConfirm: Boolean,
+        val velocityBudgetFloor: Boolean,
         val rationale: List<String>
     )
 
@@ -134,12 +150,28 @@ object BoostV5AutoConfig {
         val fastCarbConfirm = !hypoProne
         if (hypoProne) reasons += "Fast-carb confirm OFF (cautious start — notable hypo history)"
 
+        // 2026-07-17 insulin-ADDING opt-in switches (aggressive early confirm, velocity-budget floor)
+        // — auto-enable ONLY for clearly well-controlled users (strict low-glucose cut). They add a
+        // little insulin, so the bar is tighter than fastCarbConfirm's !hypoProne. A user can still
+        // enable either manually; this only sets a safe default. (Velocity-budget floor ALSO has a
+        // live fail-closed 14d-TBR gate downstream.)
+        val wellControlled = p.tbrBelow70Pct < WELL_CONTROLLED_MAX_TBR70 && p.timeBelow54Pct < WELL_CONTROLLED_MAX_SEV54
+        val aggressiveEarlyConfirm = wellControlled
+        val velocityBudgetFloor = wellControlled
+        reasons += if (wellControlled)
+            "Aggressive early confirm + velocity-budget floor ON (low-glucose exposure well within target: <70 ${pct(p.tbrBelow70Pct)}, <54 ${pct(p.timeBelow54Pct)})"
+        else
+            "Aggressive early confirm + velocity-budget floor OFF (enabled only for very low low-glucose exposure)"
+
         return V5Suggestion(
             aggression = aggression, hypoCaution = hypoCaution,
             confirmedCapU = confirmedCapU, committedCapU = committedCapU,
             cumulativeSmbCap60MinU = cumulativeSmbCap60MinU,
             maxIobU = maxIobU, bolusCapU = bolusCapU,
-            fastCarbConfirm = fastCarbConfirm, rationale = reasons
+            fastCarbConfirm = fastCarbConfirm,
+            aggressiveEarlyConfirm = aggressiveEarlyConfirm,
+            velocityBudgetFloor = velocityBudgetFloor,
+            rationale = reasons
         )
     }
 

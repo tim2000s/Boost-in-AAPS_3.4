@@ -96,7 +96,7 @@ class BoostDosingPreferencesTest {
     // a 4.0U confirmed shot, on a genuine rise. Reproduces fd = 0 at masked maxIob 1.0 and the
     // real delivery at his stored maxIob 8.0 — the outcome flips solely on which value the doser reads.
 
-    private fun romanCycle(maxIob: Double) = Phase3Inputs(
+    private fun userHCycle(maxIob: Double) = Phase3Inputs(
         insulinToDeliver = 4.0,          // his confirmedCap-sized shot (budget × mult, pre-safety)
         enableSmbPreChecks = true,
         minGuardBg = 148.0, minGuardThreshold = 80.0,
@@ -110,21 +110,21 @@ class BoostDosingPreferencesTest {
     )
 
     @Test fun `masked maxIOB 1_0 zeroes the confirmed shot (the bug)`() {
-        val r = applyPhase3(romanCycle(maxIob = 1.0))
+        val r = applyPhase3(userHCycle(maxIob = 1.0))
         assertThat(r.finalDose).isEqualTo(0.0)                 // headroom = max(0, 1.0 − 1.04) = 0
         assertThat(r.reductions.maxIobClampApplied).isTrue()
     }
 
     @Test fun `stored maxIOB 8_0 lets the confirmed shot land (the fix)`() {
-        val r = applyPhase3(romanCycle(maxIob = 8.0))
+        val r = applyPhase3(userHCycle(maxIob = 8.0))
         assertThat(r.finalDose).isEqualTo(4.0)                 // headroom 6.96, iob_frac 0.13 → no brake
         assertThat(r.reductions.maxIobClampApplied).isFalse()
     }
 
     @Test fun `the ONLY difference is the ceiling the doser reads`() {
         // Same cycle, same everything except maxIob → 0.0 vs 4.0. This is the whole bug.
-        assertThat(applyPhase3(romanCycle(maxIob = 1.0)).finalDose).isEqualTo(0.0)
-        assertThat(applyPhase3(romanCycle(maxIob = 8.0)).finalDose).isEqualTo(4.0)
+        assertThat(applyPhase3(userHCycle(maxIob = 1.0)).finalDose).isEqualTo(0.0)
+        assertThat(applyPhase3(userHCycle(maxIob = 8.0)).finalDose).isEqualTo(4.0)
     }
 
     // ── Cap sizing flip: a confirmed shot clipped by the masked cap now sizes to the real cap ──

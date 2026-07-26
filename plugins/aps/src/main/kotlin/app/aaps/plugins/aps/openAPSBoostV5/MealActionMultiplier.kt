@@ -28,7 +28,7 @@ package app.aaps.plugins.aps.openAPSBoostV5
  * - **CONFIRMED** (1.8×): catch-up dose. Larger than baseline because we waited 2+ cycles
  *   in OBSERVING to confirm. This is the riskiest single decision V5 makes; mitigated by
  *   AggressionBudget hard floor on the lower side and Phase 3 gates on the upper side.
- *   The user-facing "Aggression" knob (∈ [0.7, 1.3], default 1.0) scales THIS multiplier
+ *   The user-facing "Aggression" knob (∈ [0.7, 1.6], default 1.0) scales THIS multiplier
  *   only — that's the one place users genuinely have a basis for per-user variation.
  * - **COMMITTED** (1.0×): sustained meal dosing at baseline. We've committed; now we follow oref.
  * - **RECOVERING** (0.4×): backing off as IOB bites and BG decelerates. Conservative.
@@ -49,7 +49,7 @@ private val ACTION_MULTIPLIERS: Map<MealHypothesis, Double> = mapOf(
  * Phase 2 multiplier for the given meal hypothesis state.
  *
  * @param state current MealHypothesis state.
- * @param aggressionUserKnob user-facing "Aggression" setting ∈ [0.7, 1.3]. Default 1.0. Scales
+ * @param aggressionUserKnob user-facing "Aggression" setting ∈ [0.7, 1.6]. Default 1.0. Scales
  *   the CONFIRMED multiplier ONLY — IDLE / OBSERVING / COMMITTED / RECOVERING are unaffected.
  *   This concentrates the user's tuning power on the single-most-impactful decision V5 makes.
  */

@@ -19,13 +19,15 @@ Brake-suppressed set: **135 cycles / 675 min** over ~6 weeks. State mix: OBSERVI
 | HARMLESS_RESOLVED | 7% | low IOB, came back to range on its own |
 | **WRONG_RECOVERABLE** | **3%** (20 min) | stayed high, low IOB, no low — the composed-floor's real target |
 
-**Verdict: the brake is RIGHT 90% of the time** (76% correct high-IOB restraint + 13% saved a low). The genuinely recoverable slice — where a floor dose would have helped safely — is **3% (20 min over six weeks)**. And even that carries a price: the low-IOB high slice has a **12% forward-low rate** (n=590), so dosing it isn't free.
+**Verdict: the brake looks defensible, but the "90%" splits into one outcome-proven part and one assumption-based part — don't quote it as a hard number.** Of the 135 cycles: **13% RIGHT_SAVEDLOW is outcome-proven** (a low actually followed), while **76% RIGHT_RESTRAINT is correct-*by-assumption*** — it's defined as high-IOB with no forward low, which we *treat* as correct restraint (grounded in the two-test finding that adding at high IOB prices ~19% into lows) but do not prove cycle-by-cycle. Only **3% (20 min/6wk) is WRONG_RECOVERABLE** (the floor's real target), and even that carries a 12% forward-low price (n=590). So the honest statement is: *~13% proven-right + ~76% presumed-right (high-IOB restraint) + only 3% recoverable* — the direction ("don't loosen the brake") holds, the specific "90%" does not.
+
+⚠️ **Sample caveat (2026-07-10 audit):** the 135 cycles are **pooled and self-dominated** — one user is 51% of the set (69/135); C/D/E/H contribute 1–3 cycles each (noise). So this is a self-heavy pooled result on a small n, not a cohort-general 90%. Per-user it can't be resolved for most users. And RIGHT_SAVEDLOW credits the brake for *any* <70 within 3h, a wide window that can catch activity/rescue lows unrelated to the suppressed dose. Treat the finding as directional, not precise.
 
 ## What this changes
 
 1. **The residency's "brake = 34% of high-time" was proximate over-attribution.** When you require that oref actually *wanted* insulin and the brake *crushed* it, the set shrinks to 675 min, and 90% of it was correct — mostly the brake correctly restraining at high IOB (the recovering-highs finding, again: the high tail is high-IOB, where adding causes lows). Much of the residency's 34% was high-episodes where oref didn't want more insulin anyway (IOB already covering).
 2. **The composed floor's upside is small and bounded** — its recoverable target is ~3% of brake-suppression. This is consistent with the floor's standing characterisation as *a bounded defect-fix, not a selectivity-passing lever*; this audit quantifies that bound.
-3. **The brake is not the lever.** Don't loosen it — 90% of its firing is correct, and 13% actively saved lows.
+3. **The brake is not the lever.** Don't loosen it — only 3% of the suppressed set was safely recoverable, 13% actively saved lows, and the rest was high-IOB restraint we have good reason (but not per-cycle proof) to treat as correct.
 
 ## Where the levers actually are (residency + audit together)
 

@@ -182,10 +182,13 @@ def main():
         row = f"{r['user']:>5} {100*r['high_min']/r['total_min']:>5.1f}% " + \
             " ".join(f"{100*r['high'][c]/hm:>8.0f}%" for c in HIGH_CAUSES)
         print(row)
-    # cohort totals (minute-weighted)
+    # cohort totals — BOTH pooled (minute-weighted) AND per-user median (the honest pair; the
+    # two can disagree / re-rank when a few users dominate the minute-pool — 2026-07-10 audit).
     tot = {c: sum(r["high"][c] for r in recs) for c in HIGH_CAUSES}
     thm = sum(tot.values()) or 1
-    print(f"{'COHORT':>5} {'':>6} " + " ".join(f"{100*tot[c]/thm:>8.0f}%" for c in HIGH_CAUSES))
+    print(f"{'POOL':>5} {'':>6} " + " ".join(f"{100*tot[c]/thm:>8.0f}%" for c in HIGH_CAUSES))
+    med_h = {c: float(np.median([100 * r["high"][c] / (r["high_min"] or 1) for r in recs if r["high_min"] > 0])) for c in HIGH_CAUSES}
+    print(f"{'MEDN':>5} {'':>6} " + " ".join(f"{med_h[c]:>8.0f}%" for c in HIGH_CAUSES))
 
     print("\n=== LOW-TIME attribution (% of each user's <70 minutes) ===")
     print(f"{'user':>5} {'low%':>6} " + " ".join(f"{c[:13]:>15}" for c in LOW_CAUSES))
@@ -195,7 +198,11 @@ def main():
               " ".join(f"{100*r['low'][c]/lm:>14.0f}%" for c in LOW_CAUSES))
     lot = {c: sum(r["low"][c] for r in recs) for c in LOW_CAUSES}
     tlm = sum(lot.values()) or 1
-    print(f"{'COHORT':>5} {'':>6} " + " ".join(f"{100*lot[c]/tlm:>14.0f}%" for c in LOW_CAUSES))
+    print(f"{'POOL':>5} {'':>6} " + " ".join(f"{100*lot[c]/tlm:>14.0f}%" for c in LOW_CAUSES))
+    med_l = {c: float(np.median([100 * r["low"][c] / (r["low_min"] or 1) for r in recs if r["low_min"] > 0])) for c in LOW_CAUSES}
+    print(f"{'MEDN':>5} {'':>6} " + " ".join(f"{med_l[c]:>14.0f}%" for c in LOW_CAUSES))
+    print("  (POOL = minute-weighted pooled; MEDN = per-user median. They can re-rank — see the "
+          "2026-07-10 audit note in RESIDENCY_REPORT.md; low-time activity/rescue flips between them.)")
 
     # dump episodes + summary for the ML step and the chart
     out = os.path.join(os.path.dirname(__file__), "residency_episodes.json")

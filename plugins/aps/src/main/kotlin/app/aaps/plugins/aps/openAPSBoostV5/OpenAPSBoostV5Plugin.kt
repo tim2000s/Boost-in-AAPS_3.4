@@ -151,6 +151,21 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
     private fun isResolved(prefKey: String) = preferences.get(BooleanComposedKey.BoostV5AutoConfigResolved, prefKey)
     private fun markResolved(prefKey: String) = preferences.put(BooleanComposedKey.BoostV5AutoConfigResolved, prefKey, value = true)
 
+    /** Auto-config-managed boolean dosing switches (2026-07-17 convention: every new dosing switch is
+     *  auto-config managed). Each resolves once, suggestion-only, exactly like the double knobs. */
+    private val managedBooleanKeys = listOf(
+        BooleanKey.ApsBoostV5FastCarbConfirm,
+        BooleanKey.ApsBoostV5AggressiveEarlyConfirm,
+        BooleanKey.ApsBoostV5VelocityBudgetActive,
+    )
+
+    private fun suggestionBoolean(s: BoostV5AutoConfig.V5Suggestion, key: BooleanKey): Boolean = when (key) {
+        BooleanKey.ApsBoostV5FastCarbConfirm         -> s.fastCarbConfirm
+        BooleanKey.ApsBoostV5AggressiveEarlyConfirm  -> s.aggressiveEarlyConfirm
+        BooleanKey.ApsBoostV5VelocityBudgetActive    -> s.velocityBudgetFloor
+        else                                         -> key.defaultValue
+    }
+
     /**
      * Populate the V5 knobs from the user's last-14-day V1 dosing + glycaemia when V5/V6 runs
      * active. Suggestion-only: writes a knob ONLY while the user hasn't changed it from a factory
@@ -230,7 +245,7 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
         }
 
         // Steady state: everything resolved → nothing to do (cheap check, no data pulls).
-        val allKeys = BoostV5AutoConfigApply.managedDoubleKeys.map { it.key } + BooleanKey.ApsBoostV5FastCarbConfirm.key
+        val allKeys = BoostV5AutoConfigApply.managedDoubleKeys.map { it.key } + managedBooleanKeys.map { it.key }
         if (allKeys.all { isResolved(it) }) return
 
         val now = dateUtil.now()
@@ -294,14 +309,18 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
         resolutions.forEach { aapsLogger.info(LTag.APS, "BoostV5 auto-config: ${it.key.key} → ${it.reason}") }
         val applied = resolutions.filter { it.outcome == BoostV5AutoConfigApply.Outcome.APPLIED }
             .map { "${shortName(it.key)}=${it.suggestedValue}" }.toMutableList()
-        val fc = BooleanKey.ApsBoostV5FastCarbConfirm
-        if (!isResolved(fc.key)) {
-            val stored = preferences.getIfExists(fc)
-            if (stored == null || stored == fc.defaultValue) {
-                preferences.put(fc, suggestion.fastCarbConfirm)
-                if (suggestion.fastCarbConfirm != fc.defaultValue) applied += "fastCarbConfirm=${suggestion.fastCarbConfirm}"
+        // Boolean managed keys. 2026-07-17 convention: every new dosing switch is auto-config managed
+        // (not shipped OFF-for-everyone requiring manual discovery). Same suggestion-only, per-key,
+        // resolve-once semantics as the double knobs — write only a key still at a factory default.
+        for (bk in managedBooleanKeys) {
+            if (isResolved(bk.key)) continue
+            val value = suggestionBoolean(suggestion, bk)
+            val stored = preferences.getIfExists(bk)
+            if (stored == null || stored == bk.defaultValue) {
+                preferences.put(bk, value)
+                if (value != bk.defaultValue) applied += "${bk.name.removePrefix("ApsBoostV5")}=$value"
             }
-            markResolved(fc.key)
+            markResolved(bk.key)
         }
 
         aapsLogger.info(LTag.APS, "BoostV5 auto-config applied [$applied]; rationale: ${suggestion.rationale}")
@@ -393,6 +412,11 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
             rT.boostV5_budget = decision.aggressionBudget.budget
             rT.boostV5_actionMult = decision.actionMultiplier
             rT.boostV5_finalDose = decision.finalDose
+            // Dose-chain intermediates (2026-07-10) so an offline port can be fidelity-validated
+            // stage-by-stage: raw(budget×actionMult) → doseAfterCaps → doseAfterBrakes → finalDose.
+            rT.boostV5_velocityFactor = decision.velocityFactor
+            rT.boostV5_doseAfterCaps = decision.insulinToDeliver
+            rT.boostV5_doseAfterBrakes = decision.phase3.finalDose
             rT.boostV5_gateReduction = formatGateReduction(decision)
             rT.boostV5_active = activeMode   // true => V5 is the selected/active doser (drives the V5 overview/widget)
             // Log the live per-user dose caps so the OBSERVING→CONFIRMED gate can be backtested against
@@ -410,6 +434,9 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
             // activation) = the uplift actually APPLIED to finalDose. Null = floor conditions
             // unmet either way, so the 07-10 review reads one field regardless.
             rT.boostV5_floorWouldAdd = decision.floorWouldAdd
+            // 2026-07-17 velocity-budget floor — same DUAL would/applied semantics keyed on the
+            // ApsBoostV5VelocityBudgetActive toggle (see velocityBudgetFloorTarget). Null = conditions unmet.
+            rT.boostV5_velocityBudgetWouldAdd = decision.velocityBudgetWouldAdd
 
             val rtJson = v5DecisionToRtJson(decision)
             aapsLogger.info(LTag.APS, "BoostV5_RT: ${rtJson} actual_smb=${rT.units ?: 0.0} actual_insulinReq=${rT.insulinReq ?: 0.0} activeMode=$activeMode")
@@ -552,7 +579,17 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
             composedFloorActive = activeMode &&
                 preferences.getBoostDosing(BooleanKey.ApsBoostV5ComposedFloorActive) &&
                 composedFloorTbrAllowed(dateUtil.now()),
+            // 2026-07-17 velocity-budget floor (budget≈0 high tail) — same three-part activation as the
+            // composed floor: V6 active, per-user Advanced toggle ON, and the SAME fail-closed 14d-TBR
+            // gate (the floor is insulin-adding, so it never engages for a hypo-prone user).
+            velocityBudgetActive = activeMode &&
+                preferences.getBoostDosing(BooleanKey.ApsBoostV5VelocityBudgetActive) &&
+                composedFloorTbrAllowed(dateUtil.now()),
             fastCarbConfirmEnabled = preferences.getBoostDosing(BooleanKey.ApsBoostV5FastCarbConfirm),
+            // 2026-07-17 aggressive early-confirm — opt-in + auto-config managed (age −2). Read raw
+            // (mask-bypassed) like the other dosing toggles; applies in BOTH shadow and active modes
+            // (it changes the state transition, not the delivered dose directly).
+            aggressiveEarlyConfirmEnabled = preferences.getBoostDosing(BooleanKey.ApsBoostV5AggressiveEarlyConfirm),
             sensorQualityOk = if (activeMode) !flatBGsDetected else true,
             profileSwitched = false,           // deferred reset trigger (microBolusAllowed gates actual dosing)
             pumpDisconnected = false,
@@ -665,7 +702,9 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostV5ConfirmedCapU, dialogMessage = R.string.boost_v5_confirmed_cap_summary, title = R.string.boost_v5_confirmed_cap_title))
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostV5CommittedCapU, dialogMessage = R.string.boost_v5_committed_cap_summary, title = R.string.boost_v5_committed_cap_title))
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostV5FastCarbConfirm, summary = R.string.boost_v5_fast_carb_confirm_summary, title = R.string.boost_v5_fast_carb_confirm_title))
+            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostV5AggressiveEarlyConfirm, summary = R.string.boost_v5_aggressive_early_confirm_summary, title = R.string.boost_v5_aggressive_early_confirm_title))
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostV5ComposedFloorActive, summary = R.string.boost_v5_composed_floor_summary, title = R.string.boost_v5_composed_floor_title))
+            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostV5VelocityBudgetActive, summary = R.string.boost_v5_velocity_budget_summary, title = R.string.boost_v5_velocity_budget_title))
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostV6PreMealTarget, summary = R.string.boost_v6_pre_meal_target_summary, title = R.string.boost_v6_pre_meal_target_title))
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostV6PreMealTargetMgdl, dialogMessage = R.string.boost_v6_pre_meal_target_mgdl_summary, title = R.string.boost_v6_pre_meal_target_mgdl_title))
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostV6PreMealLeadMin, dialogMessage = R.string.boost_v6_pre_meal_lead_min_summary, title = R.string.boost_v6_pre_meal_lead_min_title))

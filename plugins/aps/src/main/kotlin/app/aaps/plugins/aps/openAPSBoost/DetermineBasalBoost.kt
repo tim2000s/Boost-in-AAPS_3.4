@@ -42,6 +42,18 @@ class DetermineBasalBoost @Inject constructor(
          * exactly when (and only when) V1's dose is the restrained one it inherits.
          */
         const val POST_RESCUE_LOW_THRESHOLD_MGDL = 75.0
+
+        /**
+         * Graduated fast-carb/rebound scale as a function of BG alone: 0.3 below 120 mg/dL,
+         * linear 0.3 → 1.0 over 120..170, 1.0 at and above 170 (no suppression).
+         * Shared by the in-tier fast-carb scaling and the composed post-rescue rebound
+         * guard (2026-07-23) so the two paths can never diverge in magnitude.
+         */
+        fun postRescueReboundScale(bg: Double): Double = when {
+            bg < 120.0 -> 0.3
+            bg < 170.0 -> 0.3 + 0.7 * (bg - 120.0) / 50.0
+            else       -> 1.0
+        }
     }
 
     private val consoleError = mutableListOf<String>()
@@ -1413,8 +1425,7 @@ class DetermineBasalBoost @Inject constructor(
                         }
                         consoleError.add("Fast-carb conditions met but $trigger override (BG $bg > target+20) — treating as genuine spike")
                     } else {
-                        fastCarbScale = if (bg < 120.0) 0.3
-                                        else 0.3 + 0.7 * (bg - 120.0) / 50.0
+                        fastCarbScale = postRescueReboundScale(bg)
                         fastCarbRebound = true
                     }
                 } else {
@@ -1450,6 +1461,9 @@ class DetermineBasalBoost @Inject constructor(
                 rT.reason.append("UAM Boost 1: ${round(uamBoost1, 2)}; UAM Boost 2: ${round(uamBoost2, 2)}; Delta: ${glucose_status.delta}; ShortAvg: ${glucose_status.shortAvgDelta}; ")
 
                 var microBolus: Double
+                // true once a tier body has already multiplied fastCarbScale into microBolus
+                // (T3/T5/T6) — the composed post-rescue guard below must not scale twice
+                var fastCarbScaleApplied = false
 
                 // v4.4.4 hotfix Fix A v2 (ported to V1 2026-06-01): post-rescue tier block.
                 // Blocks T3 (UAM_BOOST), T4 (UAM_HIGH_BOOST), and T5 (PERCENT_SCALE) when the
@@ -1510,6 +1524,7 @@ class DetermineBasalBoost @Inject constructor(
                         val preFcSmb = microBolus
                         microBolus = Math.floor(microBolus * fastCarbScale * roundSMBTo) / roundSMBTo
                         consoleError.add("Fast-carb scale applied: $preFcSmb → $microBolus (${round(fastCarbScale * 100, 0)}%)")
+                        fastCarbScaleApplied = true
                     }
                     iTimeActive = true
                     consoleError.add("UAM Boost enacted; SMB equals $boostInsulinReq; Original insulin requirement was $insulinReq")
@@ -1564,6 +1579,7 @@ class DetermineBasalBoost @Inject constructor(
                         val preFcSmb = microBolus
                         microBolus = Math.floor(microBolus * fastCarbScale * roundSMBTo) / roundSMBTo
                         consoleError.add("Fast-carb scale applied: $preFcSmb → $microBolus (${round(fastCarbScale * 100, 0)}%)")
+                        fastCarbScaleApplied = true
                     }
                     rT.reason.append("Increased SMB as percentage of insulin required to ${(1.0 / insulinDivisor) * 100}%. SMB is $microBolus; ")
                     iTimeActive = true
@@ -1586,6 +1602,7 @@ class DetermineBasalBoost @Inject constructor(
                         val preFcSmb = microBolus
                         microBolus = Math.floor(microBolus * fastCarbScale * roundSMBTo) / roundSMBTo
                         consoleError.add("Fast-carb scale applied: $preFcSmb → $microBolus (${round(fastCarbScale * 100, 0)}%)")
+                        fastCarbScaleApplied = true
                     }
                     iTimeActive = true
                     consoleError.add("Acceleration bolus triggered; SMB equals $boostInsulinReq")
@@ -1638,6 +1655,32 @@ class DetermineBasalBoost @Inject constructor(
                         rT.reason.append("Spike override: cap raised from $maxBolus to ${round(spikeOverrideCap, 2)}; ")
                         microBolus = overrideBolus
                     }
+                }
+
+                // ── Composed post-rescue rebound guard (2026-07-23, user-H incident) ──
+                // The post-rescue tier block demotes T3/T5 to T7/T8, but T7/T8 apply no
+                // fast-carb scaling, so a delta-inflated insulinReq still delivers full-size
+                // SMBs into an unannounced rescue-carb rebound (observed: 3.55U at BG 97,
+                // 25 min after a 67 mg/dL low; second hypo followed and the user disabled
+                // the loop). The V6 post-rescue cap inherits this dose as "V1's restrained
+                // dose", so the hole propagates through the override layer too. Fix: apply
+                // the graduated scale to the FINAL microBolus whenever the post-rescue
+                // window is active — independent of tier and of the delta_accl>25 trigger,
+                // which plateaus mid-rebound exactly when the big deltas arrive. No
+                // velocity/eventualBG escape inside the window: delta > 10 during a
+                // post-rescue rebound IS the rescue-carb signature (same contamination
+                // argument as the v4.4.3 Fix D eventualBG gating).
+                // DB pricing 2026-07-23 (price_composed_guard.py): 34% [95% CI 32-37] of
+                // the insulin this removes sits directly ahead of a second low <70 (07-04
+                // cap benchmark 27%, other levers 14-19%). Cost: 9% of affected episodes
+                // are genuine post-hypo meals, median 0.8U under-delivery — episodes full
+                // dosing was not containing anyway (median peak 240 mg/dL).
+                if (inPostRescueWindow && COB == 0.0 && bg < 170.0 && microBolus > 0 && !fastCarbScaleApplied) {
+                    val prScale = postRescueReboundScale(bg)
+                    val preSMB = microBolus
+                    microBolus = Math.floor(microBolus * prScale * roundSMBTo) / roundSMBTo
+                    consoleError.add("Post-rescue rebound scale applied: $preSMB → $microBolus (${round(prScale * 100, 0)}%)")
+                    rT.reason.append("Post-rescue rebound scale ${round(prScale * 100, 0)}%: SMB ${round(preSMB, 2)} → ${round(microBolus, 2)}; ")
                 }
 
                 // ── Layer B: ML risk graduated SMB scaling ──

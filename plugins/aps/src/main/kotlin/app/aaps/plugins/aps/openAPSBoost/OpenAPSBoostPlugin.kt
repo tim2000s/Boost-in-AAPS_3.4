@@ -1452,7 +1452,14 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 // incl. 2.0U at 05:02 where V1 dosed 0. Capping at V1's would-dose makes IDLE match
                 // its own spec ("standard oref dose; no meal hypothesis"); genuine meal rises still
                 // get full V6 dosing via OBSERVING→CONFIRMED.
-                val inMealState = v5decision.mealHypothesis == MealHypothesis.CONFIRMED || v5decision.mealHypothesis == MealHypothesis.COMMITTED
+                // 2026-07-17 velocity-budget floor exemption: when the ACTIVE velocity-budget floor
+                // lifted this cycle's dose (velocityBudgetExempt), treat it as a meal state so the
+                // floored hold can out-dose V1 on the budget≈0 high tail (V1 doses ~0 there). Safe by
+                // construction: the exempt dose is committedCap + maxIOB bounded, the floor requires
+                // !postRescueWindow, and the cumulative-60min / boost-active / sleep gates all still run.
+                val inMealState = v5decision.mealHypothesis == MealHypothesis.CONFIRMED ||
+                    v5decision.mealHypothesis == MealHypothesis.COMMITTED ||
+                    v5decision.velocityBudgetExempt
                 // Post-rescue meal-state cap (2026-07-04): inside the post-rescue window the meal-state
                 // exemption is suppressed and CONFIRMED/COMMITTED are ALSO capped at V1's would-dose —
                 // which is hypo-restrained by V1's aligned tier guard (same value, same threshold; see
@@ -1475,6 +1482,15 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 if (floorUplift > 0.0) {
                     it.reason.append("brake-floor applied: ${Round.roundTo(v5decision.finalDose - floorUplift, 0.001)}→${Round.roundTo(v5decision.finalDose, 0.001)} U; ")
                     aapsLogger.info(LTag.APS, "V6 brake-floor applied: ${Round.roundTo(v5decision.finalDose - floorUplift, 0.001)}→${Round.roundTo(v5decision.finalDose, 0.001)} U")
+                }
+                // 2026-07-17 velocity-budget floor breadcrumb: when ON, decision.velocityBudgetWouldAdd
+                // carries the uplift actually APPLIED (out-dosing V1 on the budget≈0 tail via the
+                // non-meal-cap exemption). overrideDose == v5decision.finalDose here (the exemption made
+                // inMealState true), so X→Y is the delivered truth.
+                val vbUplift = if (preferences.getBoostDosing(BooleanKey.ApsBoostV5VelocityBudgetActive)) v5decision.velocityBudgetWouldAdd ?: 0.0 else 0.0
+                if (vbUplift > 0.0) {
+                    it.reason.append("velocity-budget floor applied: ${Round.roundTo(v5decision.finalDose - vbUplift, 0.001)}→${Round.roundTo(v5decision.finalDose, 0.001)} U (base insulinReq≈0); ")
+                    aapsLogger.info(LTag.APS, "V6 velocity-budget floor applied: ${Round.roundTo(v5decision.finalDose - vbUplift, 0.001)}→${Round.roundTo(v5decision.finalDose, 0.001)} U")
                 }
             } else if (v5Active && v5decision != null && cumulativeCapReached) {
                 it.units = 0.0

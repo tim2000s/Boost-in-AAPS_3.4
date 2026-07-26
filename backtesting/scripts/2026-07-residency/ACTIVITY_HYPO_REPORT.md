@@ -47,7 +47,9 @@ Mean `steps_60m` at increasing look-back before each real low onset (baseline 25
 | 60 | 391 | 1.5× |
 | 90–180 | ~400 | 1.5–1.6× |
 
-Activity sits **1.5–1.6× above baseline as far as 3h ahead**, rising to 2.4× just before. It is a genuine **leading** indicator — the exercise protection has ample time to act, not a coincident artifact.
+Activity sits **~1.5–1.6× above baseline as far as 3h ahead**, rising to 2.4× just before. Directionally this reads as a **leading** indicator — the exercise protection has time to act.
+
+⚠️ **Caveat (2026-07-10 audit) — these lead-time multiples are soft.** Two weaknesses: (a) **no matched control** — despite the section header, the code compares pre-onset activity only to a global baseline, not to matched non-low periods, so it doesn't isolate "before a low" from "activity in general"; (b) **weighting mismatch** — the pre-onset means pool low-onsets across users (onset-weighted) while the baseline is a user-averaged mean, so the ratio mixes two weightings and can be inflated by users who both step more and go low more. The multiples should be read as suggestive, not as clean causal evidence. The **load-bearing** result for "activity → hypo is real and per-user" is Section 1 (dose-response) + Section 2 (GroupKFold-OOS), not this section.
 
 ## Implications for the Garmin work
 
@@ -57,6 +59,6 @@ Activity sits **1.5–1.6× above baseline as far as 3h ahead**, rising to 2.4×
 
 ## Caveats
 
-- Pooled dose-response can be partly confounded (activity co-varies with time-of-day and low IOB); the lead-time result is the cleaner causal-direction evidence.
+- **The dose-response table (13→38.5%) is pooled across users** (as well as confounded by time-of-day and low IOB), so between-user differences in both activity and hypo-rate contribute; the within-user counterpart is Section 2's GroupKFold result. The lead-time section is NOT a clean causal control (no matched non-low comparator) — see its caveat.
 - Forward-low here = any <70 within 3h (base 19.1%), a deliberately sensitive label.
 - The HR conclusion is "can't validate on sparse data," not "HR doesn't predict."

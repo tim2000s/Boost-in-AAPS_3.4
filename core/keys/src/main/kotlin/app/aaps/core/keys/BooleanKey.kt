@@ -96,6 +96,11 @@ enum class BooleanKey(
     // score-corroborated rise while awake & not exercising. Replay-validated (backtesting/replay.py).
     // Default ON (it's the fix for the 2026-06-16 fast-carb crash); toggle OFF = instant revert.
     ApsBoostV5FastCarbConfirm("boost_v5_fast_carb_confirm", true, defaultedBySM = true),
+    // 2026-07-17 aggressive early-confirm — shaves the sustained-score early-confirm path one more
+    // cycle (age −2). The pre-push backtest showed ~28% of its candidates are fizzle-catches (new
+    // insulin at ~base rate), so it is NOT a clean cohort default; it is OPT-IN and AUTO-CONFIG
+    // MANAGED (BoostV5AutoConfig enables it only for clearly well-controlled users). Default OFF.
+    ApsBoostV5AggressiveEarlyConfirm("boost_v5_aggressive_early_confirm", false, defaultedBySM = true),
     // 2026-07 composed Phase-3 brake floor (F = 0.25) — when ON (and V6 is the active doser), the
     // delivered dose is floored at min(budget × 0.25, committedCapU) on meal-session high cycles
     // (CONFIRMED/COMMITTED/RECOVERING ∧ BG > 160 ∧ eventualBG > target+20 ∧ awake ∧ not post-rescue ∧
@@ -104,6 +109,15 @@ enum class BooleanKey(
     // within consensus targets (TBR<70 < 3.5%, <54 < 0.8%) — the 2026-07 re-review excluded cohort
     // users B/C/D whose TBR would cross those absolutes. All hard gates/caps still apply.
     ApsBoostV5ComposedFloorActive("boost_v5_composed_floor_active", false, defaultedBySM = true),
+    // 2026-07-17 velocity-budget floor — when ON (and V6 active), the delivered dose is floored at
+    // min(0.5U, committedCapU) on the budget≈0 high tail (BG > 180 ∧ oref insulinReq ≈ 0 ∧ not
+    // RECOVERING ∧ awake ∧ not post-rescue), and the cycle is exempted from the non-meal seam cap so
+    // it can out-dose V1 (V1 also doses ~0 there). It deliberately overrides a prediction that was
+    // right-by-outcome on shadow data, so it is PER-USER opt-in AND gated on the SAME fail-closed
+    // 14d-TBR gate as the composed floor (TBR<63 < 2.0% ∧ TBR<70 < 3.5%). committedCap + maxIOB
+    // bounded; all Phase-3 hard gates + cumulative/boost-active/sleep seam guards still apply.
+    // Default OFF. Field driver: user H "postprandial highs" — his budget=0 tail (55% of his >180).
+    ApsBoostV5VelocityBudgetActive("boost_v5_velocity_budget_active", false, defaultedBySM = true),
     // LEGACY (2026-06-26..2026-07): global auto-config one-shot flag. Superseded by per-knob
     // BooleanComposedKey.BoostV5AutoConfigResolved; kept only so existing installs migrate
     // (OpenAPSBoostV5Plugin reads it raw once, marks tuned knobs resolved, then clears it).

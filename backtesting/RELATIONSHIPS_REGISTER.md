@@ -14,6 +14,7 @@ A record of the data relationships, dosing levers, mechanisms and models we've e
 | Age-gate −1 when score-ready | Harm-neutral, ~1.5 U/day shifted | 07-03 | Score-ready lever |
 | OBSERVING raise, restricted cell | Only defensible in BG≥140 ∧ IOB<5% TDD | 07-03 | Blanket raise contraindicated |
 | Post-rescue meal-state cap | 27% of removed insulin sat pre-low (worst-priced found) | 07-04 backtest | Shipped: suppress meal-state exemption when recentLow<75 |
+| Composed post-rescue rebound guard (scale T7/T8 in-window) | Tier demotion alone doesn't restrain: T7/T8 uncapped by fastCarbScale + delta-weighted ISF inflates insulinReq → 3.55U at BG 97 post-hypo (user-H 2026-07-23 double incident, loop disabled). Graduated scale on FINAL microBolus in-window: 34% [32,37] of removed insulin sat pre-low (new best-priced; LOUO floor 27% dropping D); cost 9% genuine meals at 0.80U median | 07-23 `2026-07-postrescue-rebound-guard/` (103k dosing cycles) | Shipped `51e7663a36` (V7-shadow) + `0eb4a65b39` (experimental); no velocity escape in-window (Fix D argument) |
 | committedCap OBSERVING→CONFIRMED gate | ~41% block (tracks the trivial population), defensible | 07-02 | Shipped; STUCK-14% is the watch-item |
 | Fast-carb confirm latency | V5 stayed OBSERVING one cycle too long (0.3U vs 1.7U) → late peak/crash | 06-16 | Fast-carb fast-path |
 | V5 front-loads before highs | All users dose earlier ahead of highs | 06-15 shadow backtest | V5 design validated (severe-low pullback mixed) |
@@ -57,8 +58,8 @@ A record of the data relationships, dosing levers, mechanisms and models we've e
 | Relationship / mechanism | Finding | Evidence | Status |
 |---|---|---|---|
 | Phase-3 brake compounding | 0.4 × 0.40 × 0.85 × 0.30 = 4.1% of budget → rounds to 0 for 30 min at BG ~270 | 07-06 forensic, 17/17 cycles reconstructed | Composed brake-floor |
-| Brake (composed multipliers) correctness | Mostly correct | 76% correct high-IOB restraint + 13% saved a low; ~3% recoverable | Don't loosen; floor's target is small |
-| Where TIR loss comes from | Highs: sizing/timing. Lows: activity 47% + rescue 37% | residency attribution | The lever map |
+| Brake (composed multipliers) correctness | Directionally right (don't loosen); the "90%" is 13% outcome-proven + 76% correct-by-assumption, on a pooled self-dominated n=135 | 13% saved a low, 76% high-IOB restraint (assumed), ~3% recoverable | Don't loosen; don't quote "90%" |
+| Where TIR loss comes from | Highs: sizing/timing (brake #1 but lead over sizing narrow per-user). Lows: activity + rescue (pooled activity 47>rescue 37; per-user rescue 44>activity 36 — ranking pooling-dependent) | residency attribution (cause-shares POOLED; per-user differs) | The lever map |
 | 2026-05-14 evening excursion | Unannounced meal on a basal deficit, not insulin stacking | peak IOB only +4.62 | Canonical V6 sequence-aware use case |
 
 ### Per-user configuration
@@ -86,6 +87,7 @@ A record of the data relationships, dosing levers, mechanisms and models we've e
 | "Re-engage tuning" after confirmed highs | Same high-IOB problem | rejected 07-03 |
 | Blanket OBSERVING raise | Contraindicated outside the safe cell | 07-03 |
 | V4.4 post-SMB gate | Too restrictive to ever fire | engaged 0/99 then 0/115 (max delta far below trigger) |
+| Second confirm on continued post-confirm acceleration | Real prediction signal (peak +23 mg/dL, distinguishable) but NO low-rate headroom — accel group already crashes ~19%/severe ~6.6% at current dose, not lower than decel (Δ overlaps 0); per-user C/F crash MORE; the fast-carb overshoot shape. Engine already blocks it (Fix 6) + holds COMMITTED 1.0×, which is correct | 2026-07-20 `2026-07-postconfirm-accel/` (3,879 anchors, 9 users, cluster-boot CI + real-engine scenario run) |
 
 ### Signals and predictors
 | Relationship | Why discarded | Evidence |
@@ -96,6 +98,7 @@ A record of the data relationships, dosing levers, mechanisms and models we've e
 | Dawn phenomenon → timed correction | Frequent but timing too loose | 82% of fasting nights, +55 mg/dL, but onset SD 75 min |
 | Meal-time anticipation | ≈ chance | onsets roughly uniform |
 | eventualBG as a forecast | Not predictive | R² −2.32 |
+| Crash-shape (spike→low) predictable AT confirm | No — chance. Rules out predict-and-restrain; vindicates the retractable back-out (unwind after the fact) as the only crash defence | 2026-07-20 `2026-07-postconfirm-accel/meal_shape.py`, OOS AUC 0.518 [0.485, 0.549], 2117 meals, GroupKFold by user |
 
 ### Models, methods, and corrected effect sizes
 | Item | Why discarded / corrected | Evidence |
@@ -104,7 +107,7 @@ A record of the data relationships, dosing levers, mechanisms and models we've e
 | ISF EMA overlay equivalence | Not clinically equivalent | within ±5% on only 28–58% of cycles |
 | delta_accl ML retrain | Rejected on validation | 05-05 |
 | Deviation-sensitivity function | Removed | 04-30, superseded by TDD-EMA |
-| Brake "34% of high-time" as a lever | Proximate over-attribution | brake is 90% right on audit |
+| Brake "34% of high-time" as a lever | Proximate over-attribution | brake is directionally right on audit (13% proven + 76% assumed; don't loosen) |
 | Cohort +13 pp as a clean Boost effect | Mostly overnight + selection/basal confound | +2.9 pp raw → +1.2 pp adjusted; permutation p ≈ 0.27 |
 | Post-exercise "delayed 2× ramp" | Window-length artefact | de-artefacted to ~1.2×, flat |
 
@@ -121,6 +124,7 @@ A record of the data relationships, dosing levers, mechanisms and models we've e
 | Multi-day activity-load ISF bump (deviation-based) | Design on record but never built; this session tested only the simplest 24h form (null) — the full deviation form is untested |
 | Activity BG-rising override (Design 9) | Believed shipped but never coded in any branch; activity target still unguarded |
 | Menstrual-cycle / hormonal sensitivity | Literature review + 3 proposals on record; needs cycle-detection input, not built |
+| Tail-shape (under-recovery) predictable AT confirm | Weakly — OOS AUC 0.60 [0.58, 0.63] (2026-07-20 `meal_shape.py`); diffuse, partly second-meal clustering (time-of-day). Too weak to gate; only safe use is a weak prior to bring plateau-nudge on earlier. Low priority |
 
 ---
 
