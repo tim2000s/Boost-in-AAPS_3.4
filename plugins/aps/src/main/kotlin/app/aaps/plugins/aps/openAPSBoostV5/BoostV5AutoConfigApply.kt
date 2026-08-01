@@ -116,7 +116,8 @@ internal object BoostV5AutoConfigApply {
         DoubleKey.ApsBoostV5CommittedCapU,
         DoubleKey.ApsBoostCumulativeSmbCap60Min,
         DoubleKey.ApsBoostMaxIob,
-        DoubleKey.ApsBoostBolus
+        DoubleKey.ApsBoostBolus,
+        DoubleKey.ApsBoostV5PrimerCapU   // 2026-07-20 — NOT in doseCapKeys (routing is the safety, see BoostV5AutoConfig)
     )
 
     /** [managedDoubleKeys] paired with their suggested values (same stable order). */
@@ -127,7 +128,8 @@ internal object BoostV5AutoConfigApply {
         DoubleKey.ApsBoostV5CommittedCapU to s.committedCapU,
         DoubleKey.ApsBoostCumulativeSmbCap60Min to s.cumulativeSmbCap60MinU,
         DoubleKey.ApsBoostMaxIob to s.maxIobU,
-        DoubleKey.ApsBoostBolus to s.bolusCapU
+        DoubleKey.ApsBoostBolus to s.bolusCapU,
+        DoubleKey.ApsBoostV5PrimerCapU to s.primerCapU   // 2026-07-20 V1-acceleration primer
     )
 
     /**
@@ -236,6 +238,10 @@ internal object BoostV5AutoConfigApply {
         )
         resolve(DoubleKey.ApsBoostMaxIob, suggestion.maxIobU)
         resolve(DoubleKey.ApsBoostBolus, suggestion.bolusCapU)
+        // 2026-07-20 V1-acceleration primer cap. NOT in doseCapKeys, so the raise-guard does not block
+        // it — the bolus-vs-temp-basal routing is the safety differentiator, and a tbr-routed
+        // (non-well-controlled) user still needs a non-zero cap to size the retractable temp-basal.
+        resolve(DoubleKey.ApsBoostV5PrimerCapU, suggestion.primerCapU)
         return resolutions
     }
 

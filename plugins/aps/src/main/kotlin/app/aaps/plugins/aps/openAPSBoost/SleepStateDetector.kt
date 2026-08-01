@@ -260,7 +260,14 @@ object SleepStateDetector {
         val wakeHrHysteresisMin: Int = 5,
         val droughtThresholdMin: Int = 30,
         val freshHrWindowMin: Int = 10,
-        val stepsToday: Int = -1
+        val stepsToday: Int = -1,
+        // 2026-07-08 sleep-in merge: the unified lie-in threshold + window that folds the former
+        // standalone StepFeed.sleepInActive backstop INTO this state machine. When sleepInWindowMin > 0,
+        // SLEEPING is held past nightEnd for this many minutes as a "lie-in" and released early once
+        // stepsToday growth over the wake lookback clears sleepInStepsThreshold (the user's
+        // ApsBoostSleepInSteps). 0 = disabled (legacy nightEnd hard-exit; strong-steps uses the constant).
+        val sleepInStepsThreshold: Int = 0,
+        val sleepInWindowMin: Int = 0
     )
 
     /**
@@ -283,6 +290,15 @@ object SleepStateDetector {
         val inSleepCandidateWindow = minuteInWrappedRange(inputs.minuteOfDay, sleepCandStart, inputs.nightEndMin)
         val wakeGraceStart = (inputs.nightEndMin - SLEEP_SCHEDULE_TOLERANCE_MIN + 1440) % 1440
         val nearScheduledWake = minuteInWrappedRange(inputs.minuteOfDay, wakeGraceStart, inputs.nightEndMin)
+        // 2026-07-08 sleep-in merge: SLEEPING is HELD past nightEnd through the lie-in window
+        // [nightEnd, nightEnd + sleepInWindowMin] (the merged StepFeed.sleepInActive), so the hard
+        // boundary exit moves from nightEnd to lieInEnd. Sleep candidacy still anchors to nightEnd
+        // (never START a new sleep during the morning lie-in).
+        val lieInEnd = if (inputs.sleepInWindowMin > 0)
+            (inputs.nightEndMin + inputs.sleepInWindowMin) % 1440 else inputs.nightEndMin
+        val inHoldWindow = minuteInWrappedRange(inputs.minuteOfDay, inputs.nightStartMin, lieInEnd)
+        val inLieIn = inputs.sleepInWindowMin > 0 &&
+            minuteInWrappedRange(inputs.minuteOfDay, inputs.nightEndMin, lieInEnd)
 
         // deep-copy the step-sample list so evaluate() stays pure over prev (data-class copy is shallow)
         var newState = prev.copy(stepSamples = prev.stepSamples.toMutableList())
@@ -319,6 +335,11 @@ object SleepStateDetector {
         // consecutive cycles with avgHr above the wake floor; any miss (null or low) resets it.
         if (inputs.stepsToday >= 0) recordStepSample(newState.stepSamples, inputs.nowMs, inputs.stepsToday)
         val stepsInLookback = stepGrowth(newState.stepSamples, inputs.nowMs, WAKE_STEP_LOOKBACK_MIN)
+        // Unified strong-steps wake threshold (the user's ApsBoostSleepInSteps; constant fallback when the
+        // merge is off). Hoisted here so BOTH the PRE_SLEEP activity-escape and the SLEEPING steps-alone
+        // wake read the one value.
+        val strongStepsThreshold =
+            if (inputs.sleepInStepsThreshold > 0) inputs.sleepInStepsThreshold else WAKE_STEP_STRONG_THRESHOLD
         newState.hrHighStreak = if (avgHr != null && avgHr > wakeFloor) newState.hrHighStreak + 1 else 0
 
         debug.append("avgHr=${avgHr?.let { String.format("%.1f", it) } ?: "null"}")
@@ -395,8 +416,21 @@ object SleepStateDetector {
             }
 
             SleepState.PRE_SLEEP -> {
+                // Clear sustained activity releases PRE_SLEEP → AWAKE immediately, ANY time of night —
+                // never suppress dosing while the user is demonstrably up. Uses the same 60-min cumulative
+                // step growth vs the user's ApsBoostSleepInSteps threshold as the SLEEPING steps-alone wake,
+                // but UNGATED by clock/drought (PRE_SLEEP is not confirmed sleep, so activity is decisive).
+                // Fixes the 05:00 "up + BG rising but stuck PRE_SLEEP to the boundary" trap. NOT a genuine
+                // sleep→wake, so wakeReason stays null (does not train the wake learner).
+                if (stepsInLookback >= strongStepsThreshold) {
+                    newState = State(state = SleepState.AWAKE, enteredAtMs = inputs.nowMs,
+                                     lastFreshHrSampleMs = newState.lastFreshHrSampleMs,
+                                     stepSamples = newState.stepSamples, hrHighStreak = newState.hrHighStreak)
+                    transitioned = true
+                    debug.append(" | →AWAKE (activity ${stepsInLookback} steps/${WAKE_STEP_LOOKBACK_MIN}m ≥ $strongStepsThreshold)")
+                }
                 // Exit PRE_SLEEP if we've left the outer night window (morning exit before ever sleeping)
-                if (!inOuterWindow && !inPreSleep) {
+                else if (!inOuterWindow && !inPreSleep) {
                     newState = State(state = SleepState.AWAKE, enteredAtMs = inputs.nowMs,
                                      lastFreshHrSampleMs = newState.lastFreshHrSampleMs,
                                      stepSamples = newState.stepSamples, hrHighStreak = newState.hrHighStreak)
@@ -426,8 +460,10 @@ object SleepStateDetector {
             }
 
             SleepState.SLEEPING -> {
-                // Hard morning exit
-                if (!inOuterWindow) {
+                // Hard morning exit — at the END of the lie-in hold window (nightEnd + sleepInWindowMin;
+                // == nightEnd when the sleep-in merge is disabled). The lie-in keeps SLEEPING past the
+                // scheduled wake until steps confirm the user is genuinely up (see strongStepsWake).
+                if (!inHoldWindow) {
                     newState = State(state = SleepState.AWAKE, enteredAtMs = inputs.nowMs,
                                      lastFreshHrSampleMs = newState.lastFreshHrSampleMs,
                                      stepSamples = newState.stepSamples, hrHighStreak = newState.hrHighStreak)
@@ -451,17 +487,19 @@ object SleepStateDetector {
                     //    of scheduled wake. HR evidence is SUSTAINED (≥WAKE_HR_SUSTAIN_CYCLES cycles above
                     //    the wake floor — a single sample never counts, REM lifts HR). Earlier HR rises
                     //    are REM/restlessness, so the gentle rule is time-gated near nightEnd.
-                    //  Rule 2 (strong steps-alone): clear sustained getting-up movement
-                    //    (≥WAKE_STEP_STRONG_THRESHOLD) wakes WITHOUT HR — but ONLY when the HR feed is
-                    //    unreliable, i.e. drought is established (dead/intermittent ≥ droughtThresholdMin,
-                    //    stray samples don't reset it) so it can't corroborate. When HR is live the gentle
-                    //    rule governs and steps-alone must NOT wake (preserves the both-required guard).
-                    //    Safety net for the HR-death nights + the 2026-07-03 over-sleep lump.
+                    //  Rule 2 (strong steps-alone): clear sustained getting-up movement wakes WITHOUT HR,
+                    //    at the UNIFIED sleep-in threshold (sleepInStepsThreshold — the user's
+                    //    ApsBoostSleepInSteps; falls back to WAKE_STEP_STRONG_THRESHOLD when the merge is
+                    //    off). It fires EITHER when HR can't corroborate (drought established — dead/
+                    //    intermittent, any time in the night) OR anywhere in the lie-in past nightEnd
+                    //    (the merged sleep-in release: past the alarm, movement means up regardless of HR).
+                    //    When HR is live and it is still the core night, the gentle rule governs and
+                    //    steps-alone does NOT wake (preserves the both-required guard).
                     val stepsConfirmWake = inputs.stepsLast15Min >= 100 || stepsInLookback >= WAKE_STEP_THRESHOLD
                     val hrAboveWakeFloor = avgHr != null && avgHr > wakeFloor &&
                         newState.hrHighStreak >= WAKE_HR_SUSTAIN_CYCLES
                     val gentleWake = stepsConfirmWake && hrAboveWakeFloor && nearScheduledWake
-                    val strongStepsWake = droughtEstablished && stepsInLookback >= WAKE_STEP_STRONG_THRESHOLD
+                    val strongStepsWake = stepsInLookback >= strongStepsThreshold && (droughtEstablished || inLieIn)
                     if (gentleWake || strongStepsWake) {
                         if (newState.wakeCandidateSinceMs == null) {
                             newState.wakeCandidateSinceMs = inputs.nowMs

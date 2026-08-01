@@ -118,6 +118,16 @@ enum class BooleanKey(
     // bounded; all Phase-3 hard gates + cumulative/boost-active/sleep seam guards still apply.
     // Default OFF. Field driver: user H "postprandial highs" — his budget=0 tail (55% of his >180).
     ApsBoostV5VelocityBudgetActive("boost_v5_velocity_budget_active", false, defaultedBySM = true),
+    // 2026-07-20 V1-acceleration primer — hypo-prone routing (AUTO-CONFIG MANAGED). When ON,
+    // auto-config has classified the user hypo-prone and routes the early primer through a
+    // RETRACTABLE temp-basal instead of a bolus (safe-by-unwinding rather than safe-by-size).
+    // OFF (default) = bolus primer (well-controlled). Overridable by ApsBoostV5PrimerBolusMode.
+    ApsBoostV5PrimerTbrFallback("boost_v5_primer_tbr_fallback", false, defaultedBySM = true),
+    // 2026-07-20 V1-acceleration primer — USER OVERRIDE (NOT auto-config-managed). When ON, forces
+    // the bolus primer even if auto-config routed this user to the temp-basal fallback
+    // (ApsBoostV5PrimerTbrFallback). Default OFF = respect the auto-config routing. Floors + net-off
+    // are unaffected by the override; it only changes bolus-vs-temp-basal delivery.
+    ApsBoostV5PrimerBolusMode("boost_v5_primer_bolus_mode", false, defaultedBySM = true),
     // LEGACY (2026-06-26..2026-07): global auto-config one-shot flag. Superseded by per-knob
     // BooleanComposedKey.BoostV5AutoConfigResolved; kept only so existing installs migrate
     // (OpenAPSBoostV5Plugin reads it raw once, marks tuned knobs resolved, then clears it).

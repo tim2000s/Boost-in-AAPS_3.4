@@ -441,7 +441,7 @@ canvas {
     </p>
     <div class="ns-field">
       <label>Nightscout URL</label>
-      <input id="ns-url-input" type="url" placeholder="https://your-site.ns.10be.de" autocomplete="off" spellcheck="false">
+      <input id="ns-url-input" type="url" placeholder="https://your-nightscout.example.com" autocomplete="off" spellcheck="false">
     </div>
     <div class="ns-field">
       <label>Access Token (optional — needed for private sites)</label>
@@ -668,8 +668,8 @@ canvas {
       </p>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Aggression</span><span class="ctrl-val" id="v-v6Aggression">1.0</span></div>
-        <input type="range" id="s-v6Aggression" min="0.7" max="1.3" step="0.05" value="1.0" oninput="update()">
-        <div class="ctrl-hints"><span>0.7 (gentle)</span><span>1.3 — scales CONFIRMED only</span></div>
+        <input type="range" id="s-v6Aggression" min="0.7" max="1.6" step="0.05" value="1.0" oninput="update()">
+        <div class="ctrl-hints"><span>0.7 (gentle)</span><span>1.6 — scales CONFIRMED only</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Hypo Caution</span><span class="ctrl-val" id="v-v6HypoCaution">1.0</span></div>
@@ -745,6 +745,7 @@ canvas {
           <option value="active">Active (uses Activity %)</option>
           <option value="inactive">Inactive (uses Inactivity %)</option>
         </select>
+        <div class="ctrl-hints" style="margin-top:4px;line-height:1.4"><span>Late-July 2026: during <b>elevated-heart-rate exercise</b> the live engine stops adding insulin — it suppresses the profile-raise and lifts the target to ~160. That HR-driven behaviour is upstream of this dosing view and is not fully re-created here; set Activity % low to approximate it.</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Activity Profile %</span><span class="ctrl-val" id="v-activityPct">80%</span></div>
@@ -1509,12 +1510,23 @@ function v6Override(v6dec, v1WouldDose, opts) {
   }
   const inMealState = v6dec.state === 'CONFIRMED' || v6dec.state === 'COMMITTED';
   const inPostRescueWindow = opts.recentLowBg != null && opts.recentLowBg < 75;
-  const dose = (inMealState && !inPostRescueWindow) ? v6dec.finalDose : Math.min(v6dec.finalDose, v1WouldDose);
+  let dose = (inMealState && !inPostRescueWindow) ? v6dec.finalDose : Math.min(v6dec.finalDose, v1WouldDose);
   const capped = dose < v6dec.finalDose - 1e-9;
   const postRescueCapped = capped && inMealState;
   const nonMealCapped = capped && !inMealState;
-  return { dose, mode: 'override', overridden: true, inMealState, inPostRescueWindow, nonMealCapped, postRescueCapped,
-           note: postRescueCapped ? `post-rescue capped from ${v6dec.finalDose.toFixed(2)}U to V1's ${v1WouldDose.toFixed(2)}U (recent low ${opts.recentLowBg.toFixed(0)})`
+  // Composed rebound guard (late July 2026, DetermineBasalBoost): inside the post-rescue window the
+  // fallback-tier SMB is scaled DOWN by BG — ~30% below 120 mg/dL, ramping back to full by 170 — to
+  // close the confirm-crash (a modest rebound after a low being over-treated, then crashing again).
+  // It only ever removes insulin. Applied after the cap, so it composes with the restraint above.
+  let reboundScale = 1.0;
+  if (inPostRescueWindow && opts.bg != null && opts.bg < 170 && dose > 0) {
+    reboundScale = opts.bg < 120 ? 0.30 : 0.30 + 0.70 * (opts.bg - 120) / 50;
+    dose = Math.floor(dose * reboundScale / 0.05 + 1e-9) * 0.05;
+  }
+  const reboundScaled = reboundScale < 1.0 - 1e-9;
+  return { dose, mode: 'override', overridden: true, inMealState, inPostRescueWindow, nonMealCapped, postRescueCapped, reboundScaled, reboundScale,
+           note: reboundScaled ? `post-rescue rebound guard: SMB scaled ×${reboundScale.toFixed(2)} (BG ${opts.bg.toFixed(0)}, recent low ${opts.recentLowBg.toFixed(0)}) → ${dose.toFixed(2)}U`
+               : postRescueCapped ? `post-rescue capped from ${v6dec.finalDose.toFixed(2)}U to V1's ${v1WouldDose.toFixed(2)}U (recent low ${opts.recentLowBg.toFixed(0)})`
                : nonMealCapped   ? `non-meal-capped from ${v6dec.finalDose.toFixed(2)}U to V1's would-dose ${v1WouldDose.toFixed(2)}U (state ${v6dec.state})` : null };
 }
 
@@ -2249,7 +2261,7 @@ function renderV6Tab(inp, r) {
   const ov = v6Override(v6, v1WouldDose, {
     asleep: m.asleep, boostInactive: false,
     cumSmbCap: inp.cumSmbCap, recentSmbVolume60Min: 0,
-    recentLowBg: inp.recentLowBg,
+    recentLowBg: inp.recentLowBg, bg: m.bg,
   });
 
   // Status pills
@@ -2857,7 +2869,7 @@ function computeProjection(inp, r) {
     const ov = v6Override(v6dec, v1WouldHere, {
       asleep, boostInactive: false,
       cumSmbCap: inp.cumSmbCap, recentSmbVolume60Min: vol60(v6Events, t),
-      recentLowBg: inp.recentLowBg,
+      recentLowBg: inp.recentLowBg, bg: bgV6,
     });
     if (ov.mode === 'cum-cap') v6CapHit = true;
     if (ov.dose >= 0.05) {

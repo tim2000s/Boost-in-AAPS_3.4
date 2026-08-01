@@ -116,6 +116,15 @@ data class V5Inputs(
     // tighten V5's commit/holding doses live during active-dosing alpha.
     val confirmedCapU: Double = MAX_CONFIRMED_COMMIT_DOSE_U,
     val committedCapU: Double = MAX_COMMITTED_DOSE_U,
+    // 2026-07-20 V1-acceleration primer (LIVE). See the PRIMER_* constants + REINTEGRATION_SPEC.
+    /** Per-user fizzle-safe base (additive allowance / net-extra over a confirmed meal). 0 = primer off. */
+    val primerCapU: Double = 0.0,
+    /** Delivery mode: true = retractable temp-basal (hypo-prone fallback), false = bolus. Resolved by
+     *  the plugin from ApsBoostV5PrimerTbrFallback && !ApsBoostV5PrimerBolusMode (the user override). */
+    val primerUseTempBasal: Boolean = false,
+    /** Wall-clock epoch-ms this cycle — for the primer-IOB accumulator's time-based decay. 0 = unknown
+     *  (skips decay; accumulator just holds — safe). Supplied by the plugin (dateUtil.now()). */
+    val nowMs: Long = 0L,
 )
 
 /** Persisted V5 state read from RT at cycle start, written back at cycle end. */
@@ -129,6 +138,20 @@ data class V5PersistedState(
      * loses it, which fails safe (streak=false → legacy confirm timing for one cycle).
      */
     val lastCycleScore: Double? = null,
+    /** 2026-07-20 primer: U delivered as the early primer this meal session (0 = not yet primed).
+     *  Primed ONCE per OBSERVING session; reset to 0 on IDLE. Persisted (survives a mid-meal restart). */
+    val primerAppliedU: Double = 0.0,
+    /** 2026-07-20 primer: remaining commit-shot reduction owed — set at the CONFIRMED transition to the
+     *  accumulated primer IOB beyond one base, then netted off the CONFIRMED shot then COMMITTED holds
+     *  until exhausted. Reset to 0 on IDLE. */
+    val primerNettingResidualU: Double = 0.0,
+    /** 2026-07-21 primer: CROSS-SESSION on-board primer insulin estimate (U), wall-clock decayed
+     *  (exp(-Δt/PRIMER_IOB_TAU_MIN)). Accumulates every primer (fizzle + seed) across sessions; NOT
+     *  reset on IDLE (fades by decay). At CONFIRMED, the amount beyond one base is netted off the
+     *  commit-shot (Tim's rule) and the credited excess is consumed. */
+    val primerIobU: Double = 0.0,
+    /** 2026-07-21 primer: epoch-ms the accumulator was last updated (for the decay). 0 = never. */
+    val primerIobUpdatedMs: Long = 0L,
 )
 
 /** Full per-cycle V5 output. Every field is reconstructable into the ~6 NS RT fields. */
@@ -172,7 +195,35 @@ data class V5Decision(
      *  override seam reads this to exempt the cycle from the non-meal cap (the floor doses when V1
      *  doses ~0, so it must out-dose V1). The dose it exempts is committedCap + maxIOB bounded. */
     val velocityBudgetExempt: Boolean = false,
+    /** 2026-07-20 primer: U to deliver as the early primer this cycle (bolus-equivalent). Bolus mode:
+     *  already folded into [finalDose] and exempt from the non-meal seam cap. Temp-basal mode: NOT in
+     *  [finalDose] — the seam converts it to a retractable temp basal. 0 = no primer this cycle. */
+    val primerBolusU: Double = 0.0,
+    /** 2026-07-20 primer delivery mode (pass-through for the seam): true = temp-basal, false = bolus. */
+    val primerUseTempBasal: Boolean = false,
 )
+
+// ===== 2026-07-20 V1-acceleration early primer (LIVE) — backtesting/scripts/2026-07-v1-acceleration =====
+// Reclaims V1's ~15-min-earlier acceleration response as a small fizzle-safe primer during OBSERVING
+// (pure fizzle-low +0.9%, not distinguishable from ambient). Delivered as an advance on the CONFIRMED
+// commit-shot: additive up to the fizzle-safe base (primerCapU); the velocity-scaled excess is netted
+// off the commit-shot (move-not-add). Fizzle branch = the small proven-safe amount; confirm branch =
+// timing shift, net-extra = the base. The follow-through that crashed V1 is guarded by V6's brake.
+/** Acceleration trigger — V1's G3-release threshold (delta_accl %, measured 98% recall / 15-min lead vs confirm). */
+internal const val PRIMER_ACCEL_THRESHOLD = 10.0
+/** Primer suppressed unless the 60-min low is at/above this (post-hypo rescue-carb guard; mirrors the fast path). */
+internal const val PRIMER_MIN_RECENT_LOW_MGDL = 80.0
+/** Delivery ceiling as a multiple of the base cap — keeps the scaled primer inside V1's proven
+ *  fizzle-safe envelope (V1-era mean 0.47, p95 1.75 U) and bounds the net-off excess to one base. */
+internal const val PRIMER_MAX_MULT = 2.0
+/** Acceleration-magnitude scale denominator: primerScale = 1 + max(0, deltaAccl − threshold)/DENOM,
+ *  capped at PRIMER_MAX_MULT. A stronger rise gets a bigger primer; the excess above the base is
+ *  netted off the commit-shot (Tim's "scaling makes it larger → netted off"). deltaAccl +30 → 2× base. */
+internal const val PRIMER_ACCEL_SCALE_DENOM = 20.0
+/** 2026-07-21 primer-IOB accumulator decay time-constant (min, wall-clock). The cross-session
+ *  primer-IOB estimate decays as exp(-Δt/TAU); TAU≈90 approximates rapid-insulin clearance well
+ *  enough for the confirm-time net-off (the netting only ever REMOVES insulin, so it's safe-signed). */
+internal const val PRIMER_IOB_TAU_MIN = 90.0
 
 @Singleton
 class DetermineBasalBoostV5 @Inject constructor() {
@@ -268,6 +319,50 @@ class DetermineBasalBoostV5 @Inject constructor() {
             scoreReadyStreak = scoreReadyStreak,   // 2026-07-03 sustained-score early confirm (hoisted above)
             aggressiveEarlyConfirm = inputs.aggressiveEarlyConfirmEnabled,   // 2026-07-17 opt-in age −2
         )
+
+        // ===== 2026-07-20 V1-acceleration early primer (LIVE) — see PRIMER_* + REINTEGRATION_SPEC =====
+        // Compute the primer amount here (state known); APPLY it after finalDose is finalised below.
+        // Once per OBSERVING session, on an accelerating rise (V1's delta_accl>10 gate), with EVERY
+        // floor clear (recentLow≥80, awake, not-exercising, not post-rescue) and maxIOB headroom.
+        // primerAppliedU (once-per-session guard) resets on IDLE; the primer-IOB accumulator does NOT.
+        val primerActiveState = newHypothesisState.state
+        var primerAppliedU = if (primerActiveState == MealHypothesis.IDLE) 0.0 else persisted.primerAppliedU
+        // 2026-07-21 cross-session primer-IOB accumulator (Tim's confirm-net rule): decay the prior
+        // estimate by wall-clock elapsed, then add any primer this cycle. Spans fizzle sessions so the
+        // commit-shot can credit ALL accumulated primer insulin beyond one base. NOT reset on IDLE.
+        var primerIobU = persisted.primerIobU
+        if (inputs.nowMs > 0L && persisted.primerIobUpdatedMs > 0L && inputs.nowMs > persisted.primerIobUpdatedMs) {
+            val dtMin = (inputs.nowMs - persisted.primerIobUpdatedMs) / 60000.0
+            primerIobU *= kotlin.math.exp(-dtMin / PRIMER_IOB_TAU_MIN)
+        }
+        var primerBolusU = 0.0
+        if (inputs.primerCapU > 0.0 && primerActiveState == MealHypothesis.OBSERVING && primerAppliedU <= 0.0 &&
+            inputs.deltaAccl > PRIMER_ACCEL_THRESHOLD && inputs.delta > 0.0 &&
+            inputs.recentLowBg >= PRIMER_MIN_RECENT_LOW_MGDL && !inputs.asleep &&
+            !inputs.exerciseActive && !inputs.postRescueWindow
+        ) {
+            // Scale with acceleration magnitude (stronger rise → bigger primer), capped inside V1's
+            // proven fizzle-safe envelope (≤ 2× base), then clamped to maxIOB headroom and pump-rounded.
+            val primerScale = 1.0 + kotlin.math.max(0.0, (inputs.deltaAccl - PRIMER_ACCEL_THRESHOLD) / PRIMER_ACCEL_SCALE_DENOM)
+            val target = minOf(inputs.primerCapU * primerScale, PRIMER_MAX_MULT * inputs.primerCapU)
+            var amt = minOf(target, kotlin.math.max(0.0, inputs.maxIob - inputs.iob))
+            if (inputs.roundSmbTo > 0.0) amt = kotlin.math.floor(amt / inputs.roundSmbTo + 1e-9) * inputs.roundSmbTo
+            if (amt > 0.0) {
+                primerBolusU = amt
+                primerAppliedU = amt
+                primerIobU += amt
+            }
+        }
+        val primerIobUpdatedMs = if (inputs.nowMs > 0L) inputs.nowMs else persisted.primerIobUpdatedMs
+        // Netting residual: reset on IDLE; SET at the CONFIRMED transition to the accumulated primer IOB
+        // beyond one base (the first primer's acceleration bonus stays additive; subsequent fizzles are
+        // credited against the commit-shot). The credited excess is then consumed from the accumulator
+        // so a second meal doesn't re-credit it. Spent down against CONFIRMED then COMMITTED below.
+        var primerNettingResidualU = if (primerActiveState == MealHypothesis.IDLE) 0.0 else persisted.primerNettingResidualU
+        if (primerActiveState == MealHypothesis.CONFIRMED) {
+            primerNettingResidualU = kotlin.math.max(0.0, primerIobU - inputs.primerCapU)
+            primerIobU = kotlin.math.min(primerIobU, inputs.primerCapU)
+        }
 
         // Phase 2 — single decision rule
         val actionMult = mealActionMultiplier(newHypothesisState.state, inputs.aggressionUserKnob)
@@ -400,6 +495,21 @@ class DetermineBasalBoostV5 @Inject constructor() {
             velocityBudgetWouldAdd = vbTarget?.let { finalDose - phase3.finalDose }
         }
 
+        // ===== Primer application (2026-07-20) — see the computation block above =====
+        // Bolus mode: fold the primer into finalDose (the seam exempts a primer-bolus cycle from the
+        // non-meal v1-cap). Temp-basal mode: leave finalDose; the seam delivers the primer as a
+        // retractable temp basal. Either way the total this cycle stays within maxIOB headroom.
+        if (primerBolusU > 0.0 && !inputs.primerUseTempBasal) {
+            finalDose = minOf(finalDose + primerBolusU, kotlin.math.max(0.0, inputs.maxIob - inputs.iob))
+        }
+        // Net the accumulated primer IOB (beyond one base) off the commit-shot (CONFIRMED) then COMMITTED
+        // holds until exhausted — "move, don't add", now spanning prior fizzle sessions (Tim's rule).
+        if ((primerActiveState == MealHypothesis.CONFIRMED || primerActiveState == MealHypothesis.COMMITTED) && primerNettingResidualU > 0.0) {
+            val net = kotlin.math.min(primerNettingResidualU, finalDose)
+            finalDose = kotlin.math.max(0.0, finalDose - net)
+            primerNettingResidualU -= net
+        }
+
         return V5Decision(
             finalDose = finalDose,
             score = scoreResult.score,
@@ -417,12 +527,18 @@ class DetermineBasalBoostV5 @Inject constructor() {
                 mealHypothesis = newHypothesisState,
                 mlMealLikelyNullStreak = nextNullStreak,
                 lastCycleScore = scoreResult.score,
+                primerAppliedU = primerAppliedU,
+                primerNettingResidualU = primerNettingResidualU,
+                primerIobU = primerIobU,
+                primerIobUpdatedMs = primerIobUpdatedMs,
             ),
             confirmGate = confirmGate,
             prospectiveConfirmShot = prospectiveConfirmShot,
             floorWouldAdd = floorWouldAdd,
             velocityBudgetWouldAdd = velocityBudgetWouldAdd,
             velocityBudgetExempt = velocityBudgetExempt,
+            primerBolusU = primerBolusU,
+            primerUseTempBasal = inputs.primerUseTempBasal,
         )
     }
 }

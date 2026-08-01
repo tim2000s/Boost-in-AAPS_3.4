@@ -199,6 +199,13 @@
         Trio equivalent and is shown as n/a; Boost-ACTIVE Trio cycles don't log the oref counterfactual and are
         counted unpaired. Mixed windows (uploader switched) are analysed per cycle in each record's own mode.</li>
         <li>TING = Time In Normo-glycaemia, 3.5–7.8 mmol/L (63–140 mg/dL), reported alongside standard TIR 70–180.</li>
+        <li><b>Late-July 2026 engine changes</b> reflected in the comparison: a <b>composed rebound guard</b> (SMB
+        scaled down in the 45-min window after a low, closing the confirm-crash) and a <b>stop on adding insulin
+        during elevated-heart-rate exercise</b>. Both only ever <i>remove</i> insulin, so where they act you'll see
+        Boost's counterfactual dose sit at or below V1's.</li>
+        <li>Recent builds also run a read-only <b>anticipation shadow</b> (an <code>anticip=</code> tag that learns
+        when you tend to eat and exercise). It <b>doses nothing</b>, so it does not affect this dose comparison — it
+        is banking data for future per-user anticipatory dosing.</li>
       </ul>
     </div>
   </div>

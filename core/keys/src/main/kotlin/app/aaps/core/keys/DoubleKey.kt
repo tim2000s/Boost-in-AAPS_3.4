@@ -82,6 +82,11 @@ enum class DoubleKey(
     // committed 1.0→2.5) so higher-insulin-need users and big meals aren't clipped.
     ApsBoostV5ConfirmedCapU("boost_v5_confirmed_cap_u", 2.5, 0.0, 7.5, defaultedBySM = true),
     ApsBoostV5CommittedCapU("boost_v5_committed_cap_u", 0.5, 0.0, 2.5, defaultedBySM = true),
+    // 2026-07-20 V1-acceleration early primer: the per-user fizzle-safe base (additive allowance,
+    // net-extra insulin over a confirmed meal). 0.0 = primer OFF (default until auto-config/user
+    // enables). Auto-config-managed + insulin-adding (strict-TBR raise-guarded). See
+    // backtesting/scripts/2026-07-v1-acceleration/. U200 users get a scaled-down cap.
+    ApsBoostV5PrimerCapU("boost_v5_primer_cap_u", 0.0, 0.0, 1.0, defaultedBySM = true),
     ApsBoostV5HypoCaution("boost_v5_hypo_caution", 1.0, 1.0, 2.0, defaultedBySM = true),
     ApsBoostV5Sensitivity("boost_v5_sensitivity", 1.0, 0.8, 1.2, defaultedBySM = true),
 

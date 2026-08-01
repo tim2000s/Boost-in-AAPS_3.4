@@ -57,16 +57,16 @@ class StepFeedTest {
     // ── INACTIVE branch guard ────────────────────────────────────────────────────────────────────
 
     @Test fun `NONE feed - INACTIVE never fires, even at zero steps`() {
-        assertThat(StepFeed.inactivityEligible(stepsAvailable = false, currentProfileSwitch = 100, recentSteps60Min = 0, inactivitySteps = 200)).isFalse()
+        assertThat(StepFeed.inactivityEligible(stepsAvailable = false, currentProfileSwitch = 100, recentSteps60Min = 0, inactivitySteps = 200, sleepInActive = false, asleep = false, inNightWindow = false)).isFalse()
     }
 
     @Test fun `LIVE feed with zero steps - INACTIVE fires as today (real sedentary unchanged)`() {
-        assertThat(StepFeed.inactivityEligible(stepsAvailable = true, currentProfileSwitch = 100, recentSteps60Min = 0, inactivitySteps = 200)).isTrue()
+        assertThat(StepFeed.inactivityEligible(stepsAvailable = true, currentProfileSwitch = 100, recentSteps60Min = 0, inactivitySteps = 200, sleepInActive = false, asleep = false, inNightWindow = false)).isTrue()
     }
 
     @Test fun `LIVE feed with steps above threshold or non-100 profile - not eligible`() {
-        assertThat(StepFeed.inactivityEligible(true, 100, 250, 200)).isFalse()
-        assertThat(StepFeed.inactivityEligible(true, 80, 0, 200)).isFalse()
+        assertThat(StepFeed.inactivityEligible(true, 100, 250, 200, false, false, false)).isFalse()
+        assertThat(StepFeed.inactivityEligible(true, 80, 0, 200, false, false, false)).isFalse()
     }
 
     // ── Sleep-in backstop guard ──────────────────────────────────────────────────────────────────
@@ -90,23 +90,108 @@ class StepFeedTest {
     // ── Lie-in FAILSAFE decision (false-AWAKE gap) ───────────────────────────────────────────────
 
     @Test fun `sleep-in window inactive - failsafe never engages regardless of detector`() {
-        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = false, autoBySleepActive = false, detectorSleeping = false)).isFalse()
-        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = false, autoBySleepActive = true, detectorSleeping = true)).isFalse()
+        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = false, nightModeEnabled = true, autoBySleepActive = false, detectorSleeping = false)).isFalse()
+        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = false, nightModeEnabled = true, autoBySleepActive = true, detectorSleeping = true)).isFalse()
     }
 
     @Test fun `auto-by-sleep OFF - failsafe engages on low steps (clock-only night mode, unchanged)`() {
-        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = true, autoBySleepActive = false, detectorSleeping = false)).isTrue()
+        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = true, nightModeEnabled = true, autoBySleepActive = false, detectorSleeping = false)).isTrue()
         // detector state is irrelevant when auto-by-sleep is off
-        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = true, autoBySleepActive = false, detectorSleeping = true)).isTrue()
+        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = true, nightModeEnabled = true, autoBySleepActive = false, detectorSleeping = true)).isTrue()
     }
 
     @Test fun `auto-by-sleep ON and detector SLEEPING - failsafe stands down (detector drives)`() {
-        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = true, autoBySleepActive = true, detectorSleeping = true)).isFalse()
+        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = true, nightModeEnabled = true, autoBySleepActive = true, detectorSleeping = true)).isFalse()
     }
 
     @Test fun `auto-by-sleep ON but detector AWAKE in the lie-in window - failsafe ENGAGES (false-AWAKE gap closed)`() {
         // The regression the fix targets: a dawn false-AWAKE with the user still in bed (low 60m steps)
         // previously left BOTH protections off. Steps are ground truth → the failsafe must re-engage.
-        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = true, autoBySleepActive = true, detectorSleeping = false)).isTrue()
+        assertThat(StepFeed.lieInFailsafeEngages(sleepInActive = true, nightModeEnabled = true, autoBySleepActive = true, detectorSleeping = false)).isTrue()
+    }
+
+    // ── 2026-07-31: sleep-in and INACTIVE must be mutually exclusive ──────────────────────────
+    // A sleeping user has near-zero steps by definition, so the step test passes every night. The
+    // INACTIVE branch ADDS insulin (profile 130%), so without an explicit exclusion it runs the user
+    // hot until morning. Reported live: INACTIVE-130% at BG 71 and falling, during sleep-in.
+
+    @Test
+    fun `inactivity is suppressed during the morning lie-in`() {
+        assertThat(
+            StepFeed.inactivityEligible(
+                stepsAvailable = true, currentProfileSwitch = 100, recentSteps60Min = 0,
+                inactivitySteps = 500, sleepInActive = true, asleep = false
+            , inNightWindow = false)
+        ).isFalse()
+    }
+
+    @Test
+    fun `inactivity is suppressed while the detector reports sleep`() {
+        // The core night, which the lie-in window cannot reach: it opens AT night end, so before
+        // dawn sleepInActive is false by construction. The detector is what covers this.
+        assertThat(
+            StepFeed.inactivityEligible(
+                stepsAvailable = true, currentProfileSwitch = 100, recentSteps60Min = 0,
+                inactivitySteps = 500, sleepInActive = false, asleep = true
+            , inNightWindow = false)
+        ).isFalse()
+    }
+
+    @Test
+    fun `inactivity still fires for a genuinely sedentary waking user`() {
+        // The raise is intended behaviour when awake and sedentary; the fix must not remove it.
+        assertThat(
+            StepFeed.inactivityEligible(
+                stepsAvailable = true, currentProfileSwitch = 100, recentSteps60Min = 40,
+                inactivitySteps = 500, sleepInActive = false, asleep = false
+            , inNightWindow = false)
+        ).isTrue()
+    }
+
+    @Test
+    fun `the 250 to 499 step band cannot leave both protections off`() {
+        // sleepInSteps ships at 250 and inactivitySteps at 500, both read from the same blended
+        // count, so in this band the lie-in stands down as awake-enough while INACTIVE fires as
+        // sedentary-enough. The detector closes it.
+        assertThat(
+            StepFeed.inactivityEligible(
+                stepsAvailable = true, currentProfileSwitch = 100, recentSteps60Min = 300,
+                inactivitySteps = 500, sleepInActive = false, asleep = true
+            , inNightWindow = false)
+        ).isFalse()
+    }
+
+    @Test
+    fun `failsafe engages when night mode is off even though the detector sleeps`() {
+        // isInNightSleepPeriod() returns false on its FIRST line when night mode is disabled, so the
+        // detector is never consulted. Deferring to it there disarmed both protections at once.
+        assertThat(
+            StepFeed.lieInFailsafeEngages(
+                sleepInActive = true, nightModeEnabled = false,
+                autoBySleepActive = true, detectorSleeping = true
+            )
+        ).isTrue()
+    }
+
+    @Test
+    fun `failsafe still stands down when night mode is genuinely suppressing`() {
+        assertThat(
+            StepFeed.lieInFailsafeEngages(
+                sleepInActive = true, nightModeEnabled = true,
+                autoBySleepActive = true, detectorSleeping = true
+            )
+        ).isFalse()
+    }
+
+    @Test
+    fun `inactivity is suppressed inside the configured night window`() {
+        // The point of the 2026-07-31 clock guard: this holds whatever ApsBoostNightModeEnabled
+        // says, and needs no HR, no steps and no sleep detector.
+        assertThat(
+            StepFeed.inactivityEligible(
+                stepsAvailable = true, currentProfileSwitch = 100, recentSteps60Min = 0,
+                inactivitySteps = 500, sleepInActive = false, asleep = false, inNightWindow = true
+            )
+        ).isFalse()
     }
 }

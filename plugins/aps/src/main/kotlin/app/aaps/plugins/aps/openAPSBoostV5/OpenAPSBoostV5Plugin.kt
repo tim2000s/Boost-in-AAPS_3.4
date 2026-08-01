@@ -110,7 +110,12 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
         .preferencesId(PluginDescription.PREFERENCE_SCREEN)
         .preferencesVisibleInSimpleMode(false)
         .showInList { config.APS }
-        .description(R.string.description_boost_v5),
+        .description(R.string.description_boost_v5)
+        // Boost V6 is the default APS engine on a fresh install (moved from OpenAPSSMBPlugin) — this
+        // fork exists to run V6, so a clean DB selects it directly rather than starting on stock SMB.
+        // Exactly one APS plugin may carry .setDefault(); PluginStore force-enables it when nothing
+        // else is selected and disables every other APS plugin (single-engine invariant).
+        .setDefault(),
     aapsLogger, rh
 ), APS, PluginConstraints {
 
@@ -157,12 +162,14 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
         BooleanKey.ApsBoostV5FastCarbConfirm,
         BooleanKey.ApsBoostV5AggressiveEarlyConfirm,
         BooleanKey.ApsBoostV5VelocityBudgetActive,
+        BooleanKey.ApsBoostV5PrimerTbrFallback,   // 2026-07-20 primer routing (NOT the user override, which is unmanaged)
     )
 
     private fun suggestionBoolean(s: BoostV5AutoConfig.V5Suggestion, key: BooleanKey): Boolean = when (key) {
         BooleanKey.ApsBoostV5FastCarbConfirm         -> s.fastCarbConfirm
         BooleanKey.ApsBoostV5AggressiveEarlyConfirm  -> s.aggressiveEarlyConfirm
         BooleanKey.ApsBoostV5VelocityBudgetActive    -> s.velocityBudgetFloor
+        BooleanKey.ApsBoostV5PrimerTbrFallback       -> s.primerTbrFallback
         else                                         -> key.defaultValue
     }
 
@@ -600,6 +607,12 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
             sensitivityUserKnob = sensitivityKnob,
             confirmedCapU = preferences.getBoostDosing(DoubleKey.ApsBoostV5ConfirmedCapU),
             committedCapU = preferences.getBoostDosing(DoubleKey.ApsBoostV5CommittedCapU),
+            // 2026-07-20 V1-acceleration primer (LIVE). Mode = auto-config's temp-basal routing UNLESS
+            // the user override (ApsBoostV5PrimerBolusMode) forces the bolus. Only active while V6 doses.
+            primerCapU = if (activeMode) preferences.getBoostDosing(DoubleKey.ApsBoostV5PrimerCapU) else 0.0,
+            primerUseTempBasal = preferences.getBoostDosing(BooleanKey.ApsBoostV5PrimerTbrFallback) &&
+                !preferences.getBoostDosing(BooleanKey.ApsBoostV5PrimerBolusMode),
+            nowMs = dateUtil.now(),   // 2026-07-21 wall-clock for the primer-IOB accumulator decay
         )
     }
 
@@ -705,6 +718,8 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostV5AggressiveEarlyConfirm, summary = R.string.boost_v5_aggressive_early_confirm_summary, title = R.string.boost_v5_aggressive_early_confirm_title))
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostV5ComposedFloorActive, summary = R.string.boost_v5_composed_floor_summary, title = R.string.boost_v5_composed_floor_title))
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostV5VelocityBudgetActive, summary = R.string.boost_v5_velocity_budget_summary, title = R.string.boost_v5_velocity_budget_title))
+            addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostV5PrimerCapU, dialogMessage = R.string.boost_v5_primer_cap_summary, title = R.string.boost_v5_primer_cap_title))
+            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostV5PrimerBolusMode, summary = R.string.boost_v5_primer_bolus_mode_summary, title = R.string.boost_v5_primer_bolus_mode_title))
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsBoostV6PreMealTarget, summary = R.string.boost_v6_pre_meal_target_summary, title = R.string.boost_v6_pre_meal_target_title))
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostV6PreMealTargetMgdl, dialogMessage = R.string.boost_v6_pre_meal_target_mgdl_summary, title = R.string.boost_v6_pre_meal_target_mgdl_title))
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsBoostV6PreMealLeadMin, dialogMessage = R.string.boost_v6_pre_meal_lead_min_summary, title = R.string.boost_v6_pre_meal_lead_min_title))

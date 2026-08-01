@@ -194,8 +194,19 @@ class BoostV5AutoConfigTest {
         assertThat(keys).containsExactly(
             DoubleKey.ApsBoostV5Aggression, DoubleKey.ApsBoostV5HypoCaution,
             DoubleKey.ApsBoostV5ConfirmedCapU, DoubleKey.ApsBoostV5CommittedCapU,
-            DoubleKey.ApsBoostCumulativeSmbCap60Min, DoubleKey.ApsBoostMaxIob, DoubleKey.ApsBoostBolus
+            DoubleKey.ApsBoostCumulativeSmbCap60Min, DoubleKey.ApsBoostMaxIob, DoubleKey.ApsBoostBolus,
+            DoubleKey.ApsBoostV5PrimerCapU
         )
+    }
+
+    @Test fun `primer cap is applied and non-zero - 2026-07-20 regression, missing resolve call`() {
+        val s = BoostV5AutoConfig.compute(profile())!!
+        val f = FakeStore()
+        f.apply(s, safeTbr)
+        // The cap MUST be written by applyAutoConfig — else the primer (bolus AND temp-basal) is a no-op.
+        assertThat(f.store[DoubleKey.ApsBoostV5PrimerCapU]).isNotNull()
+        assertThat(f.store[DoubleKey.ApsBoostV5PrimerCapU]!!).isGreaterThan(0.0)
+        assertThat(s.primerCapU).isGreaterThan(0.0)
     }
 
     @Test fun `with nothing preset, every knob is configured and resolved — including the cumulative cap`() {

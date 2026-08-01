@@ -134,6 +134,28 @@ data class RT(
     var boostV5_cumulativeCapU: Double? = null,  // operative rolling-60-min cumulative SMB cap (U, ApsBoostCumulativeSmbCap60Min); 0 = cap disabled
     var boostV5_smbVol60Min: Double? = null,     // SMB volume delivered in the trailing 60 min (U) — the value the cap compares against (fail-closed: set AT cap on DB error)
 
+    // Boost V7 SHADOW telemetry (2026-07) — live instrument for the REVISED distributional-sizing
+    // formulation after the offline NO-GO (backtesting/reports/2026-07_v7_foundation_REPORT.md §3:
+    // cost-ratio insensitive + rode the biased substrate). Filled by V7Shadow at the V1 engine's
+    // seam (AFTER V5 runShadow, BEFORE the V6 override). READ-ONLY: never feeds the dose path;
+    // delivered dosing is bit-identical with or without it. See plugins/aps/.../openAPSBoostV7/V7_SHADOW.md.
+    var boostV7_wouldDoseR4: Double? = null,     // sizing rule's would-dose (U) at low:high cost ratio R=4. With R7/R10 = the criterion-(a) instrument: identical values in the field ⇒ formulation still wrong. Null = abstained (cold pool / no V5 decision / unusable sens)
+    var boostV7_wouldDoseR7: Double? = null,     // would-dose (U) at R=7
+    var boostV7_wouldDoseR10: Double? = null,    // would-dose (U) at R=10
+    var boostV7_pLow90: Double? = null,          // p(BG<70 within 90 min) off the regime pool's piecewise-linear CDF at h=90, undosed projection; <5% truncates to 0 (left tail not fitted — report §1). DISPLAY ONLY, never permission
+    var boostV7_q50Drift: Double? = null,        // active regime pool's MEDIAN 30-min residual (mg/dL) — the criterion-(b) instrument: quiet-flat cycles must read ≈0 once regime conditioning has debiased the substrate
+    var boostV7_pool: String? = null,            // active regime pool + n at h=60, e.g. "quiet_flat(n=812)"; "meal(warming n=42)" below warm threshold (sizer abstains); "excluded" = cycle fits no pool (non-flat non-meal daytime — the unannounced-onset pollution, deliberately dropped)
+    var boostV7_innovSensFrozen: Double? = null, // rolling 30-min innovation SUM (mg/dL) with sens FROZEN at profile ISF — Backtest-2 follow-up (adapted variable_sens absorbed the signal, d=0.02). Log-only
+
+    // KAIROS Twin SHADOW telemetry (2026-07-18) — a physiological Ensemble-Kalman forecaster
+    // (plugins/aps/.../openAPSBoostTwin), READ-ONLY (doses nothing). NOTE: its forecast is emitted
+    // as a "twin=fc30,fc60,lo60,hi60,ra,gi,insU;" tag appended to [reason], NOT as its own RT field.
+    // WHY: adding ANY field to this huge @Serializable data class shifts the register allocation of
+    // the legacy DetermineBasalBoostV3MLG3.determine_basal (which builds an RT and sits right at the
+    // ART method-verifier limit) and trips a VerifyError → instant startup crash (reproduced on an
+    // emulator 2026-07-18, both High- and Low-half register-aliasing). Riding in the existing reason
+    // string keeps RT's constructor byte-identical to the verified build. The extractor parses the tag.
+
     // HR + sleep telemetry (2026-06-02) — emitted into NS devicestatus for retrospective
     // sleep-model tuning. Cadence = one observation per Boost cycle (~5 min), which
     // matches sleep-analysis granularity. Wear OS samples HR every 1 min; here we

@@ -68,9 +68,19 @@ enum class StringKey(
     // V5 persisted state (JSON blob: mealHypothesis, age, mlMealLikelyNullStreak)
     ApsBoostV5State("boost_v5_state", "", defaultedBySM = true),
 
+    // V7 shadow residual pools (JSON blob: pending IOB-only projections + regime-conditioned
+    // residual samples, ~21-day window). Read/written by V7Shadow every Boost cycle; blank or
+    // corrupt → cold start (sizer abstains until pools re-warm). See openAPSBoostV7/V7_SHADOW.md.
+    ApsBoostV7ResidualPools("boost_v7_residual_pools", "", defaultedBySM = true),
+
     // ISF shadow persisted state (JSON blob: EMA value + timestamps for warmup computation)
     // Used by BoostIsfShadow to persist EMA(τ=3h) sensitivity ratio across plugin restarts.
     ApsBoostIsfShadowState("boost_isf_shadow_state", "", defaultedBySM = true),
+
+    // Anticipation shadow onset history (JSON blob: rolling exercise + meal onset timestamps,
+    // ~56-day window). Read/written by AnticipationShadow every Boost cycle to refit the per-user
+    // habit models. Blank/corrupt → empty (falls back to the cross-user prior). Read-only to dosing.
+    ApsBoostAnticipHistory("boost_anticip_history", "", defaultedBySM = true),
 
     // Sleep state machine persisted state (JSON blob: SleepState, hysteresis counters, entry ts)
     ApsBoostSleepState("boost_sleep_state", "", defaultedBySM = true),

@@ -1547,7 +1547,7 @@
         <div class="card-icon icon-yellow">🎚️</div>
         <div>
           <div class="card-title">V6 user knobs</div>
-          <div class="card-subtitle">The only three settings most V6 users ever touch</div>
+          <div class="card-subtitle">The only three settings most V6 users ever touch — full detail in the <a href="https://github.com/tim2000s/Boost-in-AAPS_3.4/blob/dev/README.md#the-three-levers" style="color:#fbbf24">README</a></div>
         </div>
       </div>
 
@@ -1557,14 +1557,14 @@
           <span class="setting-name">Aggression</span>
           <span class="setting-key">ApsBoostV5Aggression</span>
         </div>
-        <div class="setting-desc">Scales the CONFIRMED catch-up dose only (1.8× base). Lower = gentler meal response; higher = firmer.</div>
+        <div class="setting-desc">Scales the CONFIRMED catch-up dose only (1.8× base). Lower = gentler meal response; higher = firmer. Ceiling raised to <strong>1.6</strong> (July 2026) for users who run consistently high and want a firmer confirm; auto-config still seeds it at neutral or below and never auto-raises it.</div>
         <div class="spectrum-wrap">
           <div class="spectrum-bar"></div>
-          <div class="default-marker" style="left: 50%">
+          <div class="default-marker" style="left: 33%">
             <div class="default-pip"></div>
             <div class="default-label">1.0</div>
           </div>
-          <div class="spectrum-labels"><span>0.7 (gentle)</span><span>1.3 (firm)</span></div>
+          <div class="spectrum-labels"><span>0.7 (gentle)</span><span>1.6 (firm)</span></div>
         </div>
       </div>
 
@@ -1609,7 +1609,7 @@
         <div class="card-icon icon-slate">⚙️</div>
         <div>
           <div class="card-title">Shared & advanced</div>
-          <div class="card-subtitle">Inherited safety limits + rarely-touched V6 internals</div>
+          <div class="card-subtitle">Inherited safety limits + rarely-touched V6 internals — each one, and how auto-config chooses its value, is detailed in the <a href="https://github.com/tim2000s/Boost-in-AAPS_3.4/blob/dev/docs/v6-advanced-settings.md" style="color:#fbbf24">Advanced settings reference</a></div>
         </div>
       </div>
       <div class="setting">
@@ -1632,19 +1632,34 @@
         <div class="setting-top"><span class="setting-name">Fast-carb confirm</span><span class="setting-key">ApsBoostV5FastCarbConfirm — default ON</span></div>
         <div class="setting-desc">A sharp (Δ ≥ 6 mg/dL/5min), accelerating (≥ 10%), score-corroborated (≥ 0.65) rise jumps
         straight to CONFIRMED in one cycle. Since July 2026 it is suppressed within an hour of a low (&lt; 80 mg/dL) —
-        rescue-carb rebounds no longer trigger a commit-shot onto carbs that are already spoken for.</div>
+        rescue-carb rebounds no longer trigger a commit-shot onto carbs that are already spoken for.
+        Auto-config turns it <b>off</b> for a low-prone history.</div>
       </div>
       <div class="setting">
         <div class="setting-top"><span class="setting-name">Pre-meal target</span><span class="setting-key">ApsBoostV6PreMealTarget</span></div>
         <div class="setting-desc">Anticipatory target-lowering ahead of a learned meal time. Off by default.</div>
       </div>
       <div class="setting">
+        <div class="setting-top"><span class="setting-name">Confirm-sooner (A2) &amp; Velocity-budget floor (C5)</span><span class="setting-key">auto-config opt-ins</span></div>
+        <div class="setting-desc">Two per-user levers for people who run high and confirm late: <b>A2</b> brings the meal
+        confirm forward a cycle when the score is already convincing; <b>C5</b> puts a small floor under the velocity factor
+        so a fast rise isn't throttled to nothing. Both are <b>auto-config-managed and off unless your history is
+        well-controlled</b> — see the auto-config rule below. Aggression levers, not guards.</div>
+      </div>
+      <div class="setting">
         <div class="setting-top"><span class="setting-name">Phase-3 composed brake floor</span><span class="setting-key">ApsBoostV5ComposedFloorActive — default OFF</span></div>
         <div class="setting-desc">Enforces a 25% floor on the composed soft-brake multiplier during active meal sessions
         above 160 mg/dL with eventualBG above target — fixes the soft-brake stack compounding to sub-pump-step zero
-        doses mid-meal (July 2026). All hard gates and dose caps still apply. <b>Per-user activation only:</b> this is
-        an aggression lever, not a guard — enable it only if your trailing 14-day time-below-range is within consensus
-        targets (&lt;70&nbsp;mg/dL below 3.5%, &lt;54&nbsp;mg/dL below 0.8%); do not enable outside those.</div>
+        doses mid-meal (July 2026). All hard gates and dose caps still apply. <b>Auto-config-managed, per-user:</b> this is
+        an aggression lever, not a guard — enabled only if your trailing 14-day time-below-range is within consensus
+        targets (&lt;70&nbsp;mg/dL below 3.5%, &lt;54&nbsp;mg/dL below 0.8%).</div>
+      </div>
+      <div class="setting">
+        <div class="setting-top"><span class="setting-name">Anticipation (routine learning)</span><span class="setting-key">shadow — <code>anticip=</code></span></div>
+        <div class="setting-desc">A per-user model that learns <i>when</i> you tend to eat and exercise from your own
+        history (refit periodically, never in the dosing loop) and predicts the next meal/walk ~45&nbsp;min ahead.
+        <b>Read-only for now — it doses nothing</b>; it is the substrate for future <i>retractable</i>, per-user
+        anticipatory dosing (an anticipated action that unwinds if the event doesn't materialise).</div>
       </div>
     </div>
   </div>
@@ -1661,6 +1676,14 @@
       <li><b>Post-hypo meal-state cap</b> — for 45 minutes after any BG &lt; 75 mg/dL, even a CONFIRMED/COMMITTED
       meal state can't out-dose the hypo-restrained V1 base — a rescue-carb rebound inherits V1's post-rescue
       restraint instead of drawing a full V6 catch-up shot.</li>
+      <li><b>Composed rebound guard (late July 2026)</b> — in that same 45-minute post-low window, whatever SMB
+      the fallback tiers would deliver is <b>scaled down by glucose</b> (~30% below 6.7&nbsp;mmol/L, ramping back
+      to full by 9.4). This closes the <i>confirm-crash</i>: a modest rebound after a low used to be over-treated
+      and then crash a second time. It only ever <i>removes</i> insulin.</li>
+      <li><b>Elevated-HR exercise stop (late July 2026, critical)</b> — Boost <b>stops adding insulin during
+      hard exercise</b>. The activity classifier no longer mis-reads a moving-but-low-step session as resting,
+      and the resting branch no longer ignores an elevated heart rate — the loop could previously add insulin
+      as BG fell during exercise.</li>
       <li><b>Fail-closed anti-stacking</b> — if recent-bolus history can't be read, SMBs pause rather than lose the cap.</li>
     </ul>
   </div>
@@ -1697,7 +1720,7 @@
     <div class="guidance-box aggressive">
       <h4>To make Boost V6 more aggressive</h4>
       <ul>
-        <li>Raise <b>Aggression</b> (1.0 → 1.1–1.2) — firmer catch-up shot on confirmed meals</li>
+        <li>Raise <b>Aggression</b> (1.0 → 1.1–1.2, ceiling now 1.6) — firmer catch-up shot on confirmed meals</li>
         <li>Raise <b>Sensitivity</b> (1.0 → 1.05–1.1) — firms the whole budget for resistant users</li>
         <li>Raise the <b>Confirmed cap</b> modestly if commit-shots keep hitting it on meals that still peak high</li>
         <li>Raise the <b>Committed cap</b> one step (0.5 → 0.75) if plateaus are held on capped holds</li>
@@ -1862,7 +1885,7 @@
       <div class="scenario-col-title">What not to do</div>
       <ul class="avoid-list">
         <li><b>Don't fight the night gate</b> — if the "plateau" is overnight, V6 standing down is deliberate (the V1 base dose still corrects genuine highs). Adjust the night window or basal, not aggression.</li>
-        <li><b>Don't max Aggression (1.3) before checking the caps and Max IOB</b> — Aggression only scales the once-per-meal commit-shot; if the cap or the IOB clamp binds, more Aggression changes nothing.</li>
+        <li><b>Don't max Aggression (now up to 1.6) before checking the caps and Max IOB</b> — Aggression only scales the once-per-meal commit-shot; if the cap or the IOB clamp binds, more Aggression changes nothing.</li>
         <li><b>Don't raise Sensitivity for a meal-only problem</b> — it firms the entire budget all day; use the meal-specific levers first.</li>
         <li><b>Don't tighten CR</b> to compensate for post-meal plateaus — a tight CR risks pre-meal overdose. Correct the loop behaviour first.</li>
       </ul>

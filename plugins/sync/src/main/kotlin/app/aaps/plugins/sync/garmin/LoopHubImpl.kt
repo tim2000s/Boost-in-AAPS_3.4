@@ -83,6 +83,35 @@ class LoopHubImpl @Inject constructor(
     /** Returns true if the pump is connected. */
     override val isConnected: Boolean get() = loop.runningMode != RM.Mode.DISCONNECTED_PUMP
 
+    /** Short loop status for the watch face. */
+    override val loopStatus: String
+        get() = when (loop.runningMode) {
+            RM.Mode.CLOSED_LOOP       -> "CLOSED"
+            RM.Mode.CLOSED_LOOP_LGS   -> "LGS"
+            RM.Mode.OPEN_LOOP         -> "OPEN"
+            RM.Mode.DISABLED_LOOP     -> "DISABLED"
+            RM.Mode.SUPER_BOLUS       -> "SUPERBOLUS"
+            RM.Mode.DISCONNECTED_PUMP -> "DISCONN"
+            RM.Mode.SUSPENDED_BY_PUMP,
+            RM.Mode.SUSPENDED_BY_USER,
+            RM.Mode.SUSPENDED_BY_DST  -> "SUSPEND"
+            else                      -> "LOOP"   // RESUME / any transient or future mode
+        }
+
+    /** Epoch-ms of the last APS run (loop freshness), or null if it has never run. */
+    override val lastLoopEpochMs: Long?
+        get() = loop.lastRun?.lastAPSRun
+
+    /** Current DynISF / variable sensitivity in the user's glucose units. Prefer the live APS
+     *  variable_sens; fall back to the profile ISF; null if neither is available. */
+    override val variableSensInUnits: Double?
+        get() {
+            val mgdl = loop.lastRun?.constraintsProcessed?.variableSens
+                ?: currentProfile?.getIsfMgdl("GarminLoopHub")
+                ?: return null
+            return profileUtil.fromMgdlToUnits(mgdl, glucoseUnit)
+        }
+
     /** Returns true if the current profile is set of a limited amount of time. */
     override val isTemporaryProfile: Boolean
         get() {

@@ -59,8 +59,53 @@ internal object StepFeed {
     /**
      * The INACTIVE branch may only fire when the feed is available — this is the exact predicate
      * calculateBoostActivity evaluates (extracted so the guard is unit-testable).
+     *
+     * INACTIVE raises the profile (ApsBoostInactivityPct, factory 130%), which lowers DynISF, lifts
+     * basal and scales the Boost SMB tiers — it ADDS insulin. That is the intended behaviour for a
+     * genuinely sedentary waking user, and is left alone here.
+     *
+     * It must never coincide with sleep. A sleeping user has near-zero steps by definition, so the
+     * step test below is satisfied every night; without an explicit exclusion the branch reads
+     * "asleep" as "sedentary" and runs the user 30% hot until morning. That was the 2026-07-31
+     * report: INACTIVE-130% at BG 71 and falling, during sleep-in.
+     *
+     * The exclusion is placed HERE rather than on the boostActive gate deliberately. That gate has
+     * several defeat paths — ApsBoostNightModeEnabled ships false, which makes isInNightSleepPeriod()
+     * return false on its first line and discards the detector entirely; and the lie-in failsafe can
+     * stand down. Guarding the branch itself makes "sleep-in and INACTIVE are mutually exclusive" a
+     * property of the predicate, independent of how the gate above it was configured.
+     *
+     * Three independent exclusions, because no one of them covers every user:
+     *
+     * @param sleepInActive  the morning lie-in window, [sleepInActive]
+     * @param asleep         the sleep detector reports SLEEPING or PRE_SLEEP. Covers sleep OUTSIDE
+     *                       the configured window — shift work, naps, a late night — but needs the
+     *                       detector to be producing a state, which it does on roughly two thirds of
+     *                       cycles in the field and not at all for some users.
+     * @param inNightWindow  the configured night clock window, [NightWindow]. Read regardless of
+     *                       ApsBoostNightModeEnabled, because the times are a fact about the user
+     *                       while the flag is a policy about dosing. Needs no sensor at all, so it
+     *                       is the one exclusion that always works, and it is what makes "INACTIVE
+     *                       never fires overnight" true by default rather than by configuration.
      */
-    fun inactivityEligible(stepsAvailable: Boolean, currentProfileSwitch: Int, recentSteps60Min: Int, inactivitySteps: Int): Boolean =
+    fun inactivityEligible(
+        stepsAvailable: Boolean,
+        currentProfileSwitch: Int,
+        recentSteps60Min: Int,
+        inactivitySteps: Int,
+        sleepInActive: Boolean,
+        asleep: Boolean,
+        inNightWindow: Boolean
+    ): Boolean =
+        inactivityStepsMet(stepsAvailable, currentProfileSwitch, recentSteps60Min, inactivitySteps) &&
+            !sleepInActive && !asleep && !inNightWindow
+
+    /**
+     * The step half of [inactivityEligible], without the sleep exclusion. Split out so the caller can
+     * tell "the user is moving" apart from "the user is sedentary because they are asleep", and
+     * breadcrumb the second case instead of falling through silently.
+     */
+    fun inactivityStepsMet(stepsAvailable: Boolean, currentProfileSwitch: Int, recentSteps60Min: Int, inactivitySteps: Int): Boolean =
         stepsAvailable && currentProfileSwitch == 100 && recentSteps60Min < inactivitySteps
 
     /**
@@ -81,7 +126,20 @@ internal object StepFeed {
      * must not amplify a dawn rise into a full meal-SMB on a false-AWAKE. Prior shadow-branch code gated
      * this on `!autoBySleepActive` alone, which stood the failsafe down for the ENTIRE lie-in whenever
      * auto-by-sleep was on — leaving both protections off exactly in the detector's false-AWAKE mode.
+     *
+     * [nightModeEnabled] joined the stand-down condition on 2026-07-31. The clause defers to the
+     * detector's night-mode suppression, but that suppression only runs when ApsBoostNightModeEnabled
+     * is true: isInNightSleepPeriod() returns false on its FIRST line otherwise, before the
+     * auto-by-sleep branch is reached. So with night mode off, a correctly-SLEEPING detector caused
+     * the failsafe to defer to a suppressor that was not running, and both protections disengaged at
+     * once — the detector being right was what disarmed the backstop. Requiring the master switch
+     * makes the deferral conditional on the thing it defers to actually existing.
      */
-    fun lieInFailsafeEngages(sleepInActive: Boolean, autoBySleepActive: Boolean, detectorSleeping: Boolean): Boolean =
-        sleepInActive && !(autoBySleepActive && detectorSleeping)
+    fun lieInFailsafeEngages(
+        sleepInActive: Boolean,
+        nightModeEnabled: Boolean,
+        autoBySleepActive: Boolean,
+        detectorSleeping: Boolean
+    ): Boolean =
+        sleepInActive && !(nightModeEnabled && autoBySleepActive && detectorSleeping)
 }

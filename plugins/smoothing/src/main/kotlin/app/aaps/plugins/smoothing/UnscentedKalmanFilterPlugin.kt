@@ -582,8 +582,12 @@ class UnscentedKalmanFilterPlugin @Inject constructor(
     private fun currentIobTotalU(): Double =
         try {
             val calc = iobCobCalculator.get()
+            // Bolus IOB plus only POSITIVE basal IOB. Negative temp-basal IOB — the loop zero-/low-
+            // temping during a genuine descent — must NOT shrink the total, or the gate is most-armed
+            // exactly when the loop is already fighting a real insulin-driven low, damping the very
+            // drop it should follow. Positive basal IOB still counts (it can drive a low). (2026-07-16)
             calc.calculateIobFromBolus().iob +
-                calc.calculateIobFromTempBasalsIncludingConvertedExtended().iob
+                max(0.0, calc.calculateIobFromTempBasalsIncludingConvertedExtended().iob)
         } catch (e: Exception) {
             aapsLogger.debug(LTag.GLUCOSE, "UKF: IOB unavailable, compression gate disabled")
             99.0
@@ -803,9 +807,13 @@ class UnscentedKalmanFilterPlugin @Inject constructor(
             // so the filter's rate-tracking can't hide a gradual dip; capped at
             // maxConsecutiveCompression so a persistent low is never masked for more than ~15 min.
             val recentMaxRaw = if (recentRaw.isEmpty()) z else recentRaw.max()
-            val compressionSuspect = z < compressionBgCeiling &&
+            // Pattern match is separate from the consecutive cap so we can distinguish "pattern
+            // resolved" from "cap reached". compressionSuspect (which drives damping) additionally
+            // requires being under the cap.
+            val compressionPattern = z < compressionBgCeiling &&
                 iobTotal < compressionIobMaxU &&
-                (recentMaxRaw - z) > compressionDropMgdl &&
+                (recentMaxRaw - z) > compressionDropMgdl
+            val compressionSuspect = compressionPattern &&
                 consecutiveCompression < maxConsecutiveCompression
             if (compressionSuspect) {
                 consecutiveCompression++
@@ -815,9 +823,16 @@ class UnscentedKalmanFilterPlugin @Inject constructor(
                         "(fell ${(recentMaxRaw - z).toInt()} from ${recentMaxRaw.toInt()}, " +
                         "IOB=${String.format(Locale.US, "%.1f", iobTotal)}) — damping"
                 )
-            } else {
+            } else if (!compressionPattern) {
+                // Reset ONLY when the compression pattern has genuinely resolved (BG back above the
+                // ceiling, drop closed, or IOB risen) — NOT merely because the consecutive cap tripped.
+                // Resetting on a cap-trip let an ongoing low re-arm for another 3-reading burst every
+                // cycle, defeating the ~15-min bound. Latching the counter while the pattern persists
+                // means a sustained low is followed (undamped) after the cap and not re-damped until it
+                // truly recovers. (2026-07-16 review)
                 consecutiveCompression = 0
             }
+            // else: pattern still present but cap reached → keep the counter latched (no damp, no reset).
             recentRaw.addFirst(z)
             if (recentRaw.size > compressionWindow) recentRaw.removeLast()
 

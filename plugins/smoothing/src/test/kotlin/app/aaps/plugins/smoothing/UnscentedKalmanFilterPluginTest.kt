@@ -114,4 +114,20 @@ internal class UnscentedKalmanFilterPluginTest {
         assertThat(damped).isGreaterThan(52.0)            // held well above the 40 floor
         assertThat(damped).isGreaterThan(followed + 5.0)  // and clearly higher than the un-gated case
     }
+
+    @Test fun `negative basal IOB does not arm the compression gate`() {
+        // Bolus IOB 3.0U (real insulin on board) but basal IOB -5.0U (loop zero-temping a descent).
+        // Summed naively that is -2.0U (< 2 → the gate would DAMP a genuine insulin-driven low). The
+        // fix counts only POSITIVE basal, so total = 3.0U and the fall is FOLLOWED, not masked.
+        val iob = Lazy<IobCobCalculator> {
+            mock {
+                on { calculateIobFromBolus() } doReturn IobTotal(0L, iob = 3.0)
+                on { calculateIobFromTempBasalsIncludingConvertedExtended() } doReturn IobTotal(0L, iob = -5.0)
+            }
+        }
+        val vals = doubleArrayOf(40.0, 44.0, 60.0, 82.0, 100.0, 100.0, 100.0, 100.0)
+        val followed = plugin(iob).smooth(series(*vals))[0].smoothed!!
+        val damped = plugin(iobLazy(0.1)).smooth(series(*vals))[0].smoothed!!
+        assertThat(followed).isLessThan(damped - 5.0)     // followed down, NOT held up by the gate
+    }
 }

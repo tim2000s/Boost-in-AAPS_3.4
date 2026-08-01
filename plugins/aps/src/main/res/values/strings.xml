@@ -85,6 +85,10 @@
     <string name="boost_v5_confirmed_cap_summary">Hard upper limit on V6\'s CONFIRMED commit-shot SMB. Lower this to tighten V6 during alpha. Default: 2.5 U</string>
     <string name="boost_v5_committed_cap_title">V6 COMMITTED dose cap (U)</string>
     <string name="boost_v5_committed_cap_summary">Hard upper limit on V6\'s per-cycle COMMITTED holding SMB. Default: 0.5 U</string>
+    <string name="boost_v5_primer_cap_title">V6 acceleration primer (U)</string>
+    <string name="boost_v5_primer_cap_summary">Fizzle-safe early primer delivered on an accelerating rise during OBSERVING — reclaims V1\'s ~15-min-earlier meal response. Additive up to this base; any velocity-scaled excess is netted off the CONFIRMED commit-shot (move, not add). 0 = OFF. Auto-config derives a per-user value.</string>
+    <string name="boost_v5_primer_bolus_mode_title">Force bolus primer</string>
+    <string name="boost_v5_primer_bolus_mode_summary">Override: deliver the acceleration primer as a bolus even if auto-config routed you to the retractable temp-basal fallback (for hypo-prone users). Floors and the commit-shot net-off are unaffected. Default OFF (respect auto-config routing).</string>
     <string name="boost_v6_pre_meal_target_title">V6 anticipatory pre-meal target</string>
     <string name="boost_v6_pre_meal_target_summary">EXPERIMENTAL — learns your habitual meal times (from V6 meal commits) and applies a low target shortly before a learned meal so insulin is working when carbs land. Exercise and post-exercise recovery override it. When OFF it runs in SHADOW (logs \"V6 pre-meal WOULD apply\" without changing dosing) so you can verify the learned times first.</string>
     <string name="boost_v6_pre_meal_target_mgdl_title">V6 pre-meal target (mg/dL)</string>

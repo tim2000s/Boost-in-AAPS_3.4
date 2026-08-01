@@ -182,6 +182,56 @@ class SleepLumpWakeTest {
         }
     }
 
+    /** Cycle with the sleep-in MERGE enabled: threshold 200 steps, 2h lie-in window past nightEnd. Live HR. */
+    private fun cycleLieIn(prev: State, nowMs: Long, minuteOfDay: Int, bpm: Double, stepsToday: Int) =
+        T.evaluate(
+            prev,
+            SleepStateDetector.Inputs(
+                nowMs = nowMs, minuteOfDay = minuteOfDay,
+                hrReadings = (1..4).map { hr(nowMs - it * 60_000L, bpm) },   // live HR feed
+                hrResting = 60, stepsLast15Min = 0, mlMealLikely = null,
+                nightStartMin = 1320, nightEndMin = 420,
+                stepsToday = stepsToday,
+                sleepInStepsThreshold = 200, sleepInWindowMin = 120   // merge: 200 steps, 2h lie-in
+            )
+        )
+
+    @Test fun `lie-in holds SLEEPING past nightEnd when steps stay low`() {
+        // 2026-07-08 merge: SLEEPING is held through the lie-in window (07:00→09:00) — no boundary
+        // exit at nightEnd — while morning steps stay below the sleepIn threshold. Live low HR.
+        var s = State(state = SleepState.SLEEPING, enteredAtMs = T0 - 4 * 3_600_000L,
+                      lastFreshHrSampleMs = T0 - 60_000)
+        var t = T0; var min = 425                                    // 07:05, into the lie-in
+        repeat(6) {
+            val r = cycleLieIn(s, t, min, bpm = 55.0, stepsToday = 100)   // flat low steps
+            assertThat(r.newState.state).isEqualTo(SleepState.SLEEPING)   // held, not nightEnd-exited
+            s = r.newState; t += FIVE_MIN; min += 5
+        }
+    }
+
+    @Test fun `lie-in releases on steps at the sleepIn threshold`() {
+        // Getting up in the lie-in: cumulative steps clear the 200 threshold → wake on steps alone
+        // (regardless of HR — past the alarm, movement means up). Reason "steps".
+        var s = State(state = SleepState.SLEEPING, enteredAtMs = T0 - 4 * 3_600_000L,
+                      lastFreshHrSampleMs = T0 - 60_000)
+        var t = T0; var min = 425; var wakeReason: String? = null
+        for (st in listOf(100, 400, 700)) {
+            val r = cycleLieIn(s, t, min, bpm = 55.0, stepsToday = st)
+            s = r.newState; wakeReason = r.wakeReason ?: wakeReason
+            if (s.state == SleepState.AWAKE) break
+            t += FIVE_MIN; min += 5
+        }
+        assertThat(s.state).isEqualTo(SleepState.AWAKE)
+        assertThat(wakeReason).isEqualTo("steps")
+    }
+
+    @Test fun `lie-in ends at the hard boundary`() {
+        // 09:01 = past lieInEnd (nightEnd 07:00 + 2h) → hard boundary AWAKE even with no steps.
+        val r = cycleLieIn(sleeping(T0), T0, minuteOfDay = 541, bpm = 55.0, stepsToday = 0)
+        assertThat(r.newState.state).isEqualTo(SleepState.AWAKE)
+        assertThat(r.wakeReason).isEqualTo("boundary")
+    }
+
     @Test fun `boundary exit unchanged`() {
         val r = cycle(sleeping(T0), T0, minuteOfDay = 421, bpm = 55.0, stepsToday = 0)   // 07:01
         assertThat(r.newState.state).isEqualTo(SleepState.AWAKE)

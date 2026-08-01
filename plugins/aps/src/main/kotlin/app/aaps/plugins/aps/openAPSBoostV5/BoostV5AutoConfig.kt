@@ -95,6 +95,9 @@ object BoostV5AutoConfig {
         // 2026-07-17 insulin-adding opt-in switches — enabled only for clearly well-controlled users.
         val aggressiveEarlyConfirm: Boolean,
         val velocityBudgetFloor: Boolean,
+        // 2026-07-20 V1-acceleration primer: per-user fizzle-safe base (0 = off) + delivery routing.
+        val primerCapU: Double,
+        val primerTbrFallback: Boolean,
         val rationale: List<String>
     )
 
@@ -163,6 +166,25 @@ object BoostV5AutoConfig {
         else
             "Aggressive early confirm + velocity-budget floor OFF (enabled only for very low low-glucose exposure)"
 
+        // 2026-07-20 V1-acceleration early primer. Fizzle-safe by size (backtesting/scripts/
+        // 2026-07-v1-acceleration: pure fizzle-low +0.9%, no excess) — so it's enabled for everyone
+        // with data, but the SIZE scales with control (hypo-prone smaller, matching the C/tim residual
+        // excess), and the DELIVERY routes hypo-prone through the retractable temp-basal (safe by
+        // unwinding) rather than a bolus. The primer size is derived from the user's own routine SMB
+        // (committedCapU), so U200 users are already scaled in their own units.
+        val primerFrac = when {
+            hypoProne       -> 0.25
+            wellControlled  -> 0.5
+            else            -> 0.4
+        }
+        val primerCapU = round2((committedCapU * primerFrac).coerceIn(0.0, 0.6))
+        // Route only CLEARLY well-controlled users to the bolus; everyone else gets the retractable
+        // temp-basal (safe-by-unwinding). The bolus is thus inherently TBR-safe (well-controlled only),
+        // so the primer cap is NOT raise-guarded — the delivery routing is the safety differentiator.
+        // A user can force the bolus via ApsBoostV5PrimerBolusMode (the override).
+        val primerTbrFallback = !wellControlled
+        reasons += "Primer ${primerCapU}U ${if (primerTbrFallback) "via retractable temp-basal (override-able to bolus)" else "as bolus (well-controlled)"} — reclaims V1's ~15-min earlier acceleration response, fizzle-safe by size, netted off the commit-shot"
+
         return V5Suggestion(
             aggression = aggression, hypoCaution = hypoCaution,
             confirmedCapU = confirmedCapU, committedCapU = committedCapU,
@@ -171,6 +193,8 @@ object BoostV5AutoConfig {
             fastCarbConfirm = fastCarbConfirm,
             aggressiveEarlyConfirm = aggressiveEarlyConfirm,
             velocityBudgetFloor = velocityBudgetFloor,
+            primerCapU = primerCapU,
+            primerTbrFallback = primerTbrFallback,
             rationale = reasons
         )
     }
