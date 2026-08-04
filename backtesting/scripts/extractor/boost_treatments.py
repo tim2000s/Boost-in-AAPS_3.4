@@ -39,6 +39,15 @@ DSN = "dbname=oref host=127.0.0.1 port=5432"
 TABLE = "boost_treatments"
 REG = os.path.expanduser("~/.config/boost_backtest/sites.json")
 CHUNK_DAYS = 7          # the sites 502 on long windows
+
+# Zero-insulin events kept as analysis covariates (see parse()).
+EVENT_TYPES_KEPT = {
+    "Site Change",          # cannula age -> absorption rate
+    "Insulin Change",       # cartridge: brand, concentration, dilution
+    "Sensor Change", "Sensor Start",   # CGM discontinuities and warm-up artefacts
+    "Pump Battery Change",
+    "Profile Switch", "Temporary Target",
+}
 MAX_RETRY = 4
 COUNT = 50000
 
@@ -94,8 +103,14 @@ def parse(rec, uid):
         t = t.replace(tzinfo=dt.UTC)
     ins = rec.get("insulin")
     carbs = rec.get("carbs")
+    # Keep zero-insulin EVENT records too. Site/cartridge/sensor changes carry neither insulin nor
+    # carbs, but they are required covariates for anything touching insulin kinetics: subcutaneous
+    # absorption differs markedly between a fresh cannula and a three-day-old one, so an analysis
+    # that ignores site age confounds it with whatever else changed at the same moment. Cartridge
+    # changes matter equally when the insulin itself is altered (concentration, dilution, brand).
     if ins in (None, "") and carbs in (None, ""):
-        return None                                   # not a dose/carb record
+        if str(rec.get("eventType") or "") not in EVENT_TYPES_KEPT:
+            return None
     btype = rec.get("type")
     is_smb = (str(btype).upper() == "SMB") or bool(rec.get("isSMB", False))
     return (uid, str(rec.get("_id") or f"{uid}-{ts}-{ins}"), t,
