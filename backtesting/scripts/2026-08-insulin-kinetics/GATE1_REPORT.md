@@ -1,6 +1,6 @@
 # Gate 1 — recovering a known insulin curve
 
-User **tim**, last 45 days: 11847 cycles, 1588 dosing bins (448 U total).
+User **G**, last 60 days: 14865 cycles, 5496 dosing bins (1421 U total).
 
 
 Deconvolves the logged bolus-only IOB series against the delivered boluses. The answer is known by construction — it must return the configured curve.
@@ -8,15 +8,15 @@ Deconvolves the logged bolus-only IOB series against the delivered boluses. The 
 
 | | configured | recovered | 95% CI |
 |---|---|---|---|
-| peak (min) | 38 | **36.3** | [35.8, 36.7] |
-| DIA (min)  | 600 | **600** | [600, 600] |
+| peak (min) | 38 | **33.9** | [33.2, 35.1] |
+| DIA (min)  | 600 | **285** | [242, 340] |
 
-Fit RMSE 0.1917 U against an IOB series of RMS 0.6716 U (relative 0.2854).
+Fit RMSE 0.2074 U against an IOB series of RMS 1.1034 U (relative 0.1879).
 
 
-**GATE: PASS** — both parameters recovered within tolerance, so the kernel is identifiable under this user's real dose spacing and the method may proceed to observed glucose.
+**GATE: FAIL** — the estimator did NOT return the configured curve. Since the relationship is an exact identity, this is a defect in the method or an unmodelled term (check: does the logged IOB include basal? is the configured curve actually what we assumed?), NOT a finding about insulin.
 
 
 ## Peak of ACTION vs peak of IOB decay
 
-For the recovered curve, action peaks at **36 min** — this is the number the loop uses, and the one a glucose-based estimate is comparable to.
+For the recovered curve, action peaks at **34 min** — this is the number the loop uses, and the one a glucose-based estimate is comparable to.

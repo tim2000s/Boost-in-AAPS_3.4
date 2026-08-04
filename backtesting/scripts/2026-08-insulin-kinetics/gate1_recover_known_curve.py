@@ -92,7 +92,7 @@ def load(user: str, days: int):
         ORDER BY floor(ts_epoch/300.0), ts_epoch DESC""", conn, params=(user,))
     bol = pd.read_sql(f"""
         SELECT ts_utc, insulin FROM boost_treatments
-        WHERE user_id = %s AND insulin > 0 AND bolus_type IS NOT NULL
+        WHERE user_id = %s AND insulin > 0
           AND ts_utc > now() - interval '{days + 2} days'
         ORDER BY ts_utc""", conn, params=(user,))
     conn.close()

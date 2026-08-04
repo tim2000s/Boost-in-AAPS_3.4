@@ -64,7 +64,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 STEP_S = 300.0
 
 
-def load(user: str):
+def load(user: str, tz: str = "Europe/London"):
     conn = psycopg2.connect(DSN)
     dec = pd.read_sql("""
         SELECT DISTINCT ON (floor(ts_epoch/300.0))
@@ -72,6 +72,10 @@ def load(user: str):
           reason_dev, variable_sens
         FROM boost_decisions WHERE user_id = %s AND cgm_mgdl > 1
         ORDER BY floor(ts_epoch/300.0), ts_epoch DESC""", conn, params=(user,))
+    # ALL delivered insulin counts for kinetics, whatever labelled it. The manual-vs-SMB split
+    # matters for auto-config, not here — and Trio uploads boluses with eventType SMB/Bolus and no
+    # `type` field at all, so filtering on bolus_type silently drops every dose a Trio user ever
+    # delivered.
     tre = pd.read_sql("""
         SELECT ts_utc, insulin, carbs, event_type FROM boost_treatments
         WHERE user_id = %s ORDER BY ts_utc""", conn, params=(user,))
@@ -79,7 +83,7 @@ def load(user: str):
     for d in (dec, tre):
         d["ts"] = pd.to_datetime(d.ts_utc, utc=True)
     dec = dec.sort_values("ts").reset_index(drop=True)
-    dec["local_hour"] = dec.ts.dt.tz_convert("Europe/London").dt.hour
+    dec["local_hour"] = dec.ts.dt.tz_convert(tz).dt.hour
     return dec, tre
 
 
@@ -92,8 +96,13 @@ def build_windows(dec, tre, hours=4.0, night=(0, 7), max_steps=200, min_insulin=
 
     t = dec.ts_epoch.values.astype(float)
     bg = dec.cgm_mgdl.values.astype(float)
+    # Steps gate only where step data actually exists. A user whose uploader sends no steps (Trio)
+    # would otherwise have every window rejected; better to lose the exercise control explicitly
+    # and say so than to silently return nothing.
+    has_steps = dec.steps_60m.notna().any()
+    steps_ok = (dec.steps_60m.fillna(9999) <= max_steps).values if has_steps else np.ones(len(dec), bool)
     ok = ((dec.sug_cob.fillna(1) == 0).values
-          & (dec.steps_60m.fillna(9999) <= max_steps).values
+          & steps_ok
           & (~dec.postrescue.fillna(False).astype(bool)).values
           & (dec.local_hour.between(night[0], night[1] - 1)).values
           & (bg > 40) & (bg < 350))
@@ -161,6 +170,7 @@ def fit_peak(windows, dia, lo=10.0, hi=150.0, linear_drift=False):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--user", default="tim")
+    ap.add_argument("--tz", default="Europe/London", help="local timezone for the night window")
     ap.add_argument("--dia", type=float, default=600.0)
     ap.add_argument("--hours", type=float, default=4.0)
     ap.add_argument("--before", help="only use windows before this date (YYYY-MM-DD)")
@@ -173,7 +183,7 @@ def main():
                     help="minimum U acting in the window — raises signal-to-noise, cuts sample")
     a = ap.parse_args()
 
-    dec, tre = load(a.user)
+    dec, tre = load(a.user, a.tz)
     if a.before:
         cut = pd.Timestamp(a.before, tz="UTC")
         dec = dec[dec.ts < cut]; tre = tre[tre.ts < cut]
@@ -209,7 +219,8 @@ def main():
     P = L.append
     P("# Gate 2 — insulin action peak from observed glucose\n")
     P(f"User **{a.user}**{f', windows before {a.before}' if a.before else ''}. "
-      f"{len(wins)} isolated fasting windows of {a.hours:g} h "
+      f"{len(wins)} isolated fasting windows of {a.hours:g} h (tz {a.tz}"
+      f"{'; NO step data - exercise uncontrolled' if not dec.steps_60m.notna().any() else ''}) "
       f"({len(wins) * a.hours:.0f} h total). DIA held at {a.dia:.0f} min.\n")
     P(f"\n**Pooled peak estimate: {peak:.1f} min**, window-bootstrap 95% CI "
       f"[{lo:.1f}, {hi:.1f}] ({a.boot} draws).\n")
