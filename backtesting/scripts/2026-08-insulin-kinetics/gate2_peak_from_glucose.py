@@ -31,6 +31,13 @@ WINDOW SELECTION is the whole ballgame — the estimate is only as good as the i
   no CGM gap longer than 15 min, and BG in a plausible range
   at least some insulin delivered, or there is no input to identify anything from
 
+DRIFT IS MODELLED AS A RAMP, NOT A CONSTANT, and this is not cosmetic. Overnight windows sit
+across dawn, and an unmodelled rising trend late in a window looks exactly like insulin action
+ending early. With only an intercept the pooled estimate is 30.9 min [20.4, 36.9]; adding the
+per-window time trend moves it to 35.3 [29.2, 44.2]. The first number invited the conclusion that
+the configured peak was too late; it was an artefact of the drift model. A pre-dawn-only cut
+(00:00-04:00) independently gives 34.8, agreeing with the trend-controlled figure.
+
 WHAT THIS CANNOT DO. Sensor lag (~4 min interstitial plus filter delay) biases every estimate LATE
 by roughly a constant. That offset is not removed here: it very nearly cancels in a before/after
 comparison, which is how this is meant to be used, but an ABSOLUTE peak from this script should be
@@ -122,22 +129,31 @@ def window_regressor(ts, d_s, d_u, peak, dia):
     return x
 
 
-def sse_for_peak(peak, windows, dia):
-    """Total residual SSE with per-window amplitude and drift profiled out."""
+def sse_for_peak(peak, windows, dia, linear_drift=False):
+    """Total residual SSE with per-window amplitude and drift profiled out.
+
+    linear_drift adds a per-window TIME TREND alongside the intercept. Dawn phenomenon is a rising
+    ramp, not a constant offset, and an unmodelled late rise inside a window mimics insulin action
+    ending early — which would bias the peak estimate EARLY. With the trend absorbed, that route to
+    bias is closed.
+    """
     tot = 0.0
     for ts, bg, d_s, d_u in windows:
         x = window_regressor(ts, d_s, d_u, peak, dia)[:-1]
         y = np.diff(bg)
         if np.std(x) < 1e-12:
             continue
-        A = np.column_stack([x, np.ones(len(x))])
+        cols = [x, np.ones(len(x))]
+        if linear_drift:
+            cols.append((ts[:-1] - ts[0]) / 3600.0)
+        A = np.column_stack(cols)
         beta, *_ = np.linalg.lstsq(A, y, rcond=None)
         tot += float(np.sum((y - A @ beta) ** 2))
     return tot
 
 
-def fit_peak(windows, dia, lo=10.0, hi=150.0):
-    r = minimize_scalar(sse_for_peak, bounds=(lo, hi), args=(windows, dia), method="bounded",
+def fit_peak(windows, dia, lo=10.0, hi=150.0, linear_drift=False):
+    r = minimize_scalar(sse_for_peak, bounds=(lo, hi), args=(windows, dia, linear_drift), method="bounded",
                         options={"xatol": 0.25})
     return float(r.x), float(r.fun)
 
@@ -149,6 +165,10 @@ def main():
     ap.add_argument("--hours", type=float, default=4.0)
     ap.add_argument("--before", help="only use windows before this date (YYYY-MM-DD)")
     ap.add_argument("--boot", type=int, default=300)
+    ap.add_argument("--no-linear-drift", dest="linear_drift", action="store_false",
+                    help="drop the per-window time trend (leaves the dawn-ramp bias in place)")
+    ap.set_defaults(linear_drift=True)
+    ap.add_argument("--night", default="0,7", help="local-hour window, e.g. 0,4 to sit before dawn")
     ap.add_argument("--min-insulin", type=float, default=0.3,
                     help="minimum U acting in the window — raises signal-to-noise, cuts sample")
     a = ap.parse_args()
@@ -157,18 +177,19 @@ def main():
     if a.before:
         cut = pd.Timestamp(a.before, tz="UTC")
         dec = dec[dec.ts < cut]; tre = tre[tre.ts < cut]
-    wins = build_windows(dec, tre, hours=a.hours, min_insulin=a.min_insulin)
+    nh = tuple(int(v) for v in a.night.split(","))
+    wins = build_windows(dec, tre, hours=a.hours, min_insulin=a.min_insulin, night=nh)
     if len(wins) < 5:
         print(f"only {len(wins)} usable windows — not enough"); return
 
-    peak, sse = fit_peak(wins, a.dia)
+    peak, sse = fit_peak(wins, a.dia, linear_drift=a.linear_drift)
 
     # Window bootstrap: resample WINDOWS, which is the independent unit here.
     rng = np.random.default_rng(20260804)
     boots = []
     for _ in range(a.boot):
         idx = rng.integers(0, len(wins), len(wins))
-        pk, _ = fit_peak([wins[j] for j in idx], a.dia)
+        pk, _ = fit_peak([wins[j] for j in idx], a.dia, linear_drift=a.linear_drift)
         boots.append(pk)
     lo, hi = np.percentile(boots, [2.5, 97.5])
 
@@ -177,7 +198,7 @@ def main():
     per = []
     for w in wins:
         try:
-            pk, _ = fit_peak([w], a.dia)
+            pk, _ = fit_peak([w], a.dia, linear_drift=a.linear_drift)
             if 12 < pk < 148:                                # drop windows pinned at a bound
                 per.append(pk)
         except Exception:                                    # noqa: BLE001
