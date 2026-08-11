@@ -3226,14 +3226,15 @@ function avgDeltaOverWindow(entries, windowMin) {
 
 function getProfileValueAt(schedule, nowMs) {
   // schedule: [{time:"HH:MM", value:x}, ...] sorted by time
+  // value can arrive as a string (some NS profile writers stringify it) — coerce to Number.
   if (!schedule || !schedule.length) return null;
   const midnight = new Date(nowMs); midnight.setHours(0,0,0,0);
   const secsFromMidnight = (nowMs - midnight.getTime()) / 1000;
-  let val = schedule[0].value;
+  let val = Number(schedule[0].value);
   for (const slot of schedule) {
     const parts = slot.time.split(':').map(Number);
     const slotSecs = parts[0]*3600 + parts[1]*60;
-    if (slotSecs <= secsFromMidnight) val = slot.value;
+    if (slotSecs <= secsFromMidnight) val = Number(slot.value);
     else break;
   }
   return val;
@@ -3287,11 +3288,15 @@ function applyNsData(entries, ds, profileData) {
     const defaultName = rec?.defaultProfile || (store && Object.keys(store)[0]);
     const prof = store?.[defaultName];
     if (prof) {
+      // Profile sens/target ship in whatever unit the profile was authored in (prof.units);
+      // sliders below are all mg/dL, so mmol/L profiles need converting.
+      const isMmol = /mmol/i.test(prof.units || '');
+      const toMgdl = v => (v == null || !isMmol) ? v : v * 18.0182;
       const basal  = getProfileValueAt(prof.basal,     nowMs);
-      const isf    = getProfileValueAt(prof.sens,      nowMs); // sens = ISF in NS profile
+      const isf    = toMgdl(getProfileValueAt(prof.sens,      nowMs)); // sens = ISF in NS profile
       const cr     = getProfileValueAt(prof.carbratio, nowMs);
-      const tgLow  = getProfileValueAt(prof.target_low,  nowMs);
-      const tgHigh = getProfileValueAt(prof.target_high, nowMs);
+      const tgLow  = toMgdl(getProfileValueAt(prof.target_low,  nowMs));
+      const tgHigh = toMgdl(getProfileValueAt(prof.target_high, nowMs));
       if (basal != null) setSlider('basal',   +basal.toFixed(2), 0.1, 5);
       if (isf   != null) setSlider('profIsf', Math.round(isf),   10,  200);
       if (cr    != null) setSlider('cr',      +cr.toFixed(1),    3,   30);
