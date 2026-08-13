@@ -112,27 +112,27 @@
     "sug_minDelta_lag5"
   ],
   "lookback_cycles": 6,
-  "label": "sustained_hypo (<70 for \u226515min)",
+  "label": "sustained_hypo (<70 for ≥15min)",
   "horizon_min": 90,
   "group_kfold_auc": 0.8391,
   "louo_auc": 0.8317,
   "louo_new_users_auc": {
-    "U029_Tim": 0.7847,
-    "U030_Joost": 0.8306,
-    "U031_user4": 0.8654,
-    "U032_Simon": 0.8875
+    "U029": 0.7847,
+    "U030": 0.8306,
+    "U031": 0.8654,
+    "U032": 0.8875
   },
   "v9_baseline_new_users": {
-    "U029_Tim": 0.7586,
-    "U030_Joost": 0.8759,
-    "U031_user4": 0.8218,
-    "U032_Simon": 0.8538
+    "U029": 0.7586,
+    "U030": 0.8759,
+    "U031": 0.8218,
+    "U032": 0.8538
   },
   "v10_baseline_new_users": {
-    "U029_Tim": 0.7726,
-    "U030_Joost": 0.874,
-    "U031_user4": 0.8314,
-    "U032_Simon": 0.8664
+    "U029": 0.7726,
+    "U030": 0.874,
+    "U031": 0.8314,
+    "U032": 0.8664
   },
   "feature_importance": {
     "cgm_mgdl": 437,
