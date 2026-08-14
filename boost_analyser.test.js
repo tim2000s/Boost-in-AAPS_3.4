@@ -246,4 +246,36 @@ t("AAPS shadow + V6-active pairing behave exactly as before", () => {
   assert.strictEqual(m.unpaired, 0);
 });
 
+/* ---------------- acceleration primer ---------------- */
+console.log("acceleration primer");
+
+t("parsePrimer reads all four breadcrumb forms and only counts the delivered ones", () => {
+  deq(C.parsePrimer("primer=bolus,0.15U; rest of reason"), { mode: "bolus", units: 0.15, delivered: true });
+  deq(C.parsePrimer("primer=tbr,0.20U\u21921.30U/h\u00d730m; more"), { mode: "tbr", units: 0.2, delivered: true });
+  assert.strictEqual(C.parsePrimer("primer=tbr-skipped(base-temp 0.4<basal 0.5); ").delivered, false);
+  assert.strictEqual(C.parsePrimer("primer=tbr-subsumed(base 1.9\u2265primer 1.3U/h); ").delivered, false);
+  assert.strictEqual(C.parsePrimer("no primer here"), null);
+  assert.strictEqual(C.parsePrimer(null), null);
+});
+
+t("analyse summarises primer activity without folding it into the dose comparison", () => {
+  const cyc = C.parseCycles([
+    aapsRec(0, { boostV5_active: true, boostV5_finalDose: 0.3, units: 0.3,
+                 reason: "V6-ACTIVE drove SMB; base would=0.10 U; primer=bolus,0.15U; " }),
+    aapsRec(1, { boostV5_active: true, boostV5_finalDose: 0.2, units: 0.2,
+                 reason: "V6-ACTIVE drove SMB; base would=0.10 U; primer=tbr-skipped(x); " }),
+    aapsRec(2, { boostV5_active: true, boostV5_finalDose: 0.2, units: 0.2,
+                 reason: "V6-ACTIVE drove SMB; base would=0.10 U" })
+  ]);
+  const entries = Array.from({ length: 6 }, (_, i) => ({ date: T0 + i * 300000, sgv: 120 }));
+  const m = C.analyse(cyc, entries, []);
+  assert.strictEqual(m.primer.cycles, 2);          // two cycles carried a breadcrumb
+  assert.strictEqual(m.primer.delivered, 1);       // only the bolus actually delivered
+  assert.strictEqual(m.primer.notDelivered, 1);
+  assert.ok(Math.abs(m.primer.units - 0.15) < 1e-9);
+  // the paired dose comparison must be untouched by the primer
+  assert.strictEqual(m.paired, 3);
+  deq(C.pairDoses(cyc[0]), { v1: 0.1, v6: 0.3 });
+});
+
 console.log(`\nall ${n} tests passed`);

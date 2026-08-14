@@ -119,6 +119,14 @@ input[type=range]::-webkit-slider-thumb {
   cursor: pointer;
   border: 2px solid #0f1117;
 }
+.unit-btn {
+  background: #0f1117; color: #94a3b8; border: 1px solid #2d3748;
+  padding: 4px 12px; font-size: 0.75rem; cursor: pointer; border-radius: 5px;
+}
+.unit-btn.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+.unit-btn:not(.active):hover { background: #1e293b; color: #e2e8f0; }
+.unit-toggle { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
+.unit-toggle-label { font-size: 0.72rem; color: #64748b; margin-right: 2px; }
 .ctrl-hints {
   display: flex;
   justify-content: space-between;
@@ -464,6 +472,11 @@ canvas {
   <div>
     <h1>Boost <span>Settings Simulator</span></h1>
     <p>Experimental research tool — not medical advice. Illustrative maths only, not a body simulation.</p>
+    <div class="unit-toggle">
+      <span class="unit-toggle-label">Display units</span>
+      <button class="unit-btn active" id="unit-btn-mgdl" onclick="setUnit('mgdl')">mg/dL</button>
+      <button class="unit-btn" id="unit-btn-mmol" onclick="setUnit('mmol')">mmol/L</button>
+    </div>
   </div>
   <div id="ns-live-bar">
     <div class="ns-live-dot"></div>
@@ -497,7 +510,7 @@ canvas {
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Profile ISF</span><span class="ctrl-val" id="v-profIsf">50 mg/U</span></div>
         <input type="range" id="s-profIsf" min="10" max="200" step="1" value="50" oninput="update()">
-        <div class="ctrl-hints"><span>10</span><span>200 mg/dL/U</span></div>
+        <div class="ctrl-hints" id="hints-profIsf"><span>10</span><span>200 mg/dL/U</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Basal rate</span><span class="ctrl-val" id="v-basal">1.0 U/hr</span></div>
@@ -507,27 +520,27 @@ canvas {
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Current BG</span><span class="ctrl-val" id="v-bg">140 mg/dL</span></div>
         <input type="range" id="s-bg" min="40" max="350" step="1" value="140" oninput="update()">
-        <div class="ctrl-hints"><span>40</span><span>350 mg/dL</span></div>
+        <div class="ctrl-hints" id="hints-bg"><span>40</span><span>350 mg/dL</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">BG delta (current 5min)</span><span class="ctrl-val" id="v-delta">+2 mg/dL/5m</span></div>
         <input type="range" id="s-delta" min="-10" max="15" step="0.5" value="2" oninput="update()">
-        <div class="ctrl-hints"><span>-10 (falling)</span><span>+15 (rising)</span></div>
+        <div class="ctrl-hints" id="hints-delta"><span>-10 (falling)</span><span>+15 (rising)</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Short avg delta (15–20 min)</span><span class="ctrl-val" id="v-shortAvgDelta">+1.5 mg/dL/5m</span></div>
         <input type="range" id="s-shortAvgDelta" min="-10" max="15" step="0.5" value="1.5" oninput="update()">
-        <div class="ctrl-hints"><span>-10</span><span>+15 mg/dL/5m</span></div>
+        <div class="ctrl-hints" id="hints-shortAvgDelta"><span>-10</span><span>+15 mg/dL/5m</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Long avg delta (30–40 min)</span><span class="ctrl-val" id="v-longAvgDelta">+1.0 mg/dL/5m</span></div>
         <input type="range" id="s-longAvgDelta" min="-10" max="15" step="0.5" value="1.0" oninput="update()">
-        <div class="ctrl-hints"><span>-10</span><span>+15 mg/dL/5m</span></div>
+        <div class="ctrl-hints" id="hints-longAvgDelta"><span>-10</span><span>+15 mg/dL/5m</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Profile target BG</span><span class="ctrl-val" id="v-target">100 mg/dL</span></div>
         <input type="range" id="s-target" min="72" max="180" step="1" value="100" oninput="update()">
-        <div class="ctrl-hints"><span>72</span><span>180 mg/dL</span></div>
+        <div class="ctrl-hints" id="hints-target"><span>72</span><span>180 mg/dL</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Current IOB</span><span class="ctrl-val" id="v-iob">0.5 U</span></div>
@@ -542,7 +555,7 @@ canvas {
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Lowest BG in last 60 min</span><span class="ctrl-val" id="v-recentLowBg">120 mg/dL</span></div>
         <input type="range" id="s-recentLowBg" min="40" max="200" step="1" value="120" oninput="update()">
-        <div class="ctrl-hints"><span>40 (recent hypo)</span><span>200 (no recent low)</span></div>
+        <div class="ctrl-hints" id="hints-recentLowBg"><span>40 (recent hypo)</span><span>200 (no recent low)</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Cumulative 60-min SMB cap</span><span class="ctrl-val" id="v-cumSmbCap">10 U</span></div>
@@ -571,12 +584,12 @@ canvas {
       <div class="ctrl" style="margin-top:10px">
         <div class="ctrl-label"><span class="ctrl-name">Normal Target (dynISF)</span><span class="ctrl-val" id="v-normTarget">99 mg/dL</span></div>
         <input type="range" id="s-normTarget" min="70" max="120" step="1" value="99" oninput="update()">
-        <div class="ctrl-hints"><span>70 (aggressive)</span><span>120 (gentle)</span></div>
+        <div class="ctrl-hints" id="hints-normTarget"><span>70 (aggressive)</span><span>120 (gentle)</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">BG Cap (dynISF)</span><span class="ctrl-val" id="v-bgCap">210 mg/dL</span></div>
         <input type="range" id="s-bgCap" min="100" max="300" step="5" value="210" oninput="update()">
-        <div class="ctrl-hints"><span>100</span><span>300 mg/dL</span></div>
+        <div class="ctrl-hints" id="hints-bgCap"><span>100</span><span>300 mg/dL</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">BG Velocity</span><span class="ctrl-val" id="v-velocity">100%</span></div>
@@ -691,6 +704,15 @@ canvas {
         <input type="range" id="s-committedCap" min="0" max="2.5" step="0.05" value="0.5" oninput="update()">
         <div class="ctrl-hints"><span>0 U</span><span>2.5 U — per-cycle COMMITTED hold cap</span></div>
       </div>
+      <div class="ctrl">
+        <div class="ctrl-label"><span class="ctrl-name">Acceleration primer base</span><span class="ctrl-val" id="v-primerCapU">0.00 U</span></div>
+        <input type="range" id="s-primerCapU" min="0" max="1" step="0.05" value="0" oninput="update()">
+        <div class="ctrl-hints"><span>0 U (off)</span><span>1.0 U — ApsBoostV5PrimerCapU, auto-config derived</span></div>
+      </div>
+      <div class="toggle-row" style="margin-top:4px">
+        <span class="toggle-label">Primer already used this meal session</span>
+        <label class="toggle"><input type="checkbox" id="t-primerUsed" onchange="update()"><div class="toggle-slider"></div></label>
+      </div>
       <div class="toggle-row" style="margin-top:4px">
         <span class="toggle-label">Fast-carb confirm enabled (pref, default ON)</span>
         <label class="toggle"><input type="checkbox" id="t-fastCarbConfirm" checked onchange="update()"><div class="toggle-slider"></div></label>
@@ -778,7 +800,7 @@ canvas {
       <div class="ctrl" style="margin-top:8px">
         <div class="ctrl-label"><span class="ctrl-name">Night Mode BG Offset</span><span class="ctrl-val" id="v-nightOffset">27 mg/dL</span></div>
         <input type="range" id="s-nightOffset" min="0" max="90" step="1" value="27" oninput="update()">
-        <div class="ctrl-hints"><span>0 (at target only)</span><span>90 mg/dL</span></div>
+        <div class="ctrl-hints" id="hints-nightOffset"><span>0 (at target only)</span><span>90 mg/dL</span></div>
       </div>
       <div class="ctrl">
         <div class="ctrl-label"><span class="ctrl-name">Current COB</span><span class="ctrl-val" id="v-cob">0 g</span></div>
@@ -816,7 +838,7 @@ canvas {
       <div class="ctrl" style="margin-top:8px">
         <div class="ctrl-label"><span class="ctrl-name">Temp Target BG</span><span class="ctrl-val" id="v-tempTargetBg">140 mg/dL</span></div>
         <input type="range" id="s-tempTargetBg" min="72" max="200" step="1" value="140" oninput="update()">
-        <div class="ctrl-hints"><span>72 (low/correction TT)</span><span>200 (exercise TT)</span></div>
+        <div class="ctrl-hints" id="hints-tempTargetBg"><span>72 (low/correction TT)</span><span>200 (exercise TT)</span></div>
       </div>
       <div class="toggle-row">
         <span class="toggle-label">High TT raises sensitivity (less insulin)</span>
@@ -877,19 +899,19 @@ canvas {
         <div class="isf-cell">
           <div class="isf-cell-label">Profile ISF</div>
           <div class="isf-cell-value val-profile" id="out-profIsf">50</div>
-          <div class="isf-cell-unit">mg/dL per U</div>
+          <div class="isf-cell-unit isf-unit-label">mg/dL per U</div>
           <div class="change-neutral" id="out-profIsf-note">your baseline</div>
         </div>
         <div class="isf-cell">
           <div class="isf-cell-label">Boost V1 at BG</div>
           <div class="isf-cell-value val-v1" id="out-v1Isf">—</div>
-          <div class="isf-cell-unit">mg/dL per U</div>
+          <div class="isf-cell-unit isf-unit-label">mg/dL per U</div>
           <div id="out-v1-change" class="change-neutral">—</div>
         </div>
         <div class="isf-cell">
           <div class="isf-cell-label">Boost V2 at BG</div>
           <div class="isf-cell-value val-v2" id="out-v2Isf">—</div>
-          <div class="isf-cell-unit">mg/dL per U</div>
+          <div class="isf-cell-unit isf-unit-label">mg/dL per U</div>
           <div id="out-v2-change" class="change-neutral">—</div>
         </div>
         <div class="isf-cell">
@@ -1001,7 +1023,7 @@ canvas {
         <span class="badge badge-v2">V2</span>
       </div>
       <p style="font-size:0.75rem; color:#64748b; margin-bottom:12px;">
-        Lower ISF = more insulin per mg/dL of BG error. Both curves assume current TDD and normal target setting.
+        Lower ISF = more insulin per <span class="unit-inline">mg/dL</span> of BG error. Both curves assume current TDD and normal target setting.
         The vertical line marks your current BG.
       </p>
       <canvas id="isfChart"></canvas>
@@ -1137,6 +1159,153 @@ canvas {
 
 <script>
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+// Display units
+// ════════════════════════════════════════════════════════════
+// Every internal value stays in mg/dL. Only presentation converts, so the maths below is untouched
+// by this setting and switching units cannot change a computed result. Each BG slider's mg/dL value
+// is kept separately as the ground truth, so a round trip through mmol and back does not drift.
+
+let currentUnit = 'mgdl';   // 'mgdl' or 'mmol'
+const MMOL = 18.0182;       // mg/dL per mmol/L
+
+function toDisplay(mgdl) { return currentUnit === 'mmol' ? mgdl / MMOL : mgdl; }
+function dispUnit()      { return currentUnit === 'mmol' ? 'mmol/L' : 'mg/dL'; }
+function deltaUnit()     { return currentUnit === 'mmol' ? 'mmol/5m' : 'mg/dL/5m'; }
+function isfUnitLabel()  { return currentUnit === 'mmol' ? 'mmol/L per U' : 'mg/dL per U'; }
+function isfShortUnit()  { return currentUnit === 'mmol' ? 'mmol/U' : 'mg/U'; }
+
+function fmtBG(mgdl, dp) {
+  if (mgdl == null || isNaN(mgdl)) return '—';
+  return toDisplay(mgdl).toFixed(dp != null ? dp : (currentUnit === 'mmol' ? 1 : 0));
+}
+function fmtDelta(mgdlPer5m, dp) {
+  if (mgdlPer5m == null || isNaN(mgdlPer5m)) return '—';
+  return toDisplay(mgdlPer5m).toFixed(dp != null ? dp : (currentUnit === 'mmol' ? 2 : 1));
+}
+function fmtISF(mgdlPerU, dp) {
+  if (mgdlPerU == null || isNaN(mgdlPerU)) return '—';
+  return toDisplay(mgdlPerU).toFixed(dp != null ? dp : (currentUnit === 'mmol' ? 2 : 1));
+}
+
+// Sliders carrying a BG-derived quantity. Ranges are declared in mg/dL and rewritten into display
+// units on a switch. loNote/hiNote preserve the descriptive hints; hiUnit says whether the upper
+// hint carries a unit label, matching how each control reads today.
+const BG_SLIDERS = [
+  { id:'profIsf',       min:10,  max:200, stepMgdl:1,   stepMmol:0.05, isISF:true, hiUnit:true },
+  { id:'bg',            min:40,  max:350, stepMgdl:1,   stepMmol:0.1,  hiUnit:true },
+  { id:'delta',         min:-10, max:15,  stepMgdl:0.5, stepMmol:0.05, isDelta:true, signed:true,
+    loNote:' (falling)', hiNote:' (rising)' },
+  { id:'shortAvgDelta', min:-10, max:15,  stepMgdl:0.5, stepMmol:0.05, isDelta:true, signed:true,
+    hiUnit:true },
+  { id:'longAvgDelta',  min:-10, max:15,  stepMgdl:0.5, stepMmol:0.05, isDelta:true, signed:true,
+    hiUnit:true },
+  { id:'target',        min:72,  max:180, stepMgdl:1,   stepMmol:0.1,  hiUnit:true },
+  { id:'recentLowBg',   min:40,  max:200, stepMgdl:1,   stepMmol:0.1,
+    loNote:' (recent hypo)', hiNote:' (no recent low)' },
+  { id:'normTarget',    min:70,  max:120, stepMgdl:1,   stepMmol:0.1,
+    loNote:' (aggressive)', hiNote:' (gentle)' },
+  { id:'bgCap',         min:100, max:300, stepMgdl:5,   stepMmol:0.1,  hiUnit:true },
+  { id:'nightOffset',   min:0,   max:90,  stepMgdl:1,   stepMmol:0.1,
+    loNote:' (at target only)', hiUnit:true },
+  { id:'tempTargetBg',  min:72,  max:200, stepMgdl:1,   stepMmol:0.1,
+    loNote:' (low/correction TT)', hiNote:' (exercise TT)' },
+];
+
+const sliderMgdlValues = {};   // slider id -> mg/dL, the ground truth
+
+function initSliderValues() {
+  BG_SLIDERS.forEach(sd => {
+    const el = document.getElementById('s-' + sd.id);
+    if (el) sliderMgdlValues[sd.id] = parseFloat(el.value);
+  });
+}
+
+function bgValueDecimals(sd) { return currentUnit === 'mmol' ? 2 : (sd.stepMgdl < 1 ? 1 : 0); }
+
+// Written already on the step grid rather than left for the browser to snap. Handing a range input
+// an off-step value rounds it twice — once when the number is formatted and again by the control —
+// and the two compound, so a value can land a full step away instead of half of one. Snapping here
+// makes the result the same in every engine and independent of how each breaks a tie.
+function snapMmol(mgdl, sd) {
+  const v = mgdl / MMOL;
+  return (Math.round(v / sd.stepMmol) * sd.stepMmol).toFixed(2);
+}
+
+// A range input snaps whatever value it is given to the nearest step counted from its minimum, so
+// the minimum decides which numbers the control can actually show. A converted bound is not a round
+// number — 40 mg/dL is 2.2201 mmol — and leaving it there puts the whole grid off-centre, offering
+// 7.82 where a reader expects 7.8. Both bounds are therefore moved outwards to the nearest multiple
+// of the step: outwards rather than nearest, so the full mg/dL range stays reachable at both ends.
+// The small overshoot that creates is taken back when the value is read, not left in the maths.
+function bgBoundLo(sd) {
+  if (currentUnit !== 'mmol') return sd.min;
+  return (Math.floor(sd.min / MMOL / sd.stepMmol) * sd.stepMmol).toFixed(2);
+}
+function bgBoundHi(sd) {
+  if (currentUnit !== 'mmol') return sd.max;
+  return (Math.ceil(sd.max / MMOL / sd.stepMmol) * sd.stepMmol).toFixed(2);
+}
+
+function rebuildBgSliders() {
+  const mmol = currentUnit === 'mmol';
+  BG_SLIDERS.forEach(sd => {
+    const el = document.getElementById('s-' + sd.id);
+    if (!el) return;
+    const mgdlVal = sliderMgdlValues[sd.id] != null ? sliderMgdlValues[sd.id] : parseFloat(el.value);
+    el.min  = bgBoundLo(sd);
+    el.max  = bgBoundHi(sd);
+    el.step = mmol ? sd.stepMmol : sd.stepMgdl;
+    el.value = mmol ? snapMmol(mgdlVal, sd) : mgdlVal;
+
+    const hint = document.getElementById('hints-' + sd.id);
+    if (!hint) return;
+    const sign = v => (sd.signed && v > 0 ? '+' : '');
+    const num = v => (mmol ? (v / MMOL).toFixed(1) : String(v));
+    const unit = sd.isISF ? (mmol ? 'mmol/L/U' : 'mg/dL/U') : (sd.isDelta ? deltaUnit() : dispUnit());
+    const lo = sign(sd.min) + num(sd.min) + (sd.loNote || '');
+    const hi = sign(sd.max) + num(sd.max) + (sd.hiUnit ? ' ' + unit : '') + (sd.hiNote || '');
+    hint.innerHTML = '<span>' + lo + '</span><span>' + hi + '</span>';
+  });
+}
+
+// Read a BG slider as mg/dL, whatever units are on screen.
+function getBgSliderMgdl(id) {
+  const el = document.getElementById('s-' + id);
+  if (!el) return 0;
+  const raw = parseFloat(el.value);
+  if (currentUnit !== 'mmol') return raw;
+  // Clamped because the displayed bounds sit slightly outside the real ones, by up to one step.
+  const sd = BG_SLIDERS.find(x => x.id === id);
+  const mgdl = raw * MMOL;
+  return sd ? Math.max(sd.min, Math.min(sd.max, mgdl)) : mgdl;
+}
+
+// Write a mg/dL value to a BG slider, whatever units are on screen. Used by the Nightscout import,
+// which always works in mg/dL after profileGlucoseToMgdl has converted a mmol profile.
+function setSliderMgdl(id, mgdlValue) {
+  const sd = BG_SLIDERS.find(x => x.id === id);
+  const clamped = sd ? Math.max(sd.min, Math.min(sd.max, mgdlValue)) : mgdlValue;
+  sliderMgdlValues[id] = clamped;
+  const el = document.getElementById('s-' + id);
+  if (!el) return;
+  el.value = currentUnit === 'mmol' ? snapMmol(clamped, sd || { stepMmol: 0.1 }) : clamped;
+}
+
+function setUnit(unit) {
+  if (unit === currentUnit) return;
+  // Take the ground truth from the sliders before switching, so anything the user has moved since
+  // the last switch is carried across rather than reverted.
+  BG_SLIDERS.forEach(sd => { sliderMgdlValues[sd.id] = getBgSliderMgdl(sd.id); });
+  currentUnit = unit;
+  document.getElementById('unit-btn-mgdl').classList.toggle('active', unit === 'mgdl');
+  document.getElementById('unit-btn-mmol').classList.toggle('active', unit === 'mmol');
+  rebuildBgSliders();
+  document.querySelectorAll('.isf-unit-label').forEach(e => { e.textContent = isfUnitLabel(); });
+  document.querySelectorAll('.unit-inline').forEach(e => { e.textContent = dispUnit(); });
+  update();
+}
+
 // Core math — mirrors Boost plugin Kotlin exactly
 // ════════════════════════════════════════════════════════════
 
@@ -1231,6 +1400,11 @@ const V6 = {
   // caps are the user prefs DoubleKey.ApsBoostV5ConfirmedCapU (default 2.5, 0–7.5) and
   // ApsBoostV5CommittedCapU (default 0.5, 0–2.5) — surfaced as sliders in this simulator.
   DEFAULT_CAP_CONFIRMED: 1.0, DEFAULT_CAP_COMMITTED: 0.25,
+  // 2026-07-20 V1-acceleration early primer (DetermineBasalBoostV5 PRIMER_* constants).
+  PRIMER_ACCEL_THRESHOLD: 10.0,      // delta acceleration above which the primer may fire
+  PRIMER_MIN_RECENT_LOW_MGDL: 80.0,  // no low below this in the recent window
+  PRIMER_MAX_MULT: 2.0,              // ceiling on the acceleration scaling, as a multiple of base
+  PRIMER_ACCEL_SCALE_DENOM: 20.0,    // scale = 1 + (accel - threshold) / this
   // ── SafetyGates.kt ──
   IOB_T0: 0.50, IOB_T1: 0.70, IOB_T2: 0.85,
   IOB_S1: 0.85, IOB_S2: 0.60, IOB_S3: 0.40,
@@ -1468,12 +1642,48 @@ function v6Decide(baseInsulinReq, m, prevState, knobs) {
   const capped = v6StateCap(st, velScaled, confirmedCap, committedCap);
   const stateCapped = capped < velScaled - 1e-9;
   const gated = v6Gates(capped, m);
+  // ===== 2026-07-20 V1-acceleration early primer =====
+  // Mirrors DetermineBasalBoostV5: computed once the state is known, applied AFTER the dose is
+  // finalised, and clamped to the remaining IOB headroom. Fires once per meal session, so the
+  // simulator exposes "already primed this session" rather than pretending to hold session state.
+  // The base is additive; the velocity-scaled excess above it is netted off the CONFIRMED
+  // commit-shot, which is why a primer here does not simply raise the total.
+  const primerCap = knobs.primerCapU || 0;
+  let primerBolusU = 0, primerReason = null;
+  if (primerCap <= 0) {
+    primerReason = 'off (cap 0)';
+  } else if (st !== 'OBSERVING') {
+    primerReason = `state ${st} (primer fires in OBSERVING only)`;
+  } else if (m.primerAlreadyApplied) {
+    primerReason = 'already primed this session';
+  } else if (!(m.deltaAccl > V6.PRIMER_ACCEL_THRESHOLD)) {
+    primerReason = `accel ${m.deltaAccl.toFixed(1)} ≤ ${V6.PRIMER_ACCEL_THRESHOLD}`;
+  } else if (!(m.delta > 0)) {
+    primerReason = 'delta not positive';
+  } else if (m.recentLowBg < V6.PRIMER_MIN_RECENT_LOW_MGDL) {
+    primerReason = `recent low ${Math.round(m.recentLowBg)} < ${V6.PRIMER_MIN_RECENT_LOW_MGDL}`;
+  } else if (m.asleep) {
+    primerReason = 'asleep';
+  } else if (m.exercising) {
+    primerReason = 'exercising';
+  } else if (m.recentLowBg < 75) {
+    primerReason = 'post-rescue window';
+  } else {
+    const scale = 1 + Math.max(0, (m.deltaAccl - V6.PRIMER_ACCEL_THRESHOLD) / V6.PRIMER_ACCEL_SCALE_DENOM);
+    const target = Math.min(primerCap * scale, V6.PRIMER_MAX_MULT * primerCap);
+    let amt = Math.min(target, Math.max(0, m.maxIob - m.iob - gated.dose));
+    if (m.roundSmbTo > 0) amt = Math.floor(amt / m.roundSmbTo + 1e-9) * m.roundSmbTo;
+    if (amt > 0) { primerBolusU = amt; primerReason = `scale ${scale.toFixed(2)}× base ${primerCap.toFixed(2)}U`; }
+    else primerReason = 'no IOB headroom left after the base dose';
+  }
+  const doseWithPrimer = Math.min(gated.dose + primerBolusU, Math.max(0, m.maxIob - m.iob));
   return {
+    primerBolusU, primerReason, doseBeforePrimer: gated.dose,
     state: st, prevState: prevState.state, score, scoreTerms: scoreRes.terms, renorm: scoreRes.renorm,
     budget: bud.budget, mlScale: bud.mlScale, postEx: bud.postEx, sens: bud.sens,
     actionMult, rawDose, velFactor, velScaled, capped, stateCapped, confirmedCap, committedCap,
     prospectiveShot, confirmFloor, confirmDoseAdequate,
-    finalDose: gated.dose, hard: gated.hard, gates: gated.gates,
+    finalDose: doseWithPrimer, hard: gated.hard, gates: gated.gates,
     spikeCapped: gated.spikeCapped, maxIobClamped: gated.maxIobClamped,
     eventualBgOffset: m.eventualBgOffset, newStateObj: newState,
   };
@@ -1558,6 +1768,7 @@ function v6Measurement(inp, r, opts) {
     mlHypoRisk: inp.mlHypoRisk,
     recentLowBg: inp.recentLowBg,
     fastCarbConfirmEnabled: inp.fastCarbConfirm,
+    primerAlreadyApplied: inp.primerUsed,
     hour: inp.circadian ? inp.circHour : new Date().getHours(),
     exercising: inp.activityState === 'active',
     inPostEx: inp.postExercise,
@@ -1575,6 +1786,7 @@ function v6Knobs(inp) {
   return {
     aggression: inp.v6Aggression, hypoCaution: inp.v6HypoCaution, sensitivity: inp.v6Sensitivity,
     confirmedCap: inp.confirmedCap, committedCap: inp.committedCap,
+    primerCapU: inp.primerCapU,
   };
 }
 
@@ -1883,24 +2095,27 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ENGINE;
 function getInputs() {
   const g = id => document.getElementById(id);
   const gf = id => parseFloat(g(id).value);
+  // BG-derived sliders go through the units layer, so the maths always receives mg/dL
+  // regardless of what the display is set to.
+  const gbg = id => getBgSliderMgdl(id.replace(/^s-/, ''));
   const gb = id => g(id).checked;
   const gs = id => g(id).value;
   return {
     // Patient / insulin
     tdd:           gf('s-tdd'),
-    profIsf:       gf('s-profIsf'),
+    profIsf:       gbg('s-profIsf'),
     basal:         gf('s-basal'),
-    bg:            gf('s-bg'),
-    delta:         gf('s-delta'),
-    shortAvgDelta: gf('s-shortAvgDelta'),
-    longAvgDelta:  gf('s-longAvgDelta'),
-    target:        gf('s-target'),
+    bg:            gbg('s-bg'),
+    delta:         gbg('s-delta'),
+    shortAvgDelta: gbg('s-shortAvgDelta'),
+    longAvgDelta:  gbg('s-longAvgDelta'),
+    target:        gbg('s-target'),
     iob:           gf('s-iob'),
     peak:          gf('s-peak'),
     // Dynamic ISF
     useTdd:        gb('t-useTdd'),
-    normTarget:    gf('s-normTarget'),
-    bgCap:         gf('s-bgCap'),
+    normTarget:    gbg('s-normTarget'),
+    bgCap:         gbg('s-bgCap'),
     velocity:      gf('s-velocity') / 100,
     tddAdj:        gf('s-tddAdj') / 100,
     adjustSens:    gb('t-adjustSens'),
@@ -1923,16 +2138,16 @@ function getInputs() {
     // Night Mode / COB
     nightMode:     gb('t-nightMode'),
     nightActive:   gb('t-nightActive'),
-    nightOffset:   gf('s-nightOffset'),
+    nightOffset:   gbg('s-nightOffset'),
     cob:           gf('s-cob'),
     lastCarbAge:   gf('s-lastCarbAge'),
     cr:            gf('s-cr'),
-    recentLowBg:   gf('s-recentLowBg'),
+    recentLowBg:   gbg('s-recentLowBg'),
     cumSmbCap:     gf('s-cumSmbCap'),
     nightModeCob:  gb('t-nightModeCob'),
     // Temp Target
     tempTarget:    gb('t-tempTarget'),
-    tempTargetBg:  gf('s-tempTargetBg'),
+    tempTargetBg:  gbg('s-tempTargetBg'),
     highTtSens:    gb('t-highTtSens'),
     lowTtSens:     gb('t-lowTtSens'),
     // Boost V6 engine
@@ -1942,6 +2157,8 @@ function getInputs() {
     confirmedCap:  gf('s-confirmedCap'),
     committedCap:  gf('s-committedCap'),
     fastCarbConfirm: gb('t-fastCarbConfirm'),
+    primerCapU:    gf('s-primerCapU'),
+    primerUsed:    gb('t-primerUsed'),
     mlMealLikely:  gf('s-mlMealLikely') / 100,
     mlHypoRisk:    gf('s-mlHypoRisk') / 100,
     noMl:          gb('t-noMl'),
@@ -1961,11 +2178,11 @@ function update() {
     if (!el) return;
     document.getElementById('v-' + id).textContent = el.value + (suffix || '');
   };
-  sl('tdd',' U'); sl('profIsf',' mg/U'); sl('basal',' U/hr');
-  sl('bg',' mg/dL'); sl('delta',' mg/dL/5m');
-  sl('shortAvgDelta',' mg/dL/5m'); sl('longAvgDelta',' mg/dL/5m');
-  sl('target',' mg/dL'); sl('iob',' U'); sl('peak',' min');
-  sl('normTarget',' mg/dL'); sl('bgCap',' mg/dL');
+  sl('tdd',' U'); sl('profIsf',' '+isfShortUnit()); sl('basal',' U/hr');
+  sl('bg',' '+dispUnit()); sl('delta',' '+deltaUnit());
+  sl('shortAvgDelta',' '+deltaUnit()); sl('longAvgDelta',' '+deltaUnit());
+  sl('target',' '+dispUnit()); sl('iob',' U'); sl('peak',' min');
+  sl('normTarget',' '+dispUnit()); sl('bgCap',' '+dispUnit());
   sl('velocity','%'); sl('tddAdj','%');
   sl('sensRatio','');
   const circHour = parseInt(document.getElementById('s-circHour').value);
@@ -1973,12 +2190,13 @@ function update() {
   sl('scale',''); sl('maxIob',' U'); sl('bolusMax',' U');
   sl('insulinReqPct','%'); sl('smbMin',' min'); sl('uamSmbMin',' min');
   sl('lastCarbAge',' min'); sl('cr',' g/U');
-  sl('recentLowBg',' mg/dL'); sl('cumSmbCap',' U');
+  sl('recentLowBg',' '+dispUnit()); sl('cumSmbCap',' U');
   sl('confirmedCap',' U'); sl('committedCap',' U');
+  sl('primerCapU',' U');
   sl('percentScale','%');
   sl('activityPct','%'); sl('inactivityPct','%');
-  sl('nightOffset',' mg/dL'); sl('cob',' g');
-  sl('tempTargetBg',' mg/dL');
+  sl('nightOffset',' '+dispUnit()); sl('cob',' g');
+  sl('tempTargetBg',' '+dispUnit());
 
   const inp = getInputs();
   const r = calcAll(inp);
@@ -1988,14 +2206,14 @@ function update() {
   if (r.boostDisabledScale) pills.push({text:'Boost DISABLED (scale ≥ 3)', cls:'pill-red'});
   else                       pills.push({text:'Boost ACTIVE', cls:'pill-green'});
   if (r.ioBlock)       pills.push({text:`IOB ${fmt(inp.iob,1)}U > maxIOB ${fmt(inp.maxIob,1)}U — SMBs blocked`, cls:'pill-red'});
-  if (r.nightSuppressed) pills.push({text:`Night Mode suppressing SMBs (BG ${inp.bg} < target+${inp.nightOffset})`, cls:'pill-yellow'});
+  if (r.nightSuppressed) pills.push({text:`Night Mode suppressing SMBs (BG ${fmtBG(inp.bg)} < target+${fmtBG(inp.nightOffset)})`, cls:'pill-yellow'});
   if (inp.bg < inp.target) pills.push({text:`BG ${fmt(inp.bg,0)} below target`, cls:'pill-yellow'});
   if (r.bgCapped < inp.bg) pills.push({text:`BG capped at ${fmt(r.bgCapped,0)} for ISF`, cls:'pill-yellow'});
   if (!inp.useTdd)     pills.push({text:'TDD ISF disabled — using profile ISF', cls:'pill-yellow'});
   if (inp.scale >= 2.5) pills.push({text:'Scale approaching disable threshold (≥3)', cls:'pill-yellow'});
   if (r.profilePct !== 100) pills.push({text:`Profile at ${r.profilePct}% (${inp.activityState})`, cls:'pill-gray'});
   if (inp.circadian)   pills.push({text:`Circadian factor: ×${fmt(r.circFactor,2)} at ${circHour}:00`, cls:'pill-gray'});
-  if (inp.tempTarget && r.ttRatioApplied !== 1.0) pills.push({text:`TT ISF ratio: ${fmt(r.ttRatioApplied,2)} (TT=${inp.tempTargetBg})`, cls:'pill-gray'});
+  if (inp.tempTarget && r.ttRatioApplied !== 1.0) pills.push({text:`TT ISF ratio: ${fmt(r.ttRatioApplied,2)} (TT=${fmtBG(inp.tempTargetBg)})`, cls:'pill-gray'});
   if (r.smbMinToUse === inp.uamSmbMin) pills.push({text:`UAM SMB minutes (${inp.uamSmbMin}m, IOB > -0.2)`, cls:'pill-gray'});
   const tierLabels = {
     'T1_COB_PRIMARY':   'Tier 1 — COB Primary (<25 min)',
@@ -2018,15 +2236,15 @@ function update() {
   pills.push({text: tierLabels[r.tier] || r.tier, cls: tierCls[r.tier] || 'pill-gray'});
   if (r.fastCarbRebound) pills.push({text:`Fast-carb protection: ${Math.round(r.fastCarbScale*100)}% scale`, cls:'pill-red'});
   if (r.inPostRescueWindow) pills.push({text:`Post-rescue window (low ${fmt(inp.recentLowBg,0)} < 75) — T3/T4/T5 blocked`, cls:'pill-red'});
-  pills.push({text:`δ_accl=${fmt(r.delta_accl,1)}% | UAM1=${fmt(r.uamBoost1,2)} | UAM2=${fmt(r.uamBoost2,2)} | eBG=${fmt(r.eventualBG,0)}`, cls:'pill-gray'});
+  pills.push({text:`δ_accl=${fmt(r.delta_accl,1)}% | UAM1=${fmt(r.uamBoost1,2)} | UAM2=${fmt(r.uamBoost2,2)} | eBG=${fmtBG(r.eventualBG)}`, cls:'pill-gray'});
 
   document.getElementById('status-row').innerHTML = pills.map(p =>
     `<span class="pill ${p.cls}">${p.text}</span>`).join('');
 
   // ISF cells
-  document.getElementById('out-profIsf').textContent = fmt(inp.profIsf, 0);
-  document.getElementById('out-v1Isf').textContent = fmt(r.isfV1, 1);
-  document.getElementById('out-v2Isf').textContent = fmt(r.isfV2, 1);
+  document.getElementById('out-profIsf').textContent = fmtISF(inp.profIsf);
+  document.getElementById('out-v1Isf').textContent = fmtISF(r.isfV1);
+  document.getElementById('out-v2Isf').textContent = fmtISF(r.isfV2);
   document.getElementById('out-divisor').textContent = r.divisor;
   document.getElementById('out-divisor-note').textContent = `peak ${inp.peak}m → ÷${r.divisor}`;
 
@@ -2047,6 +2265,9 @@ function update() {
 
   // ISF breakdown text
   let breakdown = '';
+  // Shown in the units the algorithm computes in, so the arithmetic can be followed.
+  if (currentUnit === 'mmol') breakdown += 'Derivation below is in mg/dL, as the algorithm '
+    + 'computes it (÷18.02 for mmol/L).\n';
   if (r.profilePct !== 100) {
     breakdown += `Profile at ${r.profilePct}% (${inp.activityState}) → globalScale ×${fmt(r.globalScale,3)}\n`;
     breakdown += `Effective basal: ${fmt(r.effectiveBasal,3)} U/hr | scaledProfileISF: ${fmt(r.scaledProfileIsf,1)}\n`;
@@ -2056,18 +2277,18 @@ function update() {
     breakdown += `insulinDivisor: ${r.divisor} (peak ${inp.peak}min)\n`;
     const rawV1 = calcSensNormalTargetV1(r.adjustedTdd, inp.normTarget, r.divisor);
     const rawV2 = calcSensNormalTargetV2(r.adjustedTdd, inp.normTarget, r.divisor);
-    breakdown += `V1 raw sensNT: 1800÷(${fmt(r.adjustedTdd,1)}×ln(${inp.normTarget}÷${r.divisor}+1)) = ${fmt(rawV1,1)}\n`;
-    breakdown += `V2 raw sensNT: 2300÷(ln(${inp.normTarget}÷${r.divisor}+1)×${fmt(r.adjustedTdd,1)}²×0.02) = ${fmt(rawV2,1)}\n`;
+    breakdown += `V1 raw sensNT: 1800÷(${fmt(r.adjustedTdd,1)}×ln(${fmt(inp.normTarget,0)}÷${r.divisor}+1)) = ${fmt(rawV1,1)}\n`;
+    breakdown += `V2 raw sensNT: 2300÷(ln(${fmt(inp.normTarget,0)}÷${r.divisor}+1)×${fmt(r.adjustedTdd,1)}²×0.02) = ${fmt(rawV2,1)}\n`;
     breakdown += `After globalScale ×${fmt(r.globalScale,3)}: V1=${fmt(rawV1!=null?rawV1*r.globalScale:null,1)} V2=${fmt(rawV2!=null?rawV2*r.globalScale:null,1)}\n`;
   } else {
-    breakdown += `TDD ISF disabled → using scaledProfileISF ${fmt(r.scaledProfileIsf,1)} mg/dL/U\n`;
+    breakdown += `TDD ISF disabled → using scaledProfileISF ${fmt(r.scaledProfileIsf,1)} mg/dL per U\n`;
   }
   if (inp.adjustSens) breakdown += `TDD Sens Adjustment: ratio=${fmt(inp.sensRatio,2)} → ISF÷${fmt(inp.sensRatio,2)}\n`;
-  if (inp.tempTarget && r.ttRatioApplied !== 1.0) breakdown += `TT adjustment: ratio=${fmt(r.ttRatioApplied,3)} (TT=${inp.tempTargetBg} vs normTarget=${inp.normTarget})\n`;
+  if (inp.tempTarget && r.ttRatioApplied !== 1.0) breakdown += `TT adjustment: ratio=${fmt(r.ttRatioApplied,3)} (TT=${fmt(inp.tempTargetBg,0)} vs normTarget=${fmt(inp.normTarget,0)})\n`;
   if (inp.circadian) breakdown += `Circadian factor at ${circHour}:00 = ×${fmt(r.circFactor,3)}\n`;
-  if (r.bgCapped < inp.bg) breakdown += `BG ${inp.bg} > cap ${inp.bgCap} → capped to ${fmt(r.bgCapped,1)}\n`;
+  if (r.bgCapped < inp.bg) breakdown += `BG ${fmt(inp.bg,0)} > cap ${fmt(inp.bgCap,0)} → capped to ${fmt(r.bgCapped,1)}\n`;
   const scaler1 = Math.log(inp.normTarget/r.divisor+1) / Math.log(Math.max(r.bgCapped,1)/r.divisor+1);
-  breakdown += `scaler at BG ${inp.bg}: ${fmt(scaler1,3)} | V1 velocity: ${(inp.velocity*100).toFixed(0)}%\n`;
+  breakdown += `scaler at BG ${fmt(inp.bg,0)}: ${fmt(scaler1,3)} | V1 velocity: ${(inp.velocity*100).toFixed(0)}%\n`;
   breakdown += `V1 ISF: ${fmt(r.sensNTV1,1)} × (1-(1-${fmt(scaler1,3)})×${fmt(inp.velocity,2)}) = ${fmt(r.isfV1,1)}\n`;
   breakdown += `V2 ISF: ${fmt(r.sensNTV2,1)} × ${fmt(scaler1,3)} = ${fmt(r.isfV2,1)} (velocity always 1.0)`;
   document.getElementById('out-isf-breakdown').textContent = breakdown;
@@ -2096,7 +2317,7 @@ function update() {
   document.getElementById('out-tier-name').style.color = tm.color;
   document.getElementById('out-tier-name').textContent  = tm.label;
   document.getElementById('out-tier-why').textContent   = r.fastCarbRebound && ['T3_UAM_BOOST','T5_PERCENT_SCALE','T6_ACCELERATION'].includes(r.tier)
-    ? `⚠ Fast-carb rebound — scaled to ${Math.round(r.fastCarbScale*100)}% (BG ${inp.bg})`
+    ? `⚠ Fast-carb rebound — scaled to ${Math.round(r.fastCarbScale*100)}% (BG ${fmtBG(inp.bg)})`
     : tm.why;
   const smbEl    = document.getElementById('out-tier-smb');
   const smbUnitEl = document.getElementById('out-tier-smb-unit');
@@ -2110,14 +2331,14 @@ function update() {
   } else if (r.ioBlock) {
     smbBreak = `⚠ SMBs blocked: IOB ${fmt(inp.iob,1)}U > maxIOB ${inp.maxIob}U.\n  Boost falls back to oref1 basal adjustment only.`;
   } else if (r.nightSuppressed) {
-    smbBreak = `⚠ Night Mode suppressing SMBs:\n  BG ${inp.bg} < target(${inp.target}) + offset(${inp.nightOffset}) = ${inp.target+inp.nightOffset}\n  `;
+    smbBreak = `⚠ Night Mode suppressing SMBs:\n  BG ${fmtBG(inp.bg)} < target(${fmtBG(inp.target)}) + offset(${fmtBG(inp.nightOffset)}) = ${inp.target+inp.nightOffset}\n  `;
     smbBreak += inp.nightModeCob && inp.cob > 0 ? `(would unblock with COB ${inp.cob}g — but Disable NM if COB is OFF)` : `(re-enable: raise offset, or turn on "Disable NM if COB>0" with COB present)`;
   } else {
-    smbBreak = `insulinReq: (${inp.bg} - ${inp.target}) ÷ ISF ${fmt(r.isfV1,1)} = ${fmt(r.insulinReqV1,3)} U\n`;
-    smbBreak += `δ=${inp.delta} | shortAvg=${inp.shortAvgDelta} | longAvg=${inp.longAvgDelta} → δ_accl=${fmt(r.delta_accl,1)}%\n`;
-    smbBreak += `uamBoost1=${fmt(r.uamBoost1,2)} | uamBoost2=${fmt(r.uamBoost2,2)} | eventualBG≈${fmt(r.eventualBG,0)} | boost_scale=${fmt(r.boost_scale,2)}\n`;
+    smbBreak = `insulinReq: (${fmtBG(inp.bg)} - ${fmtBG(inp.target)}) ÷ ISF ${fmtISF(r.isfV1)} = ${fmt(r.insulinReqV1,3)} U\n`;
+    smbBreak += `δ=${fmtDelta(inp.delta)} | shortAvg=${fmtDelta(inp.shortAvgDelta)} | longAvg=${fmtDelta(inp.longAvgDelta)} → δ_accl=${fmt(r.delta_accl,1)}%\n`;
+    smbBreak += `uamBoost1=${fmt(r.uamBoost1,2)} | uamBoost2=${fmt(r.uamBoost2,2)} | eventualBG≈${fmtBG(r.eventualBG)} | boost_scale=${fmt(r.boost_scale,2)}\n`;
     smbBreak += `Active tier: ${r.tier}\n`;
-    if (r.fastCarbRebound) smbBreak += `⚠ Fast-carb rebound: Tiers 3/5/6 scaled to ${Math.round(r.fastCarbScale*100)}% (BG ${inp.bg}, range 30–100%)\n`;
+    if (r.fastCarbRebound) smbBreak += `⚠ Fast-carb rebound: Tiers 3/5/6 scaled to ${Math.round(r.fastCarbScale*100)}% (BG ${fmtBG(inp.bg)}, range 30–100%)\n`;
     const tierKey = r.tier;
     if (tierKey === 'T1_COB_PRIMARY') {
       smbBreak += `min(insulinReq÷insulinReqPCT, insulinReq) = min(${fmt(r.insulinReqV1/r.baseReqDivisor,3)}, ${fmt(r.insulinReqV1,3)}) = ${fmt(r.microBolus,2)} U`;
@@ -2197,8 +2418,8 @@ function update() {
   document.getElementById('out-agg-summary').textContent = aggText;
 
   // Reason string
-  let reason = `BG ${inp.bg} | delta ${inp.delta > 0 ? '+' : ''}${inp.delta} | target ${inp.target} | IOB ${fmt(inp.iob,1)}/${inp.maxIob}\n`;
-  reason += `V1 ISF ${fmt(r.isfV1,1)} | V2 ISF ${fmt(r.isfV2,1)} | profile ISF ${inp.profIsf}\n`;
+  let reason = `BG ${fmtBG(inp.bg)} | delta ${inp.delta > 0 ? '+' : ''}${fmtDelta(inp.delta)} | target ${fmtBG(inp.target)} | IOB ${fmt(inp.iob,1)}/${inp.maxIob}\n`;
+  reason += `V1 ISF ${fmtISF(r.isfV1)} | V2 ISF ${fmtISF(r.isfV2)} | profile ISF ${fmtISF(inp.profIsf)}\n`;
   reason += `Max basal bolus (${inp.smbMin}min): ${fmt(r.maxBasalBolus,2)} U | bolusMax: ${inp.bolusMax} U\n`;
   reason += r.boostDisabledScale ? `BOOST DISABLED (scale ≥ 3.0)\n` : `Boost ACTIVE (scale ${inp.scale})\n`;
   reason += r.ioBlock ? `SMBs BLOCKED — IOB above maxIOB\n` : `SMBs eligible\n`;
@@ -2220,7 +2441,7 @@ function update() {
     `  IOB headroom increases; ${inp.iob > inp.maxIob ? 'would unblock SMBs' : 'already unblocked'}`,
     ``,
     `<b>V2 vs V1</b> at current settings: `,
-    `  V1 ISF = ${fmt(r.isfV1,1)} | V2 ISF = ${fmt(r.isfV2,1)} → `,
+    `  V1 ISF = ${fmtISF(r.isfV1)} | V2 ISF = ${fmtISF(r.isfV2)} → `,
     `  ${r.isfV2 < r.isfV1 ? 'V2 is MORE aggressive (lower ISF) at this TDD/BG' : 'V2 is less aggressive (higher ISF) at this TDD/BG'}`,
     `  (V2 ISF scales with TDD² — much more sensitive to TDD changes)`,
   ];
@@ -2295,7 +2516,7 @@ function renderV6Tab(inp, r) {
   const t = v6.scoreTerms;
   let sd = `score terms: delta ${fmt(t.deltaTerm,2)}×0.30 | accl ${fmt(t.deltaAcclTerm,2)}×0.16 | ML ${m.mlMealLikely==null?'null':fmt(m.mlMealLikely,2)}×0.20 | notLow ${fmt(t.notLowTerm,2)}×0.12 | timeOfDay ${fmt(t.todTerm,2)}×0.10 | notEx ${fmt(t.notExTerm,2)}×0.04 | sustained ${fmt(t.sustainedTerm,2)}×0.15${v6.renorm ? '  [ML dropped → ×1.25 renorm]' : ''}\n`;
   sd += `notRecentlyLow is continuous: max(0.4, (recentLow ${fmt(inp.recentLowBg,0)} − 70)/30) = ${fmt(t.notLowTerm,2)}\n`;
-  sd += `cumRise30 = shortAvgDelta ×6 = ${fmt(m.cumRise30,0)} mg/dL | eventualBG offset ${fmt(m.eventualBgOffset,0)} (confirm needs peak ≥30)\n`;
+  sd += `cumRise30 = shortAvgDelta ×6 = ${fmtBG(m.cumRise30)} ${dispUnit()} | eventualBG offset ${fmtBG(m.eventualBgOffset)} (confirm needs peak ≥30)\n`;
   sd += `prior state ${inp.v6PriorState} (age ${prior.age}) → ${v6.state}. Age gates check PRE-increment age: confirm is first possible on the 4th OBSERVING cycle.\n`;
   const fcAllowed = inp.fastCarbConfirm && inp.recentLowBg >= V6.FC_MIN_RECENT_LOW;
   sd += `fast-carb fast-path: ${inp.fastCarbConfirm ? (fcAllowed ? 'armed' : `BLOCKED — recent low ${fmt(inp.recentLowBg,0)} < ${V6.FC_MIN_RECENT_LOW} (post-hypo rescue guard)`) : 'disabled (pref)'}${fcAllowed ? ` (needs delta ≥${V6.FC_DELTA}, accl ≥${V6.FC_ACCL}, score ≥${V6.FC_SCORE}, awake, not exercising${prior.committed ? ', blocked: already committed this session' : ''})` : ''}`;
@@ -2322,6 +2543,11 @@ function renderV6Tab(inp, r) {
   bd += `budget = max(${V6.BUDGET_FLOOR}×base, base × mlHypo ${fmt(v6.mlScale,2)} × postEx ${fmt(v6.postEx,2)} × sens ${fmt(v6.sens,2)}) = ${fmt(v6.budget,3)} U\n`;
   bd += `dose = budget × multiplier(${v6.state}) ${fmt(v6.actionMult,2)} = ${fmt(v6.rawDose,3)} U\n`;
   bd += `× velocity ${fmt(v6.velFactor,2)} (cumRise30 ${fmt(m.cumRise30,0)}) = ${fmt(v6.velScaled,3)} U → state-cap ${fmt(v6.capped,3)} U${v6.stateCapped ? ` (${v6.state} cap ${fmt(v6.state==='CONFIRMED'?inp.confirmedCap:inp.committedCap,2)}U bound)` : ''}\n`;
+  // The primer is applied after the dose is finalised, so it is reported after the cap line
+  // rather than folded into it, exactly as the engine applies it.
+  bd += v6.primerBolusU > 0
+    ? `+ acceleration primer ${fmt(v6.primerBolusU,3)} U (${v6.primerReason}) = ${fmt(v6.finalDose,3)} U; base is additive, any excess is netted off the commit-shot\n`
+    : `acceleration primer: none — ${v6.primerReason}\n`;
   if (v6.hard) bd += `HARD GATE: ${v6.hard} → 0 U\n`;
   else bd += `gates: ${v6.gates.length ? v6.gates.join(', ') : 'none'} → engine dose ${fmt(v6.finalDose,2)} U${v6.spikeCapped ? ' (spike-capped)' : ''}\n`;
   if (ov.mode === 'sleep' || ov.mode === 'boost-inactive' || ov.mode === 'cum-cap') bd += `override site: ${ov.note}`;
@@ -2438,26 +2664,26 @@ function drawIsfChart(inp, r) {
   ctx.beginPath(); ctx.moveTo(xS(inp.bg), pad.t); ctx.lineTo(xS(inp.bg), H-pad.b); ctx.stroke();
   ctx.fillStyle = 'rgba(110,231,183,0.9)';
   ctx.font = '11px system-ui';
-  ctx.fillText(`BG ${inp.bg}`, xS(inp.bg)+4, pad.t+14);
+  ctx.fillText(`BG ${fmtBG(inp.bg)}`, xS(inp.bg)+4, pad.t+14);
 
   // Axes labels
   ctx.fillStyle = '#475569';
   ctx.font = '11px system-ui';
   ctx.textAlign = 'center';
   for (let bg = 80; bg <= 320; bg += 80) {
-    ctx.fillText(bg, xS(bg), H - pad.b + 16);
+    ctx.fillText(fmtBG(bg), xS(bg), H - pad.b + 16);
   }
   ctx.textAlign = 'right';
   for (let isf = Math.ceil(minY/10)*10; isf <= maxY; isf += 20) {
-    ctx.fillText(isf, pad.l - 6, yS(isf) + 4);
+    ctx.fillText(fmtISF(isf), pad.l - 6, yS(isf) + 4);
   }
   ctx.fillStyle = '#64748b';
   ctx.textAlign = 'center';
-  ctx.fillText('Blood Glucose (mg/dL)', W/2, H - 8);
+  ctx.fillText('Blood Glucose ('+dispUnit()+')', W/2, H - 8);
   ctx.save();
   ctx.translate(14, H/2);
   ctx.rotate(-Math.PI/2);
-  ctx.fillText('ISF (mg/dL/U)', 0, 0);
+  ctx.fillText('ISF ('+isfUnitLabel()+')', 0, 0);
   ctx.restore();
 }
 
@@ -2528,13 +2754,13 @@ function drawRatioChart(inp, r) {
 
   // Labels
   ctx.fillStyle = '#475569'; ctx.font = '11px system-ui'; ctx.textAlign = 'center';
-  [80,160,240,320].forEach(bg => ctx.fillText(bg, xS(bg), H-pad.b+16));
+  [80,160,240,320].forEach(bg => ctx.fillText(fmtBG(bg), xS(bg), H-pad.b+16));
   ctx.textAlign = 'right';
   [0.5, 0.75, 1.0, 1.25, 1.5].forEach(v => {
     if (v >= minY && v <= maxY) ctx.fillText(v.toFixed(2), pad.l-6, yS(v)+4);
   });
   ctx.fillStyle = '#64748b'; ctx.textAlign = 'center';
-  ctx.fillText('Blood Glucose (mg/dL)', W/2, H-8);
+  ctx.fillText('Blood Glucose ('+dispUnit()+')', W/2, H-8);
   ctx.save(); ctx.translate(14, H/2); ctx.rotate(-Math.PI/2);
   ctx.fillText('ISF ratio (vs profile)', 0, 0); ctx.restore();
 
@@ -2651,12 +2877,12 @@ function drawSmbChart(inp, r) {
 
   // Labels
   ctx.fillStyle='#475569'; ctx.font='11px system-ui'; ctx.textAlign='center';
-  [100,150,200,250,300].forEach(bg => ctx.fillText(bg, xS(bg), H-pad.b+16));
+  [100,150,200,250,300].forEach(bg => ctx.fillText(fmtBG(bg), xS(bg), H-pad.b+16));
   const ySteps = maxY <= 1 ? [0.2,0.4,0.6,0.8,1.0] : [0.5,1.0,1.5,2.0,2.5,3.0].filter(v=>v<=maxY*1.05);
   ctx.textAlign='right';
   ySteps.forEach(v => ctx.fillText(v.toFixed(1)+'U', pad.l-6, yS(v)+4));
   ctx.fillStyle='#64748b'; ctx.textAlign='center';
-  ctx.fillText('Blood Glucose (mg/dL)', W/2, H-8);
+  ctx.fillText('Blood Glucose ('+dispUnit()+')', W/2, H-8);
   ctx.save(); ctx.translate(14,H/2); ctx.rotate(-Math.PI/2);
   ctx.fillText('Estimated SMB (U)', 0, 0); ctx.restore();
 }
@@ -2677,7 +2903,7 @@ const DEFAULTS = {
   cob:0, lastCarbAge:60, cr:10, recentLowBg:120, cumSmbCap:10, nightModeCob:false,
   tempTarget:false, tempTargetBg:140, highTtSens:false, lowTtSens:false,
   v6Aggression:1.0, v6HypoCaution:1.0, v6Sensitivity:1.0,
-  confirmedCap:2.5, committedCap:0.5, fastCarbConfirm:true,
+  confirmedCap:2.5, committedCap:0.5, fastCarbConfirm:true, primerCapU:0, primerUsed:false,
   mlMealLikely:0, mlHypoRisk:0, noMl:false, mlNull3:false, v6PriorState:'IDLE', postExercise:false,
 };
 const scenarios = {
@@ -3007,10 +3233,10 @@ function drawProjChart(canvasId, inp, proj, mode) {
   });
   ctx.textAlign = 'right';
   for (let bg = Math.ceil(yMin / 20) * 20; bg <= yMax; bg += 20) {
-    if (bg >= yMin && bg <= yMax) ctx.fillText(bg, pad.l - 6, yS(bg) + 4);
+    if (bg >= yMin && bg <= yMax) ctx.fillText(fmtBG(bg), pad.l - 6, yS(bg) + 4);
   }
   ctx.save(); ctx.translate(13, H / 2); ctx.rotate(-Math.PI / 2);
-  ctx.textAlign = 'center'; ctx.fillText('mg/dL', 0, 0); ctx.restore();
+  ctx.textAlign = 'center'; ctx.fillText(dispUnit(), 0, 0); ctx.restore();
 
   // Current BG dot (junction of history + projection)
   ctx.beginPath();
@@ -3019,7 +3245,7 @@ function drawProjChart(canvasId, inp, proj, mode) {
 
   // Target label
   ctx.fillStyle = 'rgba(16,185,129,0.7)'; ctx.font = '10px system-ui'; ctx.textAlign = 'left';
-  ctx.fillText(`Target ${inp.target}`, pad.l + 4, yS(inp.target) - 4);
+  ctx.fillText(`Target ${fmtBG(inp.target)}`, pad.l + 4, yS(inp.target) - 4);
 }
 
 // ── Per-tab projected-SMB logs ─────────────────────────────
@@ -3164,22 +3390,75 @@ function avgDeltaOverWindow(entries, windowMin) {
   return (entries[0].sgv - oldest.sgv) * (5 / dt);
 }
 
-function getProfileValueAt(schedule, nowMs) {
-  // schedule: [{time:"HH:MM", value:x}, ...] sorted by time
+const MMOL_TO_MGDL = 18.01559;
+
+function mmolToMgdl(v) {
+  return Math.round(v * MMOL_TO_MGDL);
+}
+
+/* Seconds since midnight IN THE PROFILE'S OWN TIMEZONE.
+   Reading the schedule against the browser's midnight picks the wrong slot for anyone whose
+   profile timezone differs from the machine they are viewing on, which silently loads the wrong
+   basal, ISF and target for the time of day. Falls back to browser local time when the profile
+   carries no timezone. */
+function secondsFromMidnightInTimeZone(nowMs, timeZone) {
+  if (timeZone) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone, hour12: false, hourCycle: 'h23',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }).formatToParts(new Date(nowMs));
+      const get = type => Number(parts.find(p => p.type === type)?.value);
+      const hour = get('hour'), minute = get('minute'), second = get('second');
+      if (Number.isFinite(hour) && Number.isFinite(minute) && Number.isFinite(second)) {
+        return hour*3600 + minute*60 + second;
+      }
+    } catch (_) { /* unknown zone: fall through to local */ }
+  }
+  const d = new Date(nowMs);
+  return d.getHours()*3600 + d.getMinutes()*60 + d.getSeconds();
+}
+
+/* Nightscout writes a slot as timeAsSeconds, or as "HH:MM" or "HH:MM:SS". Accept all three. */
+function profileSlotSeconds(slot) {
+  if (slot && Number.isFinite(slot.timeAsSeconds)) return slot.timeAsSeconds;
+  if (!slot || typeof slot.time !== 'string') return null;
+  const parts = slot.time.split(':').map(Number);
+  if (!Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return null;
+  return parts[0]*3600 + parts[1]*60 + (Number.isFinite(parts[2]) ? parts[2] : 0);
+}
+
+function getProfileValueAt(schedule, nowMs, timeZone) {
   if (!schedule || !schedule.length) return null;
-  const midnight = new Date(nowMs); midnight.setHours(0,0,0,0);
-  const secsFromMidnight = (nowMs - midnight.getTime()) / 1000;
-  let val = schedule[0].value;
-  for (const slot of schedule) {
-    const parts = slot.time.split(':').map(Number);
-    const slotSecs = parts[0]*3600 + parts[1]*60;
-    if (slotSecs <= secsFromMidnight) val = slot.value;
-    else break;
+  const secsFromMidnight = secondsFromMidnightInTimeZone(nowMs, timeZone);
+  const slots = schedule
+    .map(slot => ({ value: slot.value, secs: profileSlotSeconds(slot) }))
+    .filter(slot => Number.isFinite(slot.secs))
+    .sort((a, b) => a.secs - b.secs);
+  if (!slots.length) return null;
+  // Before the first slot of the day the value in force is the last one, which carries over
+  // midnight. Starting from slots[0] returned the wrong value between 00:00 and the first slot.
+  let val = slots[slots.length - 1].value;
+  for (const slot of slots) {
+    if (slot.secs <= secsFromMidnight) val = slot.value; else break;
   }
   return val;
 }
 
+/* A profile carries its own units. Its glucose-valued fields, ISF and the targets, are in those
+   units, so a mmol profile has to be converted before it reaches sliders that are mg/dL. Basal and
+   carb ratio are not glucose and are never converted. */
+function profileUsesMmol(profile) {
+  return String(profile?.units || '').toLowerCase() === 'mmol';
+}
+
+function profileGlucoseToMgdl(value, profile) {
+  if (value == null || !isFinite(value)) return null;
+  return profileUsesMmol(profile) ? mmolToMgdl(value) : Math.round(value);
+}
+
 function setSlider(id, value, min, max) {
+  if (BG_SLIDERS.some(sd => sd.id === id)) { setSliderMgdl(id, value); return; }
   const el = document.getElementById('s-' + id);
   if (!el) return;
   el.value = Math.max(parseFloat(el.min || min), Math.min(parseFloat(el.max || max), value));
@@ -3227,13 +3506,14 @@ function applyNsData(entries, ds, profileData) {
     const defaultName = rec?.defaultProfile || (store && Object.keys(store)[0]);
     const prof = store?.[defaultName];
     if (prof) {
-      const basal  = getProfileValueAt(prof.basal,     nowMs);
-      const isf    = getProfileValueAt(prof.sens,      nowMs); // sens = ISF in NS profile
-      const cr     = getProfileValueAt(prof.carbratio, nowMs);
-      const tgLow  = getProfileValueAt(prof.target_low,  nowMs);
-      const tgHigh = getProfileValueAt(prof.target_high, nowMs);
+      const tz     = prof.timezone;
+      const basal  = getProfileValueAt(prof.basal,     nowMs, tz);
+      const isf    = profileGlucoseToMgdl(getProfileValueAt(prof.sens, nowMs, tz), prof); // sens = ISF
+      const cr     = getProfileValueAt(prof.carbratio, nowMs, tz);
+      const tgLow  = profileGlucoseToMgdl(getProfileValueAt(prof.target_low,  nowMs, tz), prof);
+      const tgHigh = profileGlucoseToMgdl(getProfileValueAt(prof.target_high, nowMs, tz), prof);
       if (basal != null) setSlider('basal',   +basal.toFixed(2), 0.1, 5);
-      if (isf   != null) setSlider('profIsf', Math.round(isf),   10,  200);
+      if (isf   != null) setSlider('profIsf', isf,               10,  200);
       if (cr    != null) setSlider('cr',      +cr.toFixed(1),    3,   30);
       if (tgLow != null && tgHigh != null) {
         setSlider('target', Math.round((tgLow + tgHigh) / 2), 72, 180);
@@ -3289,6 +3569,7 @@ function disconnectNs() {
 
 // Initial render — restore the persisted tab, then compute everything once
 window.addEventListener('resize', () => { const inp = getInputs(); drawCharts(inp, calcAll(inp)); });
+initSliderValues();   // capture the mg/dL defaults before any unit switch can occur
 let savedTab = 'v1';
 try { savedTab = localStorage.getItem('boost_sim_tab') || 'v1'; } catch (_) {}
 switchTab(savedTab);

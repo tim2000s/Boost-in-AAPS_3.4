@@ -1636,6 +1636,29 @@
         Auto-config turns it <b>off</b> for a low-prone history.</div>
       </div>
       <div class="setting">
+        <div class="setting-top"><span class="setting-name">V6 acceleration primer (U)</span><span class="setting-key">ApsBoostV5PrimerCapU — default 0 (off)</span></div>
+        <div class="setting-desc">A small early dose on an accelerating rise while V6 is still in OBSERVING, reclaiming
+        the roughly 15 minutes V1 used to gain by reacting to acceleration before the meal was confirmed. It fires
+        <b>once per meal session</b>, only when acceleration exceeds 10 with a positive delta, and only with every floor
+        clear: no recent low below 80&nbsp;mg/dL, awake, not exercising, not inside the post-rescue window, and inside
+        maxIOB headroom. The size scales with how sharp the rise is, capped at twice the base you set here.
+        <br><br>The base is <b>additive</b>; anything the acceleration scaling adds beyond it is <b>netted off the
+        CONFIRMED commit-shot</b>, so a fizzled session costs you the base only and a real meal moves insulin earlier
+        rather than adding more of it. The accumulator decays with a 90-minute time constant and carries across sessions,
+        so several fizzles in a row are credited against the next commit-shot rather than stacking.
+        <b>Auto-config-managed:</b> derived per user as a fraction of your committed cap, clamped to 0.6&nbsp;U.
+        0 = off, which is the setting default until auto-config or you set it.</div>
+      </div>
+      <div class="setting">
+        <div class="setting-top"><span class="setting-name">Force bolus primer</span><span class="setting-key">ApsBoostV5PrimerBolusMode — default OFF</span></div>
+        <div class="setting-desc">How the primer is delivered. Auto-config routes a hypo-prone history through a
+        <b>retractable temp basal</b> over 30 minutes instead of a bolus, so the insulin can be withdrawn if the rise
+        fizzles; a well-controlled history gets it as a bolus. This switch overrides that routing and forces the bolus.
+        The floors and the commit-shot net-off are identical either way, so it changes the delivery route and nothing
+        else. The routing flag itself (<span class="setting-key">ApsBoostV5PrimerTbrFallback</span>) is
+        auto-config-managed and is not a dial you set.</div>
+      </div>
+      <div class="setting">
         <div class="setting-top"><span class="setting-name">Pre-meal target</span><span class="setting-key">ApsBoostV6PreMealTarget</span></div>
         <div class="setting-desc">Anticipatory target-lowering ahead of a learned meal time. Off by default.</div>
       </div>

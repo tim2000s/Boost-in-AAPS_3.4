@@ -180,6 +180,7 @@
       <div class="card"><table id="gateTable"></table></div>
     </div>
     <p class="muted" id="confirmLine"></p>
+    <p class="muted" id="primerLine"></p>
 
     <h2>Notes &amp; caveats</h2>
     <div class="card muted" style="font-size:0.9em">
@@ -239,6 +240,26 @@ function parseTrioTag(reason) {
 
 // Per-record source sniff: structured boostV5_* fields → AAPS Boost build; the boostV5[…] reason
 // tag or the Trio device signature (NightscoutStatus.device = "Trio") → Trio build; else unknown.
+/* The acceleration primer leaves a breadcrumb in the reason rather than a structured field, so it
+   has to be read from the text. Four forms are written by OpenAPSBoostPlugin:
+     primer=bolus,0.15U;                delivered as a bolus
+     primer=tbr,0.15U->...U/h x30m;     delivered as a retractable temp basal
+     primer=tbr-skipped(...)            base temp below basal, nothing delivered
+     primer=tbr-subsumed(...)           the base temp already exceeded the primer rate
+   Only the first two put insulin in. The other two are counted separately, because a primer that
+   was computed and then not delivered says something different about the configuration than one
+   that never fired at all. */
+function parsePrimer(reason) {
+  const t = String(reason || "");
+  let m = t.match(/primer=bolus,([\d.]+)U/);
+  if (m) return { mode: "bolus", units: parseFloat(m[1]), delivered: true };
+  m = t.match(/primer=tbr,([\d.]+)U/);
+  if (m) return { mode: "tbr", units: parseFloat(m[1]), delivered: true };
+  if (/primer=tbr-skipped/.test(t)) return { mode: "skipped", units: 0, delivered: false };
+  if (/primer=tbr-subsumed/.test(t)) return { mode: "subsumed", units: 0, delivered: false };
+  return null;
+}
+
 function classifyRecordSource(d) {
   const sug = d && d.openaps && d.openaps.suggested;
   if (!sug) return null;
@@ -332,6 +353,7 @@ function parseCycles(dsList) {
       // from a score fade). Powers the brake-floor + confirm-gate lever hints.
       floorWouldAdd: numOrNull(sug.boostV5_floorWouldAdd),
       confirmGate: sug.boostV5_confirmGate || null,
+      primer: parsePrimer(reason),
       reason
     });
   }
@@ -497,7 +519,22 @@ function analyse(cycles, entries, episodes) {
   const modelStub = { episodes: eps, nearMiss, night: mk(night), gly };
   const hints = leverHints(modelStub, cycles, activeMode, labels);
   const cfSeries = counterfactualSeries(entries, cycles);
+  // Acceleration primer. Counted separately from the paired dose comparison, because the primer is
+  // additive only up to its base and the excess is netted off the commit-shot, so folding it into a
+  // V6 total would double-count insulin the commit-shot has already given up.
+  const primed = cycles.filter(c => c.primer);
+  const primerDelivered = primed.filter(c => c.primer.delivered);
+  const primerSummary = {
+    cycles: primed.length,
+    delivered: primerDelivered.length,
+    units: sum(primerDelivered.map(c => c.primer.units)),
+    bolus: primed.filter(c => c.primer.mode === "bolus").length,
+    tbr: primed.filter(c => c.primer.mode === "tbr").length,
+    notDelivered: primed.filter(c => !c.primer.delivered).length,
+    perDay: days > 0 ? primerDelivered.length / days : null
+  };
   return {
+    primer: primerSummary,
     siteMode, sources, labels, segments: sourceSegments(cycles),
     cfN: cfDeltas.length,
     nearMiss,
@@ -1203,6 +1240,17 @@ function render(model, entries) {
     ? `CONFIRMED commit-shots: ${model.confirms} (${(model.confirms / Math.max(model.days, 0.1)).toFixed(1)}/day) · ` +
       `median shot ${fmtU(shots.slice().sort((a, b) => a - b)[Math.floor(shots.length / 2)] || 0)}U · largest ${fmtU(Math.max(0, ...shots))}U`
     : "No CONFIRMED transitions in this window.";
+  // Acceleration primer. Reported apart from the dose comparison: the base is additive but the
+  // velocity-scaled excess is netted off the commit-shot, so the primer's units are not simply
+  // extra insulin and must not be read as though they were.
+  const pr = model.primer;
+  $("primerLine").textContent = !pr || pr.cycles === 0
+    ? "Acceleration primer: not seen in this window (cap 0, or no qualifying accelerating rise)."
+    : `Acceleration primer: ${pr.delivered} delivered` +
+      (pr.perDay != null ? ` (${pr.perDay.toFixed(1)}/day)` : "") +
+      ` · ${fmtU(pr.units)}U total · ${pr.bolus} as bolus, ${pr.tbr} as temp basal` +
+      (pr.notDelivered ? ` · ${pr.notDelivered} computed but not delivered` : "") +
+      ". The base is additive; any velocity-scaled excess is netted off the commit-shot.";
   $("results").style.display = "block";
 }
 
