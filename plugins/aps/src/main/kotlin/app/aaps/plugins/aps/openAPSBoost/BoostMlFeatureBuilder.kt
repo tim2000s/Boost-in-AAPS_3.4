@@ -26,6 +26,14 @@ import org.json.JSONObject
 object BoostMlFeatureBuilder {
 
     const val LOOKBACK = 6
+
+    /**
+     * The span the lookback window claims to represent, plus one cycle of slack so an ordinary
+     * late reading does not discard usable history. Six cycles at the five-minute grid is thirty
+     * minutes; anything older than thirty-five is not the preceding six cycles and must not be
+     * presented to the model as though it were.
+     */
+    const val STALE_AFTER_MS: Long = 35 * 60 * 1000L
     val LOOKBACK_FEATURES = listOf(
         "cgm_mgdl", "iob_iob", "iob_activity",
         "sug_eventualBG", "recent_smb_units_60m", "sug_minDelta"
@@ -64,11 +72,29 @@ object BoostMlFeatureBuilder {
     }
 
     data class RingBuffer(val snapshots: MutableList<CycleSnapshot> = mutableListOf()) {
+        /**
+         * Append, then drop anything the window no longer covers — by AGE as well as by count.
+         *
+         * The buffer is persisted across process restarts, and the decision series is interrupted
+         * often. Trimming by length alone leaves pre-gap snapshots in place, so a cycle arriving
+         * two hours after the last one is scored with lag features from two hours ago presented as
+         * the preceding five cycles. That is not the history the model was trained on: an offline
+         * replay of the exported model against its own published output reproduces contiguous
+         * cycles to a median absolute error of 0.003 to 0.006, and on post-gap cycles the carried
+         * snapshots explain the published score better than either a cleared buffer or the true
+         * contiguous history, for every user tested.
+         */
         fun push(s: CycleSnapshot) {
             snapshots.add(s)
+            val oldest = s.ts - STALE_AFTER_MS
+            snapshots.removeAll { it.ts < oldest }
             while (snapshots.size > LOOKBACK) snapshots.removeAt(0)
         }
-        /** Get the snapshot `lag` cycles ago (0 = most recent). Returns null if buffer too short. */
+
+        /**
+         * Get the snapshot `lag` cycles ago (0 = most recent). Null when the buffer is too short,
+         * which the caller renders as a fall back to the current cycle.
+         */
         fun lagged(lag: Int): CycleSnapshot? {
             val idx = snapshots.size - 1 - lag
             return if (idx in 0..snapshots.lastIndex) snapshots[idx] else null
