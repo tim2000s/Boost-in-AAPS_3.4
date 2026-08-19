@@ -47,6 +47,10 @@ EVENT_TYPES_KEPT = {
     "Sensor Change", "Sensor Start",   # CGM discontinuities and warm-up artefacts
     "Pump Battery Change",
     "Profile Switch", "Temporary Target",
+    # The basal stream. These carry a rate and a duration rather than an insulin amount, so
+    # without them the table holds boluses only and any total-daily-dose work is reconstructing
+    # half its subject from the rate the engine suggested rather than reading what was set.
+    "Temp Basal", "Temporary Basal", "Suspend Pump", "Resume Pump",
 }
 MAX_RETRY = 4
 COUNT = 50000
@@ -59,6 +63,8 @@ CREATE TABLE IF NOT EXISTS {TABLE} (
     event_type text,
     bolus_type text,                -- AAPS BS.Type verbatim: SMB | NORMAL | ...
     insulin    double precision,
+    rate       double precision,
+    duration   double precision,
     carbs      double precision,
     is_smb     boolean,
     PRIMARY KEY (user_id, ns_id)
@@ -103,12 +109,19 @@ def parse(rec, uid):
         t = t.replace(tzinfo=dt.UTC)
     ins = rec.get("insulin")
     carbs = rec.get("carbs")
+    # A temp basal is uploaded as a rate in units per hour with a duration in minutes; some
+    # uploaders send the absolute rate under a different key, and a suspend arrives as a zero
+    # rate. Both are needed to integrate delivery over the interval.
+    rate = rec.get("rate")
+    if rate in (None, "") and rec.get("absolute") not in (None, ""):
+        rate = rec.get("absolute")
+    dur = rec.get("duration")
     # Keep zero-insulin EVENT records too. Site/cartridge/sensor changes carry neither insulin nor
     # carbs, but they are required covariates for anything touching insulin kinetics: subcutaneous
     # absorption differs markedly between a fresh cannula and a three-day-old one, so an analysis
     # that ignores site age confounds it with whatever else changed at the same moment. Cartridge
     # changes matter equally when the insulin itself is altered (concentration, dilution, brand).
-    if ins in (None, "") and carbs in (None, ""):
+    if ins in (None, "") and carbs in (None, "") and rate in (None, ""):
         if str(rec.get("eventType") or "") not in EVENT_TYPES_KEPT:
             return None
     btype = rec.get("type")
@@ -117,6 +130,8 @@ def parse(rec, uid):
             rec.get("eventType"), btype,
             float(ins) if ins not in (None, "") else None,
             float(carbs) if carbs not in (None, "") else None,
+            float(rate) if rate not in (None, "") else None,
+            float(dur) if dur not in (None, "") else None,
             is_smb)
 
 
@@ -135,7 +150,7 @@ def pull(uid, base, token, since, until=None):
             with conn, conn.cursor() as cur:
                 execute_values(cur, f"""
                     INSERT INTO {TABLE}
-                      (user_id, ns_id, ts_utc, event_type, bolus_type, insulin, carbs, is_smb)
+                      (user_id, ns_id, ts_utc, event_type, bolus_type, insulin, carbs, rate, duration, is_smb)
                     VALUES %s ON CONFLICT (user_id, ns_id) DO NOTHING""", rows)
         rows_total += len(rows)
         print(f"    [{uid}] {cursor:%Y-%m-%d} +{len(rows)} (total {rows_total})", flush=True)
