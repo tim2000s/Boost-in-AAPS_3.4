@@ -24,7 +24,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REG = os.path.expanduser("~/.config/boost_backtest/sites.json")
-COHORT = ("tim", "A", "B", "C", "D", "E", "F", "G", "H", "I")
+COHORT = ("tim", "A", "B", "C", "D", "E", "F", "G", "H", "I",
+          "CAD_B", "CAD_C", "CAD_D")   # the cadence arms are separate instances
 # The registry tags the first participant's own site "self" while every table keys them by
 # name, so a filter on the cohort names silently skips them. Map it rather than leave a
 # participant out of a cohort backfill without saying so.
