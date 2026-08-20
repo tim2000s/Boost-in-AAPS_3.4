@@ -59,8 +59,34 @@ TRIO_TAG_RE = re.compile(
 
 TWIN_RE = re.compile(r"twin=([-\d.,]+)")
 PLATEAU_RE = re.compile(r"plateau=([^;]+);")
+# 2026-08-03 auto-config breadcrumbs, both replayed EVERY cycle so the DB always carries the
+# CURRENT state rather than the single cycle on which the derivation ran.
+#   autocfg=  onboarding derivation outcome
+#   autordv=  last periodic re-derivation: @ISO,win=28d,ev=N,ch=M[,<knob>:<value>][,held-…][,retired-…]
+AUTOCFG_RE = re.compile(r"autocfg=([^;]+);")
+AUTORDV_RE = re.compile(r"autordv=([^;]+);")
+# 2026-08-03 post-rescue tight-ramp TRIAL: "prTrial=<enrolled 0|1>,<control|tight>,<cap>;"
+# emitted every cycle (not only when the guard fired), so exposure is countable on days the
+# guard never engaged. Pre-reg: backtesting/protocols/2026-08_postrescue_tight_ramp_PREREG.md
+PRTRIAL_RE = re.compile(r"prTrial=([^;]+);")
+# 2026-07-20 acceleration early-meal-detection SHADOW, READ-ONLY: delivers nothing.
+# "accelMeal=<trig 0|1>,<accel>,<shortAvgDelta>,<longAvgDelta>,<bg>,<state>;" emitted every
+# cycle, so the on-device lead and the false-alarm rate are both countable. The cohort-path
+# extractor has parsed this since it shipped; this one did not, which is why the columns
+# are empty for the arms even though every site emits the tag.
+ACCELMEAL_RE = re.compile(r"accelMeal=([^;]+);")
 ANTBACKOUT_RE = re.compile(r"antBackout=([^;]+);")
 ANTICIP_RE = re.compile(r"anticip=([^;]+);")
+
+
+def _accelmeal(reason: str, i: int, cast=float):
+    m = ACCELMEAL_RE.search(reason or "")
+    if not m:
+        return None
+    try:
+        return cast(m.group(1).split(",")[i])
+    except (IndexError, ValueError, TypeError):
+        return None
 
 
 def _anticip(reason: str, i: int, cast=float):
@@ -114,6 +140,56 @@ def _plat(reason: str, i: int, cast=float):
         return cast(parts[i])
     except (ValueError, TypeError):
         return None
+
+
+def _prtrial(reason: str, i: int, cast=float):
+    """Post-rescue tight-ramp trial tag: enrolled(0/1), arm(control|tight), cap(U)."""
+    m = PRTRIAL_RE.search(reason or "")
+    if not m:
+        return None
+    parts = m.group(1).split(",")
+    if i >= len(parts):
+        return None
+    try:
+        return cast(parts[i])
+    except (ValueError, TypeError):
+        return None
+
+
+def _autordv(reason: str, field: str):
+    """Pull one field out of the periodic re-derivation breadcrumb.
+
+    field: 'raw' | 'at' | 'window_d' | 'evaluated' | 'changed' | 'changes'
+    'changes' returns the comma-joined knob:value list, i.e. what actually moved.
+    """
+    m = AUTORDV_RE.search(reason or "")
+    if not m:
+        return None
+    raw = m.group(1)
+    if field == "raw":
+        return raw
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    try:
+        if field == "at":
+            return parts[0].lstrip("@") if parts and parts[0].startswith("@") else None
+        if field == "window_d":
+            v = next((p for p in parts if p.startswith("win=")), None)
+            return int(v[4:].rstrip("d")) if v else None
+        if field == "evaluated":
+            v = next((p for p in parts if p.startswith("ev=")), None)
+            return int(v[3:]) if v else None
+        if field == "changed":
+            v = next((p for p in parts if p.startswith("ch=")), None)
+            return int(v[3:]) if v else None
+        if field == "changes":
+            # the leading @ISO timestamp also contains colons — exclude it and the
+            # held-/retired- markers, leaving only knob:value pairs that actually moved
+            ch = [p for p in parts
+                  if ":" in p and not p.startswith(("@", "held-", "retired-", "win=", "ev=", "ch="))]
+            return ",".join(ch) or None
+    except (ValueError, IndexError):
+        return None
+    return None
 
 
 def _twin(reason: str, i: int) -> Optional[float]:
@@ -460,6 +536,16 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
         "tdd": sug.get("tdd"),
         "tdd_ratio": sug.get("tddRatio"),
         "delta_acceleration": sug.get("deltaAcceleration"),
+        # Volume-weighted dose shadow: the blend it proposes and the working behind it. Read-only
+        # telemetry, so a within-person trial has the paired estimates from the first cycle.
+        "vwa_blend": sug.get("boostVwa_blend"),
+        "vwa_projection": sug.get("boostVwa_projection"),
+        "vwa_expected": sug.get("boostVwa_expected"),
+        "vwa_delivered": sug.get("boostVwa_delivered"),
+        "vwa_day_fraction": sug.get("boostVwa_dayFraction"),
+        "vwa_calibrated_tdd": sug.get("boostVwa_calibratedTdd"),
+        "vwa_curve_days": sug.get("boostVwa_curveDays"),
+        "vwa_used_prev_day": sug.get("boostVwa_usedPrevDay"),
         "sens_normal_target": sug.get("sensNormalTarget"),
         "variable_sens": sug.get("variable_sens"),
         "dynamic_isf": sug.get("dynamicISF"),
@@ -539,6 +625,21 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
         "boostv5_plateau_trend": _plat(reason, 3),
         "boostv5_plateau_iob": _plat(reason, 4),
         "boostv5_plateau_floor": _plat(reason, 6, str),
+        "autocfg_summary": (lambda m: m.group(1) if m else None)(AUTOCFG_RE.search(reason or "")),
+        "autordv_at": _autordv(reason, "at"),
+        "autordv_window_d": _autordv(reason, "window_d"),
+        "autordv_evaluated": _autordv(reason, "evaluated"),
+        "autordv_changed": _autordv(reason, "changed"),
+        "autordv_changes": _autordv(reason, "changes"),
+        "prtrial_enrolled": _prtrial(reason, 0, int),
+        "prtrial_arm": _prtrial(reason, 1, str),
+        "prtrial_cap": _prtrial(reason, 2),
+        "accelmeal_trig": _accelmeal(reason, 0, int),
+        "accelmeal_accel": _accelmeal(reason, 1),
+        "accelmeal_shortavgdelta": _accelmeal(reason, 2),
+        "accelmeal_longavgdelta": _accelmeal(reason, 3),
+        "accelmeal_bg": _accelmeal(reason, 4, int),
+        "accelmeal_state": _accelmeal(reason, 5, str),
         # 2026-07-20 anticipatory back-out controller SHADOW (read-only; BACKOUT_CONTROLLER_SPEC.md).
         "antbackout_state": _antb(reason, 0, str),
         "antbackout_ra0": _antb(reason, 1), "antbackout_ranow": _antb(reason, 2),
@@ -770,6 +871,21 @@ ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boostv5_plateau_bg         double p
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boostv5_plateau_trend      double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boostv5_plateau_iob        double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boostv5_plateau_floor      text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS autocfg_summary            text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS autordv_at                 text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS autordv_window_d           integer;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS autordv_evaluated          integer;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS autordv_changed            integer;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS autordv_changes            text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS prtrial_enrolled           integer;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS prtrial_arm                text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS prtrial_cap                double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_trig             integer;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_accel            double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_shortavgdelta    double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_longavgdelta     double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_bg               double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_state            text;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS antbackout_state           text;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS antbackout_ra0             double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS antbackout_ranow           double precision;
