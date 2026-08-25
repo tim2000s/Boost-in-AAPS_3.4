@@ -77,6 +77,7 @@ PRTRIAL_RE = re.compile(r"prTrial=([^;]+);")
 ACCELMEAL_RE = re.compile(r"accelMeal=([^;]+);")
 ANTBACKOUT_RE = re.compile(r"antBackout=([^;]+);")
 ANTICIP_RE = re.compile(r"anticip=([^;]+);")
+CONSEQ_RE = re.compile(r"conseq=([^;]+);")
 
 
 def _accelmeal(reason: str, i: int, cast=float):
@@ -86,6 +87,26 @@ def _accelmeal(reason: str, i: int, cast=float):
     try:
         return cast(m.group(1).split(",")[i])
     except (IndexError, ValueError, TypeError):
+        return None
+
+
+def _conseq(reason: str, i: int, cast=float):
+    """Consequence-prior SHADOW tag (2026-08-26), READ-ONLY: doses nothing.
+    "conseq=pHigh,pRise,onsetBg,minsSinceOnset,riseSoFar;"
+    pHigh is P(glucose exceeds 180 within 2 h) and pRise is P(peak rise >= 60), both from glucose at
+    the rise onset and the local hour. onsetBg is the anchor the engine used, which is the last
+    non-rising sample and NOT the current glucose; keeping it lets the probability be recomputed
+    offline from the record alone.
+    """
+    m = CONSEQ_RE.search(reason or "")
+    if not m:
+        return None
+    parts = m.group(1).split(",")
+    if i >= len(parts):
+        return None
+    try:
+        return cast(parts[i])
+    except (TypeError, ValueError):
         return None
 
 
@@ -648,6 +669,10 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
         "antbackout_trip": _antb(reason, 7, int), "antbackout_meallikely": _antb(reason, 8),
         "antbackout_armsrc": _antb(reason, 9, str),
         # 2026-07-27 per-user ANTICIPATION SHADOW (read-only; ANTICIPATION_ARCHITECTURE_SPEC.md).
+        # 2026-08-26 consequence-prior SHADOW (read-only).
+        "conseq_p_high": _conseq(reason, 0), "conseq_p_rise": _conseq(reason, 1),
+        "conseq_onset_bg": _conseq(reason, 2, int), "conseq_mins": _conseq(reason, 3, int),
+        "conseq_rise": _conseq(reason, 4, int),
         "anticip_p_ex": _anticip(reason, 0), "anticip_p_meal": _anticip(reason, 1),
         "anticip_src_ex": _anticip(reason, 2, str), "anticip_src_meal": _anticip(reason, 3, str),
         "anticip_ex_arm": _anticip(reason, 4, int), "anticip_ex_conf": _anticip(reason, 5, int),
@@ -865,6 +890,11 @@ ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_gi            double prec
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_insu          double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_lo30          double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_floorbreach   double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_p_high              double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_p_rise              double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_onset_bg            double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_mins                double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_rise                double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boostv5_plateau_trig       double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boostv5_plateau_wouldnudge double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boostv5_plateau_bg         double precision;
