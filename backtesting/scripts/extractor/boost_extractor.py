@@ -78,6 +78,7 @@ ACCELMEAL_RE = re.compile(r"accelMeal=([^;]+);")
 ANTBACKOUT_RE = re.compile(r"antBackout=([^;]+);")
 ANTICIP_RE = re.compile(r"anticip=([^;]+);")
 CONSEQ_RE = re.compile(r"conseq=([^;]+);")
+TRANCHE_RE = re.compile(r"tranche=([^;]+);")
 
 
 def _accelmeal(reason: str, i: int, cast=float):
@@ -87,6 +88,25 @@ def _accelmeal(reason: str, i: int, cast=float):
     try:
         return cast(m.group(1).split(",")[i])
     except (IndexError, ValueError, TypeError):
+        return None
+
+
+def _tranche(reason: str, i: int, cast=float):
+    """Confirm-tranche tag (2026-08-27). LIVE when the toggle is on; doses less, never more.
+    "tranche=sizedU,deliveredU,heldU,releaseProb,state;"
+    sizedU is what the engine would have given without the tranche and deliveredU is what it gave,
+    so the difference is the withheld amount and the two together price the change without needing
+    a counterfactual. releaseProb is "-" on a confirming cycle, where nothing is being released yet.
+    """
+    m = TRANCHE_RE.search(reason or "")
+    if not m:
+        return None
+    parts = m.group(1).split(",")
+    if i >= len(parts):
+        return None
+    try:
+        return cast(parts[i])
+    except (TypeError, ValueError):
         return None
 
 
@@ -669,6 +689,10 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
         "antbackout_trip": _antb(reason, 7, int), "antbackout_meallikely": _antb(reason, 8),
         "antbackout_armsrc": _antb(reason, 9, str),
         # 2026-07-27 per-user ANTICIPATION SHADOW (read-only; ANTICIPATION_ARCHITECTURE_SPEC.md).
+        # 2026-08-27 confirm tranche (LIVE when enabled).
+        "tranche_sized_u": _tranche(reason, 0), "tranche_delivered_u": _tranche(reason, 1),
+        "tranche_held_u": _tranche(reason, 2), "tranche_release_p": _tranche(reason, 3),
+        "tranche_state": _tranche(reason, 4, str),
         # 2026-08-26 consequence-prior SHADOW (read-only).
         "conseq_p_high": _conseq(reason, 0), "conseq_p_rise": _conseq(reason, 1),
         "conseq_onset_bg": _conseq(reason, 2, int), "conseq_mins": _conseq(reason, 3, int),
@@ -890,6 +914,11 @@ ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_gi            double prec
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_insu          double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_lo30          double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_floorbreach   double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_sized_u            double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_delivered_u        double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_held_u             double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_release_p          double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_state              text;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_p_high              double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_p_rise              double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_onset_bg            double precision;

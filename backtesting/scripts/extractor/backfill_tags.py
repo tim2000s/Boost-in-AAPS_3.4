@@ -18,7 +18,7 @@ import sys
 import psycopg2
 import psycopg2.extras
 
-from boost_extractor import _accelmeal, _antb, _anticip, _conseq, _plat, _prtrial
+from boost_extractor import _accelmeal, _antb, _anticip, _conseq, _plat, _prtrial, _tranche
 
 TABLE = "public.boost_decisions"
 
@@ -51,6 +51,11 @@ GROUPS = {
         ("boostv5_plateau_bg", _plat, 2, float), ("boostv5_plateau_trend", _plat, 3, float),
         ("boostv5_plateau_iob", _plat, 4, float), ("boostv5_plateau_floor", _plat, 6, str),
     ],
+    "tranche=": [
+        ("tranche_sized_u", _tranche, 0, float), ("tranche_delivered_u", _tranche, 1, float),
+        ("tranche_held_u", _tranche, 2, float), ("tranche_release_p", _tranche, 3, float),
+        ("tranche_state", _tranche, 4, str),
+    ],
     "conseq=": [
         ("conseq_p_high", _conseq, 0, float), ("conseq_p_rise", _conseq, 1, float),
         ("conseq_onset_bg", _conseq, 2, int), ("conseq_mins", _conseq, 3, int),
@@ -64,7 +69,7 @@ GROUPS = {
 # the column whose nullness marks a row as unparsed for that tag
 SENTINEL = {"accelMeal=": "accelmeal_trig", "antBackout=": "antbackout_state",
             "anticip=": "anticip_p_meal", "plateau=": "boostv5_plateau_trig",
-            "prTrial=": "prtrial_arm", "conseq=": "conseq_p_high"}
+            "prTrial=": "prtrial_arm", "conseq=": "conseq_p_high", "tranche=": "tranche_sized_u"}
 
 
 def main():
