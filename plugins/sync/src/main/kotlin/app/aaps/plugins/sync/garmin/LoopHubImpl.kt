@@ -206,11 +206,18 @@ class LoopHubImpl @Inject constructor(
         device: String?
     ) {
         if (timestampMs <= 0L) return
+        // A trailing-window count has a physical ceiling; above about 200 steps a minute it is a
+        // cumulative counter rather than a window. A Venu 3 sent 1919 in all six windows at once on
+        // 2026-08-27, which the activity classifier reads as six times a brisk walk and treats as
+        // continuous exercise. See GarminStepWindows.
+        val w = GarminStepWindows.sanitise(
+            steps5min, steps10min, steps15min, steps30min, steps60min, steps180min
+        )
         val sc = SC(
             duration = 300_000L,          // 5-min snapshot (mirrors the wear cadence)
             timestamp = timestampMs,
-            steps5min = steps5min, steps10min = steps10min, steps15min = steps15min,
-            steps30min = steps30min, steps60min = steps60min, steps180min = steps180min,
+            steps5min = w.s5, steps10min = w.s10, steps15min = w.s15,
+            steps30min = w.s30, steps60min = w.s60, steps180min = w.s180,
             device = device ?: "Garmin",
             dateCreated = clock.millis(),
         )
