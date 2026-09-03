@@ -14,7 +14,9 @@ import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import android.content.Context
 import org.mockito.Mock
+import org.mockito.Mockito.mock
 import org.mockito.kotlin.whenever
 import javax.inject.Provider
 
@@ -58,7 +60,9 @@ class CalibrationBlockTest : TestBaseWithProfile() {
             processedTbrEbData, persistenceLayer,
             GlucoseStatusCalculatorSMB(aapsLogger, iobCobCalculator, dateUtil, decimalFormatter, deltaCalculator),
             bgQualityCheck, uiInteraction, tddCalculator, determineBasalBoost,
-            boostRiskModel, boostMealModel, boostIsfShadow, profiler, apsResultProvider,
+            boostRiskModel, boostMealModel, boostIsfShadow,
+            FallConsequenceShadow(mock(Context::class.java), aapsLogger),
+            profiler, apsResultProvider,
             boostV5Plugin, healthConnectHrIngest, healthConnectStepsIngest
         )
         // Activate the RxBus subscription

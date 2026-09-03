@@ -159,6 +159,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
     // in parallel with V1's instantaneous ratio. Singleton with SharedPreferences-backed
     // EMA state, so the ratio survives plugin restarts.
     private val boostIsfShadow: BoostIsfShadow,
+    private val fallConsequenceShadow: FallConsequenceShadow,
     private val profiler: Profiler,
     private val apsResultProvider: Provider<APSResult>,
     // V5 silent shadow — V1 hands the cycle's RT + inputs to V5 after determine_basal
@@ -1750,6 +1751,41 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 consequenceShadow.runCycle(now, glucoseStatus.glucose)
                     ?.let { p -> it.reason.append("conseq=$p; ") }
             }.onFailure { t -> aapsLogger.error(LTag.APS, "Consequence-prior shadow failed (swallowed — dosing untouched)", t) }
+            // Fall-consequence SHADOW (2026-09-03). Twenty minutes into a fall, is this one
+            // reaching 70 mg/dL within two hours? Offline it reaches AUC 0.780 on the sixteen Boost
+            // participants, none of whom contributed a training row, against 0.746 for glucose at
+            // onset plus the clock, and it is better for all sixteen. Restricted to onsets still
+            // above 70 at the moment of scoring, which is where a controller could still act, it is
+            // 0.760 against 0.723.
+            //
+            // The onset rule here is STRICTER than the one that built the training anchors: those
+            // allowed the 25 mg/dL drop to arrive within thirty minutes, which is only knowable
+            // thirty minutes late. This wants it within twenty, so every onset found here would
+            // also have been an anchor offline while some anchors will be missed. Measuring that
+            // shortfall is the shadow's first job, which is why the tag carries the onset age and
+            // the fall size rather than the score alone.
+            //
+            // Rides in [reason] rather than on RT: one more field on that class costs one register
+            // in every determine_basal and the V3MLG3 one has none left. Delivers NOTHING.
+            runCatching {
+                val since = now - 70 * 60 * 1000L
+                val rows = persistenceLayer.getBgReadingsDataFromTimeToTime(since, now, true)
+                if (rows.size >= 4) {
+                    val times = LongArray(rows.size) { rows[it].timestamp }
+                    val values = DoubleArray(rows.size) { rows[it].value }
+                    fallConsequenceShadow.evaluate(times, values) { tsMs ->
+                        val z = java.time.ZonedDateTime.ofInstant(
+                            java.time.Instant.ofEpochMilli(tsMs), java.time.ZoneId.systemDefault())
+                        z.hour + z.minute / 60.0 + z.second / 3600.0
+                    }?.let { r ->
+                        it.reason.append(
+                            "fallcon=${Round.roundTo(r.score, 0.001)},${r.onsetAgeMin}," +
+                                "${Round.roundTo(r.onsetBg, 0.1)},${Round.roundTo(r.fall, 0.1)}," +
+                                "${if (r.stillFalling) 1 else 0}; "
+                        )
+                    }
+                }
+            }.onFailure { t -> aapsLogger.error(LTag.APS, "Fall-consequence shadow failed (swallowed — dosing untouched)", t) }
             // Sleep gate (2026-06-14): do NOT let V5 drive the SMB while SLEEPING — fall back to V1's
             // (oref1/Boost) SMB, which already respects night mode. V5 still computes its shadow
             // telemetry above (runShadow ran), so the V5-vs-V1 comparison continues overnight; only

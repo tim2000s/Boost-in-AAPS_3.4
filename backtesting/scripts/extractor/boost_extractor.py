@@ -59,6 +59,7 @@ TRIO_TAG_RE = re.compile(
 
 TWIN_RE = re.compile(r"twin=([-\d.,]+)")
 HYPOSHADOW_RE = re.compile(r"hyposhadow=([-\d.]+)")
+FALLCON_RE = re.compile(r"fallcon=([-\d.,]+)")
 PLATEAU_RE = re.compile(r"plateau=([^;]+);")
 # 2026-08-03 auto-config breadcrumbs, both replayed EVERY cycle so the DB always carries the
 # CURRENT state rather than the single cycle on which the derivation ran.
@@ -175,6 +176,24 @@ def _autordv(reason: str, field: str):
     except (ValueError, IndexError):
         return None
     return None
+
+
+def _fallcon(reason: str, i: int, cast=float):
+    """Fall-consequence shadow, "fallcon=score,ageMin,onsetBg,fall,stillFalling;".
+
+    Absent on most cycles by design: the anchor is a fall onset, which happens a few times a day,
+    not every five minutes. A null means no qualifying onset, never a score of zero.
+    """
+    m = FALLCON_RE.search(reason or "")
+    if not m:
+        return None
+    parts = m.group(1).split(",")
+    if i >= len(parts):
+        return None
+    try:
+        return cast(parts[i])
+    except ValueError:
+        return None
 
 
 def _hyposhadow(reason: str) -> Optional[float]:
@@ -655,6 +674,14 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
         # Read from a [reason] tag, not an RT field: RT cannot take another field without
         # tripping the ART method verifier in the legacy V3MLG3 engine (see RT.kt).
         "ml_hypo_risk_shadow": _hyposhadow(reason),
+        # Fall-consequence shadow (2026-09-03). P(reaching 70 mg/dL within 2 h of a fall onset),
+        # calibrated to a 0.221 base rate. NOT comparable to ml_hypo_risk: different question,
+        # different horizon, and no threshold transfers between them.
+        "fallcon_score": _fallcon(reason, 0),
+        "fallcon_onset_age_min": _fallcon(reason, 1, int),
+        "fallcon_onset_bg": _fallcon(reason, 2),
+        "fallcon_fall_mgdl": _fallcon(reason, 3),
+        "fallcon_still_falling": _fallcon(reason, 4, int),
         "ml_meal_likely": sug.get("mlMealLikely"),
         # 2026-07-07 sensing hardening: which step feeds were live this cycle
         # ("phone+wear"|"phone"|"wear"|"none" — "none" = INACTIVE + sleep-in suppressed), and the
@@ -770,6 +797,11 @@ CREATE TABLE IF NOT EXISTS {TABLE} (
     boostv5_gatereduction text,
     ml_hypo_risk          double precision,
     ml_hypo_risk_shadow   double precision,
+    fallcon_score         double precision,
+    fallcon_onset_age_min integer,
+    fallcon_onset_bg      double precision,
+    fallcon_fall_mgdl     double precision,
+    fallcon_still_falling integer,
     ml_meal_likely        double precision,
     v1_units              double precision,
     iob_iob              double precision,
