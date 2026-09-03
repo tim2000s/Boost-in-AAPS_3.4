@@ -326,6 +326,25 @@ def parse_hr_features(console_error: str) -> dict:
     return out
 
 
+def parse_glucose_status(console_error: str) -> dict:
+    """The engine's own delta windows, which it prints into the glucose block:
+    'BG: 91.8 mg/dl | Delta: 2.2 | Short avg: 1.5 | Long avg: -1.0'
+
+    These are the values the dosing engine actually used. Reconstructing them from the reading
+    series is measurably worse, so any replay wants them read rather than derived.
+    """
+    out = {"gs_delta": None, "gs_short_avg_delta": None, "gs_long_avg_delta": None}
+    if not console_error:
+        return out
+    m = re.search(r"Delta:\s*(-?[\d.]+)\s*\|\s*Short avg:\s*(-?[\d.]+)\s*\|\s*"
+                  r"Long avg:\s*(-?[\d.]+)", console_error)
+    if m:
+        out["gs_delta"] = float(m.group(1))
+        out["gs_short_avg_delta"] = float(m.group(2))
+        out["gs_long_avg_delta"] = float(m.group(3))
+    return out
+
+
 def parse_steps(console_error: str) -> dict:
     out = {"steps_5m": None, "steps_15m": None, "steps_30m": None, "steps_60m": None}
     if not console_error:
@@ -746,6 +765,7 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
     row["boost_active_console"] = parse_boost_active(ce)
     row["boost_tier"] = parse_boost_tier(ce, sug.get("boostTier"))
     row.update(parse_steps(ce))
+    row.update(parse_glucose_status(ce))
     row.update(parse_hr_features(ce))
     row.update(parse_isf_blend(ce))
     row.update(parse_reason(reason))
@@ -777,6 +797,9 @@ CREATE TABLE IF NOT EXISTS {TABLE} (
     tdd                  double precision,
     tdd_ratio            double precision,
     delta_acceleration   double precision,
+    gs_delta             double precision,
+    gs_short_avg_delta   double precision,
+    gs_long_avg_delta    double precision,
     sens_normal_target   double precision,
     variable_sens        double precision,
     dynamic_isf          double precision,
