@@ -1,0 +1,26 @@
+
+=== 4h horizon: 542,492 rows, 183 participants, base rate 0.203 ===
+  fold 0 done
+  fold 1 done
+  fold 2 done
+  fold 3 done
+  fold 4 done
+  AUC  raw 0.7450  circ 0.7452  both 0.7456  none 0.7435
+   circ vs raw   +0.0002 (-0.0006 to +0.0011)  UNPROVEN   better on 107/183
+   both vs raw   +0.0006 (-0.0006 to +0.0024)  UNPROVEN   better on 102/183
+    raw vs none  +0.0015 (+0.0003 to +0.0029)  distinguishable   better on 104/183
+   circ vs none  +0.0017 (+0.0003 to +0.0033)  distinguishable   better on 106/183
+
+=== 1h horizon: 561,715 rows, 183 participants, base rate 0.081 ===
+  fold 0 done
+  fold 1 done
+  fold 2 done
+  fold 3 done
+  fold 4 done
+  AUC  raw 0.9115  circ 0.9113  both 0.9111  none 0.9113
+   circ vs raw   -0.0002 (-0.0004 to +0.0001)  UNPROVEN   better on 81/183
+   both vs raw   -0.0004 (-0.0006 to -0.0001)  distinguishable   better on 81/183
+    raw vs none  +0.0002 (-0.0001 to +0.0006)  UNPROVEN   better on 90/183
+   circ vs none  +0.0001 (-0.0002 to +0.0004)  UNPROVEN   better on 80/183
+
+wrote /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-09-ml-features/out/c5_clock_encoding.json

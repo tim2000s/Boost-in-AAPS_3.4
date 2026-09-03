@@ -1,0 +1,196 @@
+{
+  "horizon_min": 20,
+  "features": [
+    "h20_fall",
+    "h20_fall_rate",
+    "h20_nadir",
+    "h20_auc",
+    "h20_dec_max",
+    "h20_dec_last",
+    "h20_dec_mean",
+    "h20_accel",
+    "h20_curv",
+    "h20_pre_slope",
+    "h20_still_falling",
+    "base",
+    "tod_sin",
+    "tod_cos"
+  ],
+  "n_commons": 147709,
+  "n_commons_participants": 183,
+  "n_boost": 15961,
+  "n_boost_participants": 16,
+  "y_low": {
+    "within_auc_shape": 0.8205109195196295,
+    "within_auc_baseline": 0.794331624544756,
+    "within_gain": [
+      0.02617980326277325,
+      0.022093809960489222,
+      0.030213303059391076,
+      157,
+      183
+    ],
+    "external_auc_shape": 0.7802260770014577,
+    "external_auc_baseline": 0.7461184809944583,
+    "external_gain": [
+      0.0341084965044004,
+      0.02411101235772702,
+      0.04695309303086631,
+      16,
+      16
+    ],
+    "per_participant_external": [
+      0.8057330765146553,
+      0.7739851428259794,
+      0.7757180302269812,
+      0.7766561024111359,
+      0.7826569037656904,
+      0.7305269571033869,
+      0.7342679903031644,
+      0.7676520557254503,
+      0.7666666666666667,
+      0.7911990950226244,
+      0.7999544148097784,
+      0.7179203539823009,
+      0.7370645426094095,
+      0.7663043478260869,
+      0.7034013605442176,
+      0.7333187081334099
+    ],
+    "operating_points": [
+      {
+        "label": "y_low",
+        "fires_pct": 1.0,
+        "threshold": 0.9972,
+        "precision": 1.0,
+        "recall": 0.034,
+        "lift": 3.35
+      },
+      {
+        "label": "y_low",
+        "fires_pct": 5.0,
+        "threshold": 0.8615,
+        "precision": 0.992,
+        "recall": 0.167,
+        "lift": 3.33
+      },
+      {
+        "label": "y_low",
+        "fires_pct": 10.0,
+        "threshold": 0.5811,
+        "precision": 0.871,
+        "recall": 0.292,
+        "lift": 2.92
+      },
+      {
+        "label": "y_low",
+        "fires_pct": 20.0,
+        "threshold": 0.3963,
+        "precision": 0.691,
+        "recall": 0.464,
+        "lift": 2.32
+      },
+      {
+        "label": "y_low",
+        "fires_pct": 30.0,
+        "threshold": 0.2919,
+        "precision": 0.586,
+        "recall": 0.589,
+        "lift": 1.96
+      },
+      {
+        "label": "y_low",
+        "fires_pct": 50.0,
+        "threshold": 0.1851,
+        "precision": 0.458,
+        "recall": 0.769,
+        "lift": 1.54
+      }
+    ]
+  },
+  "y_severe": {
+    "within_auc_shape": 0.8151764817969734,
+    "within_auc_baseline": 0.7755310962763505,
+    "within_gain": [
+      0.03964591073976187,
+      0.03341077591405548,
+      0.0465055052619717,
+      138,
+      183
+    ],
+    "external_auc_shape": 0.7796218539247427,
+    "external_auc_baseline": 0.7251958796754943,
+    "external_gain": [
+      0.05442739983454703,
+      0.038668205387329235,
+      0.0810543092089033,
+      16,
+      16
+    ],
+    "per_participant_external": [
+      0.803860535039704,
+      0.7884515289525049,
+      0.8055483142161974,
+      0.7253870702509859,
+      0.72546,
+      0.7350914391730718,
+      0.8185425685425686,
+      0.8342348433626324,
+      0.7809759231327859,
+      0.6805590062111802,
+      0.8077586719819123,
+      0.7454954954954955,
+      0.7386382985551768
+    ],
+    "operating_points": [
+      {
+        "label": "y_severe",
+        "fires_pct": 1.0,
+        "threshold": 0.7975,
+        "precision": 0.988,
+        "recall": 0.096,
+        "lift": 9.6
+      },
+      {
+        "label": "y_severe",
+        "fires_pct": 5.0,
+        "threshold": 0.2856,
+        "precision": 0.567,
+        "recall": 0.276,
+        "lift": 5.51
+      },
+      {
+        "label": "y_severe",
+        "fires_pct": 10.0,
+        "threshold": 0.1815,
+        "precision": 0.41,
+        "recall": 0.399,
+        "lift": 3.98
+      },
+      {
+        "label": "y_severe",
+        "fires_pct": 20.0,
+        "threshold": 0.1141,
+        "precision": 0.284,
+        "recall": 0.553,
+        "lift": 2.76
+      },
+      {
+        "label": "y_severe",
+        "fires_pct": 30.0,
+        "threshold": 0.0801,
+        "precision": 0.23,
+        "recall": 0.672,
+        "lift": 2.24
+      },
+      {
+        "label": "y_severe",
+        "fires_pct": 50.0,
+        "threshold": 0.0467,
+        "precision": 0.169,
+        "recall": 0.823,
+        "lift": 1.65
+      }
+    ]
+  }
+}
