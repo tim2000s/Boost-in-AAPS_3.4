@@ -780,6 +780,43 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
 # Database
 # ───────────────────────────────────────────────────────────────────────────
 
+def migrate_columns(cur, table, ddl):
+    """Add any column the DDL declares for `table` that the live table lacks.
+
+    CREATE TABLE IF NOT EXISTS does nothing to a table that already exists, so a column added to
+    the DDL never reaches a database built before it. The failure is silent where it matters: the
+    refresh runner reports FAILED in a truncated cell and the only visible symptom is that no new
+    rows arrive. That happened on 2026-09-03, when five fallcon_ columns were declared and the live
+    table was not altered, and every refresh failed for a day before anyone looked.
+
+    The DDL string defines more than one table, so the block for this one is isolated first. An
+    earlier version of this function did not, and added boost_cgm's `direction` column to
+    boost_decisions.
+    """
+    m = re.search(rf"CREATE TABLE IF NOT EXISTS {table}\s*\((.*?)\n\);", ddl, re.S | re.I)
+    if not m:
+        return
+    declared = []
+    for line in m.group(1).splitlines():
+        line = line.strip().rstrip(",")
+        if not line or line.upper().startswith(("PRIMARY", "UNIQUE", "CONSTRAINT", "FOREIGN")):
+            continue
+        parts = line.split(None, 1)
+        if len(parts) == 2 and re.fullmatch(r"[a-z_][a-z0-9_]*", parts[0]):
+            declared.append((parts[0], parts[1]))
+
+    cur.execute("select column_name from information_schema.columns where table_name = %s", (table,))
+    have = {r[0] for r in cur.fetchall()}
+    added = []
+    for name, typ in declared:
+        if name in have:
+            continue
+        cur.execute(f'alter table {table} add column if not exists "{name}" {typ}')
+        added.append(name)
+    if added:
+        print(f"[db] added {len(added)} missing column(s) to {table}: {', '.join(added)}")
+
+
 DDL = f"""
 CREATE TABLE IF NOT EXISTS {TABLE} (
     user_id              text NOT NULL,
@@ -1084,6 +1121,7 @@ def main():
     conn = psycopg2.connect(f"dbname={DB_NAME}")
     with conn.cursor() as cur:
         cur.execute(DDL)
+        migrate_columns(cur, TABLE, DDL)
     conn.commit()
 
     decision_columns = [k for k in rows[0].keys()] if rows else []
