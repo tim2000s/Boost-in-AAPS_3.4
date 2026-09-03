@@ -60,6 +60,7 @@ TRIO_TAG_RE = re.compile(
 TWIN_RE = re.compile(r"twin=([-\d.,]+)")
 HYPOSHADOW_RE = re.compile(r"hyposhadow=([-\d.]+)")
 FALLCON_RE = re.compile(r"fallcon=([-\d.,]+)")
+FALLCONSKIP_RE = re.compile(r"fallconskip=([a-z0-9]+),(\d+)")
 PLATEAU_RE = re.compile(r"plateau=([^;]+);")
 # 2026-08-03 auto-config breadcrumbs, both replayed EVERY cycle so the DB always carries the
 # CURRENT state rather than the single cycle on which the derivation ran.
@@ -701,6 +702,10 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
         "fallcon_onset_bg": _fallcon(reason, 2),
         "fallcon_fall_mgdl": _fallcon(reason, 3),
         "fallcon_still_falling": _fallcon(reason, 4, int),
+        # Why no score this cycle: nomodel, norows, rows<n>, noanchor, below70, fall<n>,
+        # shortwin, schema<n>. A silent shadow and a quiet day look identical without this.
+        "fallcon_skip": (lambda m: m.group(1) if m else None)(FALLCONSKIP_RE.search(reason or "")),
+        "fallcon_n_readings": (lambda m: int(m.group(2)) if m else None)(FALLCONSKIP_RE.search(reason or "")),
         "ml_meal_likely": sug.get("mlMealLikely"),
         # 2026-07-07 sensing hardening: which step feeds were live this cycle
         # ("phone+wear"|"phone"|"wear"|"none" — "none" = INACTIVE + sleep-in suppressed), and the
@@ -862,6 +867,8 @@ CREATE TABLE IF NOT EXISTS {TABLE} (
     fallcon_onset_bg      double precision,
     fallcon_fall_mgdl     double precision,
     fallcon_still_falling integer,
+    fallcon_skip          text,
+    fallcon_n_readings    integer,
     ml_meal_likely        double precision,
     v1_units              double precision,
     iob_iob              double precision,

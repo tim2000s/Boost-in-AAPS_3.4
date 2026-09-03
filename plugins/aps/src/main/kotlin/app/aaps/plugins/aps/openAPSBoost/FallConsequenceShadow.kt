@@ -58,6 +58,10 @@ class FallConsequenceShadow @Inject constructor(
         val stillFalling: Boolean
     )
 
+    /** Why the last call produced no score. A shadow that fails silently reads as a quiet day. */
+    @Volatile var lastSkip: String = "init"
+        private set
+
     private val assetPath = "boost/fall_consequence_v1.json"
     private val loadLock = Any()
     private var trees: List<Node>? = null
@@ -224,8 +228,9 @@ class FallConsequenceShadow @Inject constructor(
      */
     fun evaluate(times: LongArray, values: DoubleArray, localHourAtOnset: (Long) -> Double): Result? {
         ensureLoaded()
-        val t = trees ?: return null
-        if (times.size < 4) return null
+        val t = trees
+        if (t == null) { lastSkip = "nomodel"; return null }
+        if (times.size < 4) { lastSkip = "rows${times.size}"; return null }
         val now = times[times.size - 1]
 
         val target = now - SHAPE_MIN * 60_000L
@@ -235,19 +240,24 @@ class FallConsequenceShadow @Inject constructor(
             val gap = abs(times[i] - target)
             if (gap < bestGap && gap <= TOLERANCE_MIN * 60_000L) { bestGap = gap; i0 = i }
         }
-        if (i0 < 1) return null
-        if (values[i0] <= FLOOR_MGDL) return null
+        if (i0 < 1) { lastSkip = "noanchor"; return null }
+        if (values[i0] <= FLOOR_MGDL) { lastSkip = "below70"; return null }
 
         var minAfter = values[i0]
         for (i in i0 until times.size) if (values[i] < minAfter) minAfter = values[i]
-        if (values[i0] - minAfter < MIN_FALL_MGDL) return null
+        if (values[i0] - minAfter < MIN_FALL_MGDL) {
+            lastSkip = "fall${(values[i0] - minAfter).toInt()}"
+            return null
+        }
 
-        val f = features(times, values, i0, localHourAtOnset(times[i0])) ?: return null
-        if (featureCount != 0 && f.size != featureCount) return null
+        val f = features(times, values, i0, localHourAtOnset(times[i0]))
+        if (f == null) { lastSkip = "shortwin"; return null }
+        if (featureCount != 0 && f.size != featureCount) { lastSkip = "schema${f.size}"; return null }
 
         var raw = 0.0
         for (tree in t) raw += walk(tree, f)
         val score = 1.0 / (1.0 + exp(-raw))
+        lastSkip = "ok"
         return Result(
             score = score,
             onsetAgeMin = ((now - times[i0]) / 60_000L).toInt(),

@@ -1784,6 +1784,13 @@ open class OpenAPSBoostPlugin @Inject constructor(
                                 "${if (r.stillFalling) 1 else 0}; "
                         )
                     }
+                    // A shadow that never fires looks exactly like a quiet day, and did for two
+                    // days. On the cycles that produce no score, say which test rejected it.
+                    if (fallConsequenceShadow.lastSkip != "ok") {
+                        it.reason.append("fallconskip=${fallConsequenceShadow.lastSkip},${rows.size}; ")
+                    }
+                } else {
+                    it.reason.append("fallconskip=norows,${rows.size}; ")
                 }
             }.onFailure { t -> aapsLogger.error(LTag.APS, "Fall-consequence shadow failed (swallowed — dosing untouched)", t) }
             // Sleep gate (2026-06-14): do NOT let V5 drive the SMB while SLEEPING — fall back to V1's
