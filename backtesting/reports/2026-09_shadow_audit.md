@@ -21,7 +21,7 @@ with the participant as the resampling unit.
 | Anticipation | 159,197 | 11 | Discarded, lost to the hour of day |
 | Insulin sensitivity shadow | 355,482 | 13 | Scored: at chance, and worse than the engine's own ratio |
 | Anticipatory backout | 136,529 | 11 | Scored: lift 1.11x, no usable signal |
-| Plateau | 44,697 | 11 | Scored: lift 1.10x, no usable signal |
+| Plateau | 37,080 | 11 | Scored: flags highs that are already resolving, lift 0.85x |
 | Tranche | 4,785 | 1 | Too thin to score, needs the cohort |
 | Fall consequence | 0 | 0 | Faulty, diagnostic build pending |
 | Volume-weighted total daily dose | 0 | 0 | Declared but never populated |
@@ -97,14 +97,29 @@ a fall of at least 30 mg/dL within the hour 26.4 per cent of the time against a 
 a lift of 1.11, with a per-participant median of 1.07 and a range from 0.69 to 1.41. For a component
 whose purpose is to anticipate a fall, that is not a signal.
 
-The plateau detector proposes a nudge on 5,674 of the 44,697 cycles above 140 mg/dL (7.8 mmol/L).
-Those cycles are still above 140 an hour later 52.5 per cent of the time against a base rate of
-47.9, a lift of 1.10, with a per-participant median of 1.04 and a range from 0.91 to 1.16. Also not
-a signal.
+The plateau rule selects glucose between 145 and 250 mg/dL (8.1 to 13.9 mmol/L) with insulin on
+board above 0.5 U and a trend that is neither rising nor falling fast, then applies a safety floor.
+Its claim is that such a high is stuck and will not come down on its own.
 
-Reading the emitting code first mattered here. The plateau tag's first field is whether the safety
-floor permitted a nudge rather than whether a plateau was detected, and scored as the latter the
-component appears actively anti-predictive at a lift of 0.63. It is not; it was being read wrong.
+Nothing here can measure whether nudging one would help. The shadow delivers nothing, so that is a
+counterfactual and there is no glucodynamic simulator to produce it. What is measurable is whether
+the rule picks out the cycles it says it picks out, and a detector that selects the wrong cycles
+cannot be useful whatever the action would do.
+
+Within its own window, 37,080 cycles across eleven participants, a third fail to come down by even
+10 mg/dL in the following hour. The cycles the rule flags are stalled 28.8 per cent of the time
+against that base rate of 33.7, a lift of 0.85, and they fall by a median of 28.8 mg/dL against 26.3
+for the window as a whole.
+
+So the highs it flags come down slightly better than the ones it does not. It is not finding stalled
+highs; it is finding highs that are already resolving, which is the population this programme has
+repeatedly documented as the wrong one to add insulin to.
+
+Two things had to be read before this measured anything. The tag's first field is whether the safety
+floor permitted a nudge rather than whether a plateau was detected. And the comparison group has to
+be the rule's own window rather than every cycle above 140 mg/dL (7.8 mmol/L), because comparing against
+everything above 140 mixes in the fast risers and fast fallers the rule excludes by construction and
+reports its selection rather than its detection.
 
 The tranche controller has 4,785 cycles on one participant, which is too thin for a verdict either
 way. It needs the cohort.

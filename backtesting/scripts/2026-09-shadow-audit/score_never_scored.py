@@ -97,20 +97,53 @@ def backout(c):
 
 
 def plateau(c):
+    """Does the plateau rule pick out highs that are actually stuck?
+
+    The shadow delivers nothing, so nothing here can measure whether a nudge would help; that is a
+    counterfactual and there is no glucodynamic simulator. What is measurable is whether the rule
+    selects the cycles it says it selects. A detector that picks the wrong cycles cannot be useful
+    whatever the action would do.
+
+    The comparison group has to be the rule's own window, 145 to 250 mg/dL with insulin on board
+    above 0.5 U, rather than every cycle above 140. Comparing against everything above 140 mixes in
+    fast risers and fast fallers that the rule excludes by construction, and reports the selection
+    rather than the detection.
+    """
     d = pd.read_sql("""select user_id, ts_utc, cgm_mgdl, reason_text from boost_decisions
         where reason_text like '%%plateau=%%' and cgm_mgdl between 20 and 500
         order by user_id, ts_utc""", c)
     d["t"] = epoch(d.ts_utc)
     f = d.reason_text.str.extract(r"plateau=([^;]+);")[0].str.split(",")
     d["would"] = f.str[1].astype(float)
-    d["min60"] = forward(d, 60, lambda seg, b: seg.min())
-    d = d.dropna(subset=["min60", "would"])
-    hi = d[d.cgm_mgdl > 140].copy()
-    hi["y"] = (hi.min60 > 140).astype(int)
-    l, base = lift(hi, hi.would > 0, "y")
-    print(f"\n=== Plateau: does a would-nudge mark a high that stays high for an hour? ===")
-    print(f"  {len(hi):,} cycles above 140 mg/dL, {hi.user_id.nunique()} participants, "
-          f"base rate {base:.3f}, lift {l:.2f}x")
+    d["trend"] = f.str[3].astype(float)
+    d["iob"] = f.str[4].astype(float)
+
+    nxt = np.full(len(d), np.nan)
+    for _, g in d.groupby("user_id"):
+        t, bg = g.t.values, g.cgm_mgdl.values
+        j = np.searchsorted(t, t + 3600)
+        ok = j < len(t)
+        good = np.zeros(len(t), bool)
+        good[ok] = np.abs(t[j[ok]] - (t[ok] + 3600)) <= 600
+        v = np.full(len(t), np.nan)
+        v[good] = bg[j[good]]
+        nxt[g.index.values] = v
+    d["bg60"] = nxt
+    d = d.dropna(subset=["bg60", "would", "trend"]).copy()
+    d["fall"] = d.cgm_mgdl - d.bg60
+
+    pool = d[(d.cgm_mgdl >= 145) & (d.cgm_mgdl < 250) & (d.iob > 0.5)].copy()
+    pool["stalled"] = (pool["fall"] < 10).astype(int)
+    base = pool.stalled.mean()
+    w = pool.would > 0
+    print("\n=== Plateau: does the rule pick out highs that are actually stuck? ===")
+    print(f"  {len(pool):,} cycles in its own window, {pool.user_id.nunique()} participants")
+    print(f"  base rate stalled, falling under 10 mg/dL in an hour: {base:.3f}")
+    print(f"  would-nudge   {w.sum():>7,} cycles, stalled {pool.stalled[w].mean():.3f}, "
+          f"lift {pool.stalled[w].mean()/base:.2f}x")
+    print(f"  median hour-ahead fall: flagged {pool['fall'][w].median():.1f} mg/dL, "
+          f"whole window {pool['fall'].median():.1f}")
+    print("  A lift below one means the flagged highs come down better than the rest.")
 
 
 def tranche(c):
