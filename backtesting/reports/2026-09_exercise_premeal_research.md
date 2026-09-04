@@ -638,37 +638,43 @@ zero to five hours, which puts the shipped two-hour window roughly in the right 
 
 ## 4. The declaration
 
-The person tells the loop that exercise is coming. Everything else follows from that declaration,
-so it has to be quick enough to actually happen and carry enough for the levers to mean anything.
+The person tells the loop that exercise is coming. That is the whole of it, and keeping it to that
+is a design decision rather than a simplification.
 
-### 4.1 The dialog and its fields
+### 4.1 One question, three answers
 
-A dialog beside the existing temporary-target one, reachable from the phone and from the watch,
-taking three things:
+A dialog reachable from the phone and the watch, asking a single thing: what sort of exercise, with
+three answers.
 
-| Field | Options | Default |
-|---|---|---|
-| Starting in | 0, 30, 60, 90 minutes | 60 |
-| Type | aerobic, mixed, resistance or intense | aerobic |
-| Expected length | 30, 45, 60, 90 minutes | 45 |
+| Answer | Meaning |
+|---|---|
+| Aerobic | continuous work, a run, a ride, a swim |
+| Mixed | intervals, a class, team sport, anything that alternates |
+| Anaerobic | lifting, sprints, brief maximal effort |
 
-Intensity is deliberately absent. Riddell's table separates a 25 per cent bolus reduction from a 75
-per cent one on intensity and duration together, which is a threefold difference resting on two
-numbers a person estimates poorly about themselves. EXTOD declines the distinction and gives a flat
-50 per cent, and that is the honest reading of the same evidence. This design follows EXTOD: the
-type decides the sign of the intervention and the length decides how long it runs, and nothing
-tries to grade effort.
+No start time, no intensity, no expected duration. Each of those is deliberately absent, and the
+reasons differ.
 
-Type maps onto the vocabulary the system already uses, so that a declared type reaches the
-post-exercise recovery branch through the same field a heart-rate classification would. Aerobic and
-mixed get the full treatment. Resistance and intense get the target raise and no bolus reduction at
-all, because every protocol exempts brief intense work and applying hypoglycaemia protection to the
-exercise type that raises glucose is the one clear way to make things worse.
+Intensity goes because Riddell's table separates a 25 per cent bolus reduction from a 75 per cent
+one on intensity and duration together, a threefold spread resting on two numbers people estimate
+poorly about themselves. EXTOD declines the distinction and gives a flat 50 per cent, which is the
+honest reading of the same evidence.
 
-A declaration can be cancelled at any point, and cancelling restores the previous target
-immediately. It also expires on its own: if the declared start passes by more than 30 minutes with
-no activity detected on the step feed, the mode stands down and says so. That matters because the
-failure mode of a declared system is a person who declares and then does not go.
+Duration goes because the loop can observe it. A self-reported expected length is a guess made
+before the event; the step feed is a measurement made during it. The mode does not need to be told
+when the session ends when it can see it end.
+
+Start time goes because a declaration is made when someone thinks of it, not on a schedule, and
+asking for a time invites either a wrong answer or no declaration at all. What matters for the
+protocols is the lead, and the lead is whatever the person gives by declaring when they do. The AID
+statement wants one to two hours, EXTOD wants sixty minutes, and this programme's own measurement
+prices a 60-minute lead at 0.70 lows prevented per high caused, so the evidence for a long lead is
+weaker here than the guidance suggests. Acting from the moment of declaration and letting the person
+choose the lead is both simpler and closer to what the data supports.
+
+The cost of dropping these is real and should be stated. Without a declared start, the mode cannot
+distinguish a declaration made ninety minutes ahead from one made as the person walks out of the
+door, so it treats both the same. Whether that costs anything is one of the things the shadow is for.
 
 ### 4.2 The undeclared case
 
@@ -679,8 +685,8 @@ though it had been declared.
 
 Nor does the evidence here support doing so. The reactive withdrawal that already handles this case
 prices at roughly break-even and gets worse when run earlier, a habit prior loses to the plain hour
-of day, and a trial of an AID adjusting insulin automatically from wearable data could not be
-distinguished from one that asked the person to confirm.
+of day, and a trial of an automated insulin delivery system adjusting from wearable data could not
+be distinguished from one that asked the person to confirm.
 
 So the undeclared case keeps exactly what it has today: the reactive step withdrawal, unchanged. A
 declaration does not suppress it, extend it or alter it. That is a deliberate choice to change one
@@ -688,54 +694,73 @@ thing at a time, and whether the two should interact is a question for after the
 
 ## 5. The mode's behaviour
 
-Stage by stage, for a declaration made at 17:00 for a 45-minute aerobic session starting at 18:00.
+The three answers do different things, and one of them does the opposite of the other two.
 
-### 5.1 Before the session
+### 5.1 Aerobic
 
-From the declaration until the declared start, the glucose target rises to 8.3 mmol/L (150 mg/dL).
-That is the AID statement's level A recommendation and it is the cheapest lever available: the
-mechanism already exists, it already retracts itself, and raising a target withholds insulin
-gradually rather than cutting it.
+The glucose target rises to 8.3 mmol/L (150 mg/dL) from the moment of declaration. That is the AID
+statement's level A recommendation and the cheapest lever available: the mechanism exists, it
+already retracts itself, and raising a target withholds insulin gradually rather than cutting it.
+Raising it also disables the aggressive dosing ladder through an interlock that already exists,
+which delivers the statement's requirement that the loop should not put the insulin back.
 
-Raising the target also disables the aggressive dosing ladder through an interlock that already
-exists, which delivers the statement's requirement that the loop should not put the insulin back.
-It does so bluntly, by switching the ladder off rather than scaling it to the 25 to 33 per cent the
-statement asks for, and that bluntness is accepted for now rather than designed around.
-
-If a meal is detected inside the pre-exercise window, the meal dose is reduced by half. That is
-EXTOD's flat figure. It is the lever with the strongest evidence behind it, because the difference
-between announcing exercise with a reduced bolus and announcing it with a full one is 2.0 against
-7.0 per cent time below 3.9 mmol/L.
+If a meal is detected while the mode is active, the meal dose is halved. That is EXTOD's flat figure
+and it is the lever with the strongest evidence behind it, because the difference between announcing
+exercise with a reduced bolus and announcing it with a full one is 2.0 against 7.0 per cent time
+below 3.9 mmol/L.
 
 The ordering matters and is the only sequencing work in the build. The target raise has to be in
 place before the meal is recognised, so the write must precede the meal-hypothesis step. Both
 operations exist today and neither currently runs before the other.
 
-### 5.2 During the session
+### 5.2 Mixed
 
-The raised target holds. Basal reduction is not part of this design. EXTOD asks for a 50 per cent
-cut from 60 minutes before, and this programme's own measurement of withdrawing insulin on activity
-prices it at roughly break-even and worse when run earlier, which is a direct contradiction that a
-declaration does not resolve. The target raise is retained because it is gentler and reversible;
-the basal cut is left to the reactive path that already runs.
+The same target raise, and a quarter off the meal dose rather than a half. Riddell's guidance for
+intermittent work sits between the continuous and resistance rows, and the honest position is that
+nothing in this programme's own data distinguishes mixed from aerobic. It is a separate answer
+because people describe their exercise that way, and because a shadow that collapses it into aerobic
+can never find out whether it should have been separate.
 
-### 5.3 After the session
+### 5.3 Anaerobic
 
-At the declared end the raised target is cancelled, which the AID statement grades at level C and
-which the existing cancellation path already does. The post-exercise recovery window then runs as
-it does today.
+This one runs the other way. Anaerobic effort raises glucose, which is why EXTOD's third lever is
+advice about ordering: put the sprint work first, because it lifts you before the aerobic work pulls
+you down. Every protocol exempts it from bolus reduction, and Riddell recommends no reduction at all
+above about 80 per cent VO2max.
 
-The next meal's bolus is not reduced. Both EXTOD and Riddell ask for roughly half, and the
+So there is no target raise and no meal reduction. What the mode does instead is stop the loop
+chasing the rise: correction dosing into an exercise-driven climb is suppressed for the duration.
+
+That is worth stating plainly because it is the opposite of hypoglycaemia protection and it is
+protecting against the same outcome. A loop that sees a catecholamine-driven rise and doses for it
+puts insulin in that lands after the session ends, when sensitivity is elevated and the rise has
+reversed on its own. Applying a hypoglycaemia protection to the exercise type that raises glucose
+would be the obvious error; chasing the rise is the less obvious one, and it is the one an automated
+system will make.
+
+### 5.4 Ending, for all three
+
+The mode stands down when the step feed has been quiet for fifteen minutes, or after a hard ceiling
+of three hours, whichever comes first. The raised target is cancelled through the existing path, and
+the post-exercise recovery window then runs as it does today.
+
+It also stands down if nothing ever starts. If no activity is detected within ninety minutes of the
+declaration, the mode gives up and says so, because the failure mode of a declared system is someone
+who declares and then does not go.
+
+### 5.5 Deliberate exclusions
+
+No basal reduction. EXTOD asks for a 50 per cent cut from sixty minutes before, and this programme's
+own measurement of withdrawing insulin on activity prices it at roughly break-even and worse when
+run earlier. That contradiction is not resolved by a declaration, so the gentler and reversible
+target raise is kept and the basal cut is left to the reactive path that already runs.
+
+No reduction of the next meal's bolus. Both EXTOD and Riddell ask for roughly half, and the
 post-exercise tail measured here is about 1.2 times baseline hazard and flat from zero to five
 hours, which does not support a second reduction on top of the recovery window already in place.
 
-### 5.4 Deliberate exclusions
-
-It will not fire without a declaration. Detection is not part of this, for the reasons in section
-4.2, and a mode that guesses is a different piece of work with different evidence behind it.
-
-It will not prompt for carbohydrate. Both protocols ask for top-ups by trend, and there is no
-prompting mechanism, so that stays with the person.
+No carbohydrate prompting. Both protocols ask for top-ups by trend, there is no prompting mechanism,
+and that stays with the person.
 
 ## 6. Proving it and enabling it
 
@@ -745,16 +770,21 @@ Nothing above doses on the day it ships. The mode computes what it would have do
 and writes it, and it does that across the cohort for as long as it takes to accumulate paired
 observations.
 
-Written once per declaration: an identifier, when it was made, the declared start, the type, the
-expected length, the route it arrived by, and the lead time actually achieved, which is the declared
-start minus the declaration time and which will differ from what was intended.
+Written once per declaration: an identifier, when it was made, which of the three answers was given,
+and the route it arrived by. That is all the person supplies, so that is all there is to record.
 
-Written every cycle: the state of the mode, the minutes to or from the declared start, the target
-and meal multiplier it would have applied, and what the loop actually did on the same cycle, which
-is the counterfactual anchor. Alongside those, the observations needed to say later whether the
-exercise happened at all: steps at 5, 15, 30 and 60 minutes with their source, heart rate with its
-classification, sleep state, the meal state and its age, insulin on board both absolute and as a
-share of that person's total daily dose, and the hour of day.
+The lead time is measured rather than declared, and it becomes one of the more interesting outputs.
+The gap between a declaration and the first detected activity onset is what people actually give
+when nobody asks them for a number, and nobody knows what that distribution looks like. If it turns
+out to cluster at five minutes, the protocols' one to two hours is unreachable by this route and the
+design has to be reconsidered.
+
+Written every cycle: the state of the mode, minutes since the declaration, minutes since or until
+the detected onset, the target and meal multiplier it would have applied, and what the loop actually
+did on the same cycle, which is the counterfactual anchor. Alongside those, the observations needed
+to say later whether the exercise happened at all: steps at 5, 15, 30 and 60 minutes with their
+source, heart rate with its classification, sleep state, the meal state and its age, insulin on
+board both absolute and as a share of that person's total daily dose, and the hour of day.
 
 It runs on every cycle whether or not a declaration exists, because the undeclared cycles are the
 comparison set. Logging only declared sessions would leave no way to price a missed declaration.
@@ -763,12 +793,17 @@ comparison set. Logging only declared sessions would leave no way to price a mis
 
 Three things, in order.
 
-The declaration has to be usable. For each declaration, whether measured activity followed within
-tolerance of the declared start, using the step-onset definition the analysis scripts already use;
-and for each measured onset, whether a declaration preceded it. Those two give the false-positive
-and false-negative rates of the declaration itself, which nobody has measured and which decide what
+The declaration has to be usable. For each declaration, whether measured activity followed it at all
+and how long after, using the step-onset definition the analysis scripts already use; and for each
+measured onset, whether a declaration preceded it. Those two give the false-positive and
+false-negative rates of the declaration itself, which nobody has measured and which decide what
 fraction of exercise this path would ever reach. A mode that catches a third of sessions is worth
 building; one that catches a twentieth is not.
+
+The three answers also have to be worth separating. If aerobic and mixed produce indistinguishable
+outcomes there is no case for two of them, and if anaerobic declarations turn out to be rare enough
+that nothing can be said about them, the arm that suppresses correction is unproven rather than
+useful.
 
 The outcome has to move in the right direction. Time below 70 mg/dL (3.9 mmol/L) in the three hours
 from onset is the primary measure, with time below 54 (3.0) second because the kill-switches key on
@@ -806,12 +841,14 @@ at any point regardless.
 
 | Piece | Where it goes | New? |
 |---|---|---|
-| Declaration dialog | beside the existing temporary-target dialog | yes, the only real UI work |
+| Declaration dialog | beside the existing temporary-target dialog | yes, one question and three buttons |
 | Declaration record | a JSON blob in a new settings key, as the sleep and meal-time histories already are | follows the pattern |
 | Per-cycle shadow | beside the activity-load shadow, which already computes and logs without dosing | follows the pattern |
 | Telemetry out | a tag appended to the reason string, parsed in the extractor | follows the pattern |
 | Target raise on promotion | the existing insert-and-cancel call, fired from the declaration instead of after exercise | one call site |
 | Meal reduction on promotion | the existing meal multiplier, with an exercise-conditioned path into it | one call site |
+| Correction suppression, anaerobic | the high-target ladder defeat already used for a raised target | reuses an interlock |
+| Stand-down on a quiet step feed | the step windows already blended for the activity predicate | reads an existing signal |
 
 The telemetry rides in the reason string rather than on the result object because one added field
 there costs one register in every engine's decision function, and the largest has none to spare: a
