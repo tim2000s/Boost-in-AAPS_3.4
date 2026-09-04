@@ -49,6 +49,11 @@ MAP = [
      [f"{R}/2026-07_cgm_cadence_report.md"], "CGM cadence"),
     ("Boost_Statistical_Methods_2026-07-09.pdf",
      [f"{BT}/STATISTICAL_METHODS.md"], "Statistical methods"),
+    ("Boost_evolution_article_2026-09-04.pdf",
+     [os.path.expanduser("~/StudioProjects/Boost-AAPS-core/diabettech-boost-evolution-article.md")],
+     "Boost: what it was, what it became, and where the machine learning sits"),
+    ("Boost_shadow_audit_2026-09-04.pdf",
+     [f"{R}/2026-09_shadow_audit.md"], "What the shadow layers have delivered"),
     ("TimSim_second_machine_requirements_2026-09-04.pdf",
      [f"{TS}/PC_REQUIREMENTS.md"], "Requirements for a second machine running part of a sweep"),
 ]
