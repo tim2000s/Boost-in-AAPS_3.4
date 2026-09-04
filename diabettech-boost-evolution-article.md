@@ -44,6 +44,10 @@ Underneath all of it sits the thing I would most want another developer to copy:
 
 I audited those shadows properly for the first time this week and the result is worth reporting because it is not flattering. There are thirteen of them. One is clearly earning its place: a detector for accelerating meals that fires on 8.8 per cent of cycles, of which 40.6 per cent are followed by a rise of at least 30 mg/dL (1.7 mmol/L) within 45 minutes against a base rate of 19.6, on 154,000 cycles from eleven people. One is real but small: a physiological forecaster that beats "assume glucose stays where it is" by about 1 mg/dL of error at thirty minutes, which is statistically solid and clinically nothing. One turned out to be worse than simply reading the current glucose and should be dropped. Two are producing no data at all. And four have been running for months without anyone asking whether they work, one of them since February.
 
+![Four shadow components scored against what each claims to anticipate](backtesting/reports/figs_boost_evolution/fig1_shadow_verdicts.png)
+
+*Four of the shadow components, each scored against the outcome its own name claims. Only one is doing anything.*
+
 A shadow that is never scored is telemetry with no decision attached. That is a process failure rather than a code failure, and it is mine.
 
 ## 4. Machine learning on the dose path
@@ -58,7 +62,17 @@ I refitted the hypoglycaemia model on 183 participants from the OpenAPS Data Com
 
 Except it isn't small where it matters. The model is only consulted on cycles that survive the low-glucose guard, which is about half of them, and the half it never sees carries most of the hypoglycaemia. Judged on the population it actually acts in, the refit's advantage roughly triples, to 0.046. It also explains something that had been bothering me: the deployed model scores 0.85 on the Commons and between 0.52 and 0.72 on the people running it, and almost all of that gap is being judged on the harder half rather than the model failing.
 
-The thing I got wrong, and had to correct twice, was calibration. The refit ranks better but reads on a different scale: fed to the existing thresholds it would restrain insulin six times as often. My first fix was a conversion table built from the Commons. That was wrong too, because the deployment cohort is not a Commons sample. The rate at which the current model triggers its damper runs from 0.26 per cent of cycles for one person to 39.8 for another, against 6.6 on the Commons. Calibrating a population against a sample is exactly the error it sounds like. The right answer is per-person, from each person's own shadow data, and it needs the cohort running the shadow build for a week.
+![Area under the curve as the highest-risk cycles are removed](backtesting/reports/figs_boost_evolution/fig2_truncation.png)
+
+*Remove the cycles the low-glucose guard already handles and both models fall a long way. The refit's advantage over the shipped model widens as they go.*
+
+The thing I got wrong, and had to correct twice, was calibration. The refit ranks better but reads on a different scale: fed to the existing thresholds it would restrain insulin six times as often. My first fix was a conversion table built from the Commons. That was wrong too, because the deployment cohort is not a Commons sample. The rate at which the current model triggers its damper runs from 0.26 per cent of cycles for one person to 39.8 for another, against 6.6 on the Commons. Calibrating a population against a sample is exactly the error it sounds like.
+
+![Each participant's own damper trigger rate against the Commons figure](backtesting/reports/figs_boost_evolution/fig3_firing_rates.png)
+
+*Every participant's own trigger rate, against the population the conversion was built from. No single threshold sits sensibly across that range.*
+
+The right answer is per-person, from each person's own shadow data, and it needs the cohort running the shadow build for a week.
 
 Two new models are in the pipe. One asks whether a fall already twenty minutes old is going to end below 70 mg/dL (3.9 mmol/L); it reaches 0.780 on the sixteen people who contributed no training data, against 0.746 for glucose plus the clock, and it is better for all sixteen of them. The other is not a model at all but a feature: a person's own hypoglycaemia rate by hour of day is worth more than tripling the training cohort was, where the population's hour-of-day rate is worth nothing at all.
 
@@ -74,4 +88,8 @@ Further out there is a pre-meal exercise mode. Exercise close to a meal is where
 
 The reason it will be a declaration rather than a detector is one contrast. Announced exercise with a reduced bolus, announced with a full bolus, and unannounced give 2.0, 7.0 and 13.0 per cent time below 3.9 mmol/L. Nothing in the detection literature separates two strategies by that much, and a trial of automatic detection from wearables could not be told apart from simply asking the person to confirm.
 
-And one thing I am watching rather than building. I moved to a one-minute loop cycle recently and it delivered 22 per cent more insulin a day, at the same glucose, and roughly doubled my time below 70. The caps that bound cumulative microbolus volume were placed for a loop with a fifth as many chances to fire, and they need re-placing before that cadence is a good idea. Faster is not automatically better, which is the sort of thing you only find out by measuring it on yourself.
+And one thing I am watching rather than building. I moved to a one-minute loop cycle recently and it delivered 22 per cent more insulin a day, at the same glucose, and roughly doubled my time below 70. The caps that bound cumulative microbolus volume were placed for a loop with a fifth as many chances to fire, and they need re-placing before that cadence is a good idea. ![Delivery and time below range across the three settings](backtesting/reports/figs_boost_evolution/fig4_cadence.png)
+
+*The same person over 28 days. Switching sensitivity to fixed changed nothing measurable; going to a one-minute cycle moved both delivery and time below range.*
+
+Faster is not automatically better, which is the sort of thing you only find out by measuring it on yourself.

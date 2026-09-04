@@ -8,6 +8,7 @@ as one document.
 Usage: python3 md2pdf.py --out FILE.pdf --title "Document title" a.md b.md ...
 """
 import argparse
+import os
 import re
 
 import markdown
@@ -23,6 +24,9 @@ h2 { font-size: 12.5pt; margin: 7mm 0 2mm 0; border-bottom: 0.5pt solid #ccc;
 h3 { font-size: 11pt; margin: 5mm 0 1.5mm 0; }
 p { margin: 0 0 2.6mm 0; text-align: justify; hyphens: auto; }
 em { color: #444; }
+img { max-width: 100%; height: auto; display: block; margin: 4mm auto 1mm auto; }
+p > img + em, .caption { display: block; text-align: center; font-size: 8.5pt; color: #666; }
+figure { break-inside: avoid; page-break-inside: avoid; margin: 5mm 0; }
 code { font: 9pt 'SF Mono', Menlo, monospace; background: #f4f4f4; padding: 0 1mm; }
 pre { font: 8.5pt/1.35 'SF Mono', Menlo, monospace; background: #f7f7f7;
       padding: 2.5mm; border-left: 2pt solid #ccc; white-space: pre-wrap; }
@@ -55,7 +59,10 @@ def main():
     title = a.title or a.files[0]
     doc = (f"<html><head><meta charset='utf-8'><title>{title}</title></head>"
            f"<body>{''.join(parts)}</body></html>")
-    HTML(string=doc).write_pdf(a.out, stylesheets=[CSS(string=CSS_TEXT)])
+    # Relative image paths are resolved against the first source file's directory, so a figure
+    # written as ![...](figs_x/fig1.png) beside the markdown renders without an absolute path.
+    base = os.path.dirname(os.path.abspath(a.files[0])) + os.sep
+    HTML(string=doc, base_url=base).write_pdf(a.out, stylesheets=[CSS(string=CSS_TEXT)])
     print(f"wrote {a.out}")
 
 

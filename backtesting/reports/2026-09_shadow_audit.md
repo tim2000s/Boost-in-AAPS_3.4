@@ -19,10 +19,10 @@ with the participant as the resampling unit.
 | Activity load | 305,297 | 13 | Priced at roughly break-even, unchanged |
 | Consequence prior | 7,914 | 1 | Loses to reading the current glucose |
 | Anticipation | 159,197 | 11 | Discarded, lost to the hour of day |
-| Insulin sensitivity shadow | 332,338 | 9 | Running since February, never scored |
-| Anticipatory backout | 137,045 | 11 | Never scored |
-| Plateau | 155,418 | 11 | Never scored |
-| Tranche | 4,785 | 1 | Never scored |
+| Insulin sensitivity shadow | 355,482 | 13 | Scored: at chance, and worse than the engine's own ratio |
+| Anticipatory backout | 136,529 | 11 | Scored: lift 1.11x, no usable signal |
+| Plateau | 44,697 | 11 | Scored: lift 1.10x, no usable signal |
+| Tranche | 4,785 | 1 | Too thin to score, needs the cohort |
 | Fall consequence | 0 | 0 | Faulty, diagnostic build pending |
 | Volume-weighted total daily dose | 0 | 0 | Declared but never populated |
 
@@ -74,12 +74,58 @@ The volume-weighted total daily dose shadow has produced no rows at all, on any 
 eight columns declared for it in the decision table. It is either not wired or not reaching the
 extractor, and until that is established the columns are misleading.
 
-## The four never scored
+## The four that had never been asked
 
-The insulin sensitivity shadow has been running since February and has 332,338 rows across nine
-participants. The anticipatory backout has 137,045 across eleven, the plateau detector 155,418, and
-the tranche controller 4,785 on one. None has been scored against an outcome.
+All four have now been scored. Three can be discarded and the fourth cannot yet be judged.
 
-That is the finding this audit is really for. Thirteen shadow components produce telemetry on every
-cycle; four have never been asked whether they work, two produce nothing, and one has been running
-long enough to be discarded on evidence that was already available.
+The insulin sensitivity shadow computes an alternative sensitivity ratio on every cycle and has done
+since February. Its output was never extracted, because no column existed for it, so 355,482 cycles
+of it sat unparsed in the console text the app already uploads. Recovered and scored against
+sustained hypoglycaemia within four hours, it reaches an area under the curve of 0.5002, which is
+chance, against 0.5151 for the sensitivity the engine actually applied. It is worse than the engine
+for eight of the nine participants where both can be computed. Seven months of running has produced
+a component that does not beat what it was proposed to replace.
+
+Recovering it turned up a data-quality problem worth naming. The app formats these debug numbers
+with the device's locale, so a participant on a European locale writes `raw=0,890` where an English
+one writes `raw=0.890`. A pattern matching digits and full stops stops at the comma and silently
+reads zero, which is what a first pass did on 61 per cent of rows and which produced a plausible
+looking median of 0.000. Any parse of these console lines has to accept both separators.
+
+The anticipatory backout arms on 23,000 of 136,529 cycles. Cycles where it is armed are followed by
+a fall of at least 30 mg/dL within the hour 26.4 per cent of the time against a base rate of 23.8,
+a lift of 1.11, with a per-participant median of 1.07 and a range from 0.69 to 1.41. For a component
+whose purpose is to anticipate a fall, that is not a signal.
+
+The plateau detector proposes a nudge on 5,674 of the 44,697 cycles above 140 mg/dL (7.8 mmol/L).
+Those cycles are still above 140 an hour later 52.5 per cent of the time against a base rate of
+47.9, a lift of 1.10, with a per-participant median of 1.04 and a range from 0.91 to 1.16. Also not
+a signal.
+
+Reading the emitting code first mattered here. The plateau tag's first field is whether the safety
+floor permitted a nudge rather than whether a plateau was detected, and scored as the latter the
+component appears actively anti-predictive at a lift of 0.63. It is not; it was being read wrong.
+
+The tranche controller has 4,785 cycles on one participant, which is too thin for a verdict either
+way. It needs the cohort.
+
+## The three producing nothing
+
+The fall-consequence shadow scores no cycle because every rejection in its path returned a bare
+null. A build that reports which test rejected each cycle is waiting to be flashed.
+
+The volume-weighted total daily dose shadow produces nothing anywhere: no rows in the decision
+table, no fields in the Nightscout payload, and no trace in the console text on any participant.
+Its `compute()` returns null on every cycle. Eight columns are declared for it and all are empty.
+
+Both of those, and the insulin sensitivity shadow, sit inside the `useTdd` branch, so they stop
+entirely for anyone who turns off total-daily-dose-driven sensitivity. That is one participant
+today and it is worth knowing before a shadow's silence is read as a quiet period.
+
+## The position
+
+Of thirteen shadow components, one is earning its place, one is real and clinically negligible, five
+can be discarded on evidence, one cannot yet be judged, three produce nothing, and two are the
+recent models that have not run long enough. The programme's discipline about not letting anything
+reach the dose path until it is measured has held. What has not held is the other half of the same
+discipline, which is measuring it and then acting.

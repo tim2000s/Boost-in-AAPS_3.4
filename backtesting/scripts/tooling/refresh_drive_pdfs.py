@@ -49,6 +49,8 @@ MAP = [
      [f"{R}/2026-07_cgm_cadence_report.md"], "CGM cadence"),
     ("Boost_Statistical_Methods_2026-07-09.pdf",
      [f"{BT}/STATISTICAL_METHODS.md"], "Statistical methods"),
+    # figures live beside the markdown and resolve relative to it, so this must stay a
+    # single-source entry: md2pdf sets base_url from the first file's directory.
     ("Boost_evolution_article_2026-09-04.pdf",
      [os.path.expanduser("~/StudioProjects/Boost-AAPS-core/diabettech-boost-evolution-article.md")],
      "Boost: what it was, what it became, and where the machine learning sits"),
