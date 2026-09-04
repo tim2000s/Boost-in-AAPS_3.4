@@ -731,7 +731,6 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
         "anticip_meal_conf": _anticip(reason, 8, int), "anticip_meal_bo": _anticip(reason, 9, int),
         "anticip_mins_ex": _anticip(reason, 10, int), "anticip_mins_meal": _anticip(reason, 11, int),
         "anticip_n_ex": _anticip(reason, 12, int), "anticip_n_meal": _anticip(reason, 13, int),
-        **parse_shadow_lines(console_error),
         "ml_hypo_risk": sug.get("mlHypoRisk"),
         # 2026-09 refit, logged and never dosed on. NOT comparable to ml_hypo_risk by
         # level: different base-rate calibration, so it reads higher for the same risk.
@@ -817,6 +816,7 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
     row.update(parse_glucose_status(ce))
     row.update(parse_hr_features(ce))
     row.update(parse_isf_blend(ce))
+    row.update(parse_shadow_lines(ce))
     row.update(parse_reason(reason))
 
     # Keep raw consoleError so re-parses are possible without re-fetching
