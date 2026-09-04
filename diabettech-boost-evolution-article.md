@@ -16,7 +16,7 @@ That's a harder ask than it sounds, and the reason is insulin, not software. Inj
 
 The original Boost kept the whole AndroidAPS engine and replaced exactly one thing: the decision about how big the next micro-bolus should be. Basal, dynamic sensitivity, the predictions and **every safety gate** stayed exactly as they were. That constraint was deliberate, it's still there, and it's the main reason I've been willing to run this on myself for as long as I have. The parts that stop you coming to harm are the parts that have been stopping people coming to harm for years.
 
-What went in place of that one decision, first time round, was a ladder of eight tiers, each licensing a bit more aggression than the last, with a small machine-learning model watching for hypo risk whose only power was to shrink whatever the ladder had just chosen. Be braver into a rise; have something that can pull you back.
+What went in place of that one decision, first time round, was a ladder of eight tiers, each licensing a bit more aggression than the last. No machine learning, no models: a set of rules about glucose, its rate of change and its acceleration, and a decision each cycle about which rung to stand on. Be braver into a rise than a stock loop dares to be, and rely on the safety gates underneath to catch anything that went too far.
 
 It worked, in the sense that it produced a usable fully closed loop: 81.2% time in range and 5.6% below over four months. It also produced post-meal highs I wasn't thrilled about and lines noticeably wider than my hybrid setup, and I said so at the time.
 
@@ -33,6 +33,8 @@ What replaced it asks a different question. Instead of "which tier am I in", Boo
 Recovering is the one that mattered most. Before it existed, a loop watching glucose come down from a meal peak would see a number that was still high, decide it was still high, and dose again, with no idea it had already dealt with it. Recovering winds down deliberately instead. If you want one change to explain why the post-meal lows I used to live with mostly went away, it's that one.
 
 The other thing the state machine bought was separation. Confidence and aggression are now decided in different places from the brakes, so I can make Boost keener at recognising a meal without simultaneously making it more dangerous, which was never possible with the tiers.
+
+The machine learning arrived later, and separately. It went in first as its own plugin partway through this year, purely as a hypo-risk score whose only power was to shrink a dose the rules had already chosen, and was then retrofitted back into the earlier engines once it had proved it did no harm. It has never been the thing that decides to dose.
 
 **The settings stopped being mine.** Early Boost had knobs and the knobs had defaults, and the defaults were whatever suited me. That doesn't survive other people. The group running it now spans total daily doses from 16 to 58 units, and one person doses in U200 where a unit carries roughly twice the mass. V6 derives its settings for each person from their own history, tightens automatically for anyone whose time below range says it should, and re-derives periodically rather than once. Anything that adds insulin only switches itself on for someone whose glucose is already sitting comfortably.
 
