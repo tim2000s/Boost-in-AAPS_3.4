@@ -570,147 +570,71 @@ Finally, `openAPSBoostTwin/AnticipationShadow.kt` is present and shadow-only, wi
 onset test at more than 150 steps in five minutes, appending to the reason string and delivering
 nothing. It is the residue of the anticipation work described in section 3.
 
-## 3. Prior measurements
+## 3. What is already established
 
-Source: `backtesting/RELATIONSHIPS_REGISTER.md`, plus the study directories it cites. Everything
-in this section is Boost's own data, and several of the entries constrain the design more
-sharply than the literature does.
+Five things constrain the design. All are measured on this cohort unless stated, with the
+participant as the resampling unit.
 
-### 3.1 The contrast that stands
+### 3.1 Two populations, with opposite requirements
 
-Meals followed by activity within two hours end in a low below 70 mg/dL (3.9 mmol/L) 23 per cent of the time
-(95% CI 19 to 27); meals not followed by activity, 15 per cent (95% CI 12 to 18). The intervals
-do not overlap. Eight users with a step feed, about 30 days to 2026-07-28, in
-`backtesting/reports/2026-07_meal_with_and_without_exercise.md`. Tier SOLID. This contrast was
-not affected by the later withdrawal described below.
+Post-meal glucose and post-meal-exercise glucose separate people into two groups that do not
+overlap. One spends 24 to 37 per cent of post-meal time above 180 mg/dL (10.0 mmol/L) with
+post-meal lows at or near zero; exercise helps them, knocking down a peak they have the glucose to
+spare. The other shows little post-meal high but exercise tips them low, at 6, 9 and 14 per cent of
+post-meal-exercise time below 70 mg/dL (3.9 mmol/L). They have no buffer, so the drain runs straight
+through the floor.
 
-The same report splits the cohort into two populations that want opposite treatment. Four users
-spend 24 to 37 per cent of post-meal time above 180 mg/dL (10.0 mmol/L) with post-meal lows at or near zero;
-three spend little time high but 6, 9 and 14 per cent of post-meal-exercise time below 70. A
-single cohort-wide pre-meal reduction would help the second group and worsen the first.
+The people who need more meal insulin are therefore not the people who need exercise protection, and
+a single setting cannot serve both. Any pre-exercise lever has to be per person.
 
-Time-in-regime, cohort-pooled over the same window:
+### 3.2 Insulin on board at onset moves lows in the ordinary direction
 
-| Regime | Share of time | Mean mmol/L | TIR 70-180 | time in normoglycaemia (TING) 63-140 | <70 | >180 |
-|---|---|---|---|---|---|---|
-| Background, non-meal | 59% | 6.6 | 93% | 82% | 2.7% | 4% |
-| Post-meal, no exercise | 18% | 8.1 | 76% | 54% | 2.4% | 22% |
-| Post-meal, with exercise | 23% | 7.7 | 78% | 55% | 4.0% | 18% |
+More insulin on board when exercise starts is associated with more lows. Standardised by each
+person's own total daily dose and resampled by participant, this reaches an area under the curve of
+0.549 (95 per cent interval 0.512 to 0.604) on 157 events from five participants, every participant
+above 0.5, with median insulin on board of 1.76 U where a low followed against 1.36 U where none
+did.
 
-### 3.2 The withdrawn mechanism
+The effect is small and the interval is narrow but above chance. Standardisation is not optional:
+total daily dose in this cohort spans 16.3 to 57.6 U, a factor of 3.5, and at least one participant
+doses in U200 where a unit carries roughly twice the mass. Pooling absolute units inverts the
+association.
 
-On 2026-07-27, `backtesting/scripts/2026-07-postmeal-exercise-mechanism/` reported that people
-who went low after post-meal exercise were carrying less insulin, not more: median 0.96 U at
-exercise onset against 1.61 U, on comparable boluses (2.40 U against 2.10 U in the first 30
-minutes), from a lower glucose (114 against 136 mg/dL), with a monotone tertile gradient of 32,
-22 and 18 per cent crash rate across low, mid and high insulin on board. The claim built on that
-was that post-meal exercise lows are a carbohydrate-counterweight failure rather than insulin
-excess, and that the remedy is anticipatory withdrawal or carbohydrate rather than a smaller
-meal dose. It was filed as SOLID on 686 events.
+### 3.3 The clock is the strongest timing signal available
 
-On 2026-08-13, `backtesting/scripts/2026-08-postmeal-exercise-recheck/` withdrew it. The
-original figures were pooled across participants in absolute units, and total daily dose in the
-cohort spans 16.3 to 57.6 U, a factor of 3.5, with at least one person on U200 where a unit
-carries twice the mass. The between-participant correlation of median insulin on board at onset
-with that person's own low rate is -0.388, which is enough to invert a pooled association.
-Standardising insulin on board by each person's own total daily dose and resampling with the
-participant as the unit gives an AUC of 0.549 (95% CI 0.512 to 0.604) on 157 events from five
-users, every participant above 0.5, with median insulin on board 1.76 U where a low followed
-against 1.36 U where none did. The pooled absolute-unit construction on the same 157 events
-gives 0.588 (0.518 to 0.656), also above 0.5.
+A plain hour-of-day rate, fitted on a person's other days, predicts their exercise onset at an area
+under the curve of 0.662 to 0.694 pooled, with 0.764 for the best-served participant at a
+60-minute lookahead. That is the strongest per-user timing signal measured anywhere in this
+programme, and in absolute terms it is still a weak classifier: about 30 per cent of a person's
+activity falls in their three busiest hours, so a clock-driven mode would be absent for most
+sessions and present for many non-sessions.
 
-The corrected finding is the ordinary direction: more insulin on board at exercise onset is
-associated with more lows. The effect is small and the interval is narrow but clearly above
-chance. What this removes is the argument that reducing the meal dose is the wrong lever. What
-survives is only the structural observation that the loop's lever is insulin-out while the
-disturbance is exogenous glucose drain, which is reasoning rather than measurement.
+Any timing claim has to be measured against the clock rather than against nothing. A per-user
+anticipation model was tested that way and lost at every lookahead, on every interval, and is not
+part of this design.
 
-### 3.3 Timing signals, and the clock that beat them
+### 3.4 Reactive withdrawal is close to break-even, and worse if run earlier
 
-On 2026-07-27 a per-user anticipation model looked strong. Exercise onset at a 45-minute lead
-gave a per-user temporal AUC of 0.779 (all eight users 0.72 to 0.83) against 0.672 for a
-cross-user model, and the conclusion was that exercise timing is idiosyncratic and should be
-learned per user. The report attached its own caveat, that accuracy is not the safety mechanism
-and AUC in that range still false-alarms often at any useful operating point.
+Withdrawing insulin on measured activity is already live: the active predicate drops profile percent
+to 80. Priced against outcomes it prevented 41 of 220 lows at the cost of 39 new highs, a ratio of
+about 1.05, and only 26 per cent of activity bouts with insulin on board went low at all. Per
+participant the ratio runs from 2.0 down to one person for whom it was pure cost.
 
-On 2026-08-26 that shadow was priced against a plain hour-of-day rate fitted on the same
-person's other days, in `backtesting/scripts/2026-08-meal-size-readability/anticipation_exercise.py`,
-on ten participants with movement onsets taken from their own step feed:
+Running the same withdrawal earlier makes it worse rather than better: 0.78 at a 30-minute lead and
+0.70 at 60. That is this programme's own measurement of exactly the trade the literature recommends,
+and it does not reproduce the literature's optimism. It is the single most important number for
+anyone designing a pre-exercise lever here.
 
-| Lookahead | Shadow AUC | Hour-of-day AUC | Delta | 95% CI | Participants where shadow won |
-|---|---|---|---|---|---|
-| +15 min | 0.489 | 0.662 | -0.173 | -0.220 to -0.123 | 0/10 |
-| +30 min | 0.553 | 0.673 | -0.121 | -0.163 to -0.073 | 1/10 |
-| +60 min | 0.591 | 0.694 | -0.104 | -0.148 to -0.059 | 0/10 |
+### 3.5 Two signal-level limits
 
-Every interval excludes zero in the wrong direction. The shadow is discarded. The result that
-matters for a pre-meal mode is the control arm rather than the treatment arm: the clock alone
-reaches 0.662 to 0.694 for exercise onset, against 0.587 to 0.625 for meal onset in the
-companion test, and the best individual figure is 0.764 for one participant at the 60-minute
-lookahead. The register rounds that to 0.760, which corresponds to a second participant at the
-same lookahead (0.7595); either is defensible as the best-participant figure but the exact
-maximum is 0.764. Tier SOLID for the comparison, since it is out-of-sample with participant
-clustered intervals and survived being the losing arm of its own test.
+Rolling 24-hour step load carries no reliable information about insulin sensitivity: a
+matched-insulin forward-low ratio of 1.06 and an autosens correlation of -0.06. Heart rate shows no
+lift before a glucose rise across 37,000 paired cycles; its only real coupling is heart rate up
+followed by glucose down at about ten minutes, which is a concurrent exercise signal rather than an
+anticipatory one.
 
-That makes the hour-of-day exercise prior the strongest per-user timing signal measured anywhere
-in this programme. It is also, on its own, a weak classifier in absolute terms.
-
-### 3.4 The price of reactive activity withdrawal
-
-`backtesting/scripts/2026-07-v6-activity/FINDINGS.md`, 2026-07-19, verdict MARGINAL. On 837
-bouts of activity with insulin on board, 220 went below 70 mg/dL and 68 below 54. A reactive
-withdrawal prevented 41 of the 220 lows (19 per cent pooled, 16 per cent per-user median) and 15
-of the 68 deep lows, at a cost of 39 new excursions above 180, of which 5 exceeded 220. Prevented
-to caused is about 41 to 39. The insulin actually withheld was 0.25 to 0.73 U per bout and the
-median lift at the nadir was 6 to 9 mg/dL.
-
-Moving the withdrawal earlier catches more lows and costs more highs, and the ratio gets worse:
-
-| Lead | Lows prevented | Deep lows prevented | New highs | Prevented per caused |
-|---|---|---|---|---|
-| Reactive | 41/220 (19%) | 15/68 | 39 | 1.05 |
-| 30 min early | 111/220 (50%) | 37/68 (54%) | 142 | 0.78 |
-| 60 min early | 160/220 (73%) | 59/68 (87%) | 228 | 0.70 |
-
-Only 26 per cent of activity bouts with insulin on board went low at all, which is why the cost
-side scales so fast. Per-user the picture separates cleanly: B at 2.0, F at 1.5, E at 1.3 and C
-at 1.0 are worth switching on; one user produced 91 bouts, 2 lows and 8 caused highs, pure cost;
-another produced 19 bouts, 7 lows and prevented none. The recommendation was not to ship it
-blanket and not to build the anticipatory arm. That last point contradicts the direction the
-withdrawn mechanism report pointed in, and the register carries neither recommendation.
-
-The lead-time table is the sharpest constraint on any pre-meal mode. It is the programme's own
-measurement of exactly the trade being proposed, and at a 60-minute lead, which is what the
-literature asks for, it prices at 0.70 lows prevented per high caused.
-
-### 3.5 Related entries
-
-Recent activity is a leading indicator of forward hypoglycaemia per user but not cross-user, with
-a dose-response from 13 to 38.5 per cent and steps running 1.5 to 1.6 times baseline up to three
-hours before a low. Time of day plus weekday predicts activity at out-of-sample AUC 0.73 to 0.85,
-with about 30 per cent of activity falling in a person's top three hours. The post-exercise
-recovery tail is real but modest, about 1.2 times baseline hazard and flat from 0 to 5 hours once
-the window-length artefact is removed, which puts the shipped 2-hour window roughly in the right
-place; the earlier "delayed 2x ramp" figure was that artefact.
-
-Two signal-level nulls constrain what a detector can use. Rolling 24-hour step load carries no
-reliable information about insulin sensitivity: matched-insulin forward-low ratio 1.06, residual
-slope wrong-signed, correlation with autosens -0.06. Heart rate carries no cephalic lift before a
-glucose rise across 37,000 paired cycles, so it is not a meal signal; the only real coupling is
-heart rate up followed by glucose down at about a 10-minute lag, which is the exercise signal.
-Forward steps predict at AUC 0.62 against 0.55 for glucose plus insulin alone.
-
-On temporary targets the register is nearly silent. There is no entry using the term. The one
-adjacent item is filed under unproven and unbuilt: an activity BG-rising override, called Design
-9, believed shipped but never coded in any branch, leaving the activity target unguarded. The
-only lever language resembling a temporary target is in the cohort report, which proposes a
-retractable anticipatory temporary basal reduction that unwinds if the activity does not appear.
-That is a specification with no measurement behind it. Tier SPECULATIVE.
-
-Two further items are listed as unproven: that exercise-anticipation preparation helps in
-practice, where detection is validated but the dosing benefit needs a shadow log before any
-claim, and a multi-day activity-load ISF adjustment in its deviation form, designed but never
-built, where only the simplest 24-hour form has been tested and was null.
+The post-exercise recovery tail is real and modest, about 1.2 times baseline hazard and flat from
+zero to five hours, which puts the shipped two-hour window roughly in the right place.
 
 ## 4. The trigger
 
@@ -788,66 +712,32 @@ per-subclass branch, the recovery window and the dose scaling all exist and all 
 exists that carries a start time in the future, an exercise type from the person rather than
 from the sensors, or an intensity.
 
-### 4.3 The backstop: undeclared exercise
+### 4.3 When nobody declares
 
-Declaration will be forgotten, and the protocols say what happens then. The AID statement's
-fourth strategy is for unplanned activity: raise the target immediately at onset, accept that it
-works less well, and expect to need more carbohydrate. Riddell's decision tree routes the
-no-bolus-adjustment-possible case to carbohydrate at roughly 0.5 to 1.0 g/kg/h. Neither protocol
-proposes detecting the exercise and acting as though it had been declared.
+Declaration will be forgotten, and the protocols say what to do then. The AID statement's fourth
+strategy for unplanned activity is to raise the target at onset, accept that it works less well, and
+expect to need more carbohydrate; Riddell's decision tree routes the case where no bolus adjustment
+is possible to carbohydrate at roughly 0.5 to 1.0 g/kg/h. Neither proposes detecting the exercise
+and acting as though it had been declared.
 
-Boost's position on detection is unusually well measured, and it is not encouraging.
+Nor does the evidence here support doing so. Section 3.4 prices the reactive withdrawal that already
+handles this case at roughly break-even, and running it earlier makes it worse. Section 3.3 rules
+out a habit prior on measurement. The external picture agrees: a trial of an AID adjusting insulin
+automatically from wearable fitness data could not be distinguished from one that detected the same
+activity and asked the person to confirm, at 1.3 against 2.5 per cent time below 3.9 mmol/L on 27
+participants, neither significant.
 
-Detection from steps is already live and already withdrawing insulin: the ACTIVE predicate at
-`OpenAPSBoostPlugin.kt:805` drops profile percent to 80. That is the unannounced case, already
-shipping. Its value has been priced. Reactive withdrawal prevented 41 of 220 lows at the cost of
-39 new highs, a ratio of about 1.05, and only 26 per cent of activity bouts with insulin on board
-went low at all. Per user the ratio ranges from 2.0 down to a user for whom it was pure cost.
+So the design question is not which detector to build. It is whether a declaration should suppress
+the reactive withdrawal already running, extend it, or leave it alone, and that is open. What can be
+said is that per-user gating is the only form in which reactive withdrawal has ever priced
+positively.
 
-Detection run early, which is what a pre-meal mode would need if it were to fire without a
-declaration, gets worse rather than better: 0.78 at a 30-minute lead and 0.70 at 60 minutes. That
-is the programme's own measurement of exactly the trade the literature recommends, and it does
-not reproduce the literature's optimism.
-
-A habit prior as the trigger is ruled out by measurement rather than by argument. The per-user
-anticipation shadow was beaten by a plain hour-of-day rate at every lookahead, with every
-interval excluding zero in the wrong direction, and is discarded. The hour-of-day rate that beat
-it reaches AUC 0.662 to 0.694 pooled and 0.764 for the best participant, which makes it the
-strongest per-user timing signal in the programme and still a weak classifier. About 30 per cent
-of a person's activity falls in their top three hours, so a clock-triggered mode would be absent
-for most sessions and present for many non-sessions.
-
-Two signal-level constraints bound what any detector could use. Rolling 24-hour step load carries
-no information about insulin sensitivity (matched-insulin forward-low ratio 1.06, autosens
-correlation -0.06). Heart rate shows no lift before a glucose rise across 37,000 paired cycles;
-its only real coupling is heart rate up followed by glucose down at about 10 minutes, which is a
-concurrent exercise signal rather than an anticipatory one.
-
-The external evidence points the same way. In the Jacobs 2023 trial, an AID that adjusted insulin
-automatically from wearable fitness data was not distinguishable from one that detected the same
-activity and asked the user to confirm: time below 3.9 mmol/L 1.3 per cent (SD 2.9) against 2.5
-per cent (SD 7.0), time in range 63.2 against 59.4 per cent, neither significant on 27
-participants. Automatic detection did not beat a confirmation prompt.
-
-Set against that, the announcement result is the strongest in the corpus. Announced with a 33 per
-cent bolus cut, announced with a full bolus, and unannounced gave 2.0, 7.0 and 13.0 per cent time
-below 3.9 mmol/L. The gap between announcing and not announcing is larger than the gap between
-any two detection strategies anyone has published.
-
-So the backstop question is not which detector to build. It is whether the already-live reactive
-step withdrawal, which is what currently handles undeclared exercise and which prices at roughly
-break-even pooled and strongly per-user, should be left exactly as it is when a declaration path
-exists alongside it, and whether a declaration should suppress it, extend it or leave it
-untouched. That is a design question and it is not answered here. What can be said from the
-measurements is that per-user gating is the only form in which reactive withdrawal has ever
-priced positively, and that its lead-time table argues against running it earlier.
-
-The remaining option, retractable after-the-fact detection, is the one the code is best equipped
-for and the one with the least evidence. The retraction mechanism exists and is tested: the
-recovery target cancels itself when glucose recovers. But nothing in the corpus prices a
-retractable anticipatory withdrawal, the cohort report proposes one purely as a specification,
-and `2026-07-v6-activity/FINDINGS.md` explicitly recommends against building the anticipatory
-arm. Tier SPECULATIVE.
+One detector already in the system is worth noting for a different reason. The accelerating-meal
+trigger fires on 8.8 per cent of cycles and 40.6 per cent of those are followed by a rise of at least
+30 mg/dL (1.7 mmol/L) within 45 minutes, against a base rate of 19.6, a lift of 2.07 on 154,379
+cycles from eleven participants. It detects the meal rather than the exercise, but a pre-meal
+exercise mode needs to know a meal is starting, and this is the only detector here that has earned
+that description.
 
 ## 5. The shadow's field list
 
