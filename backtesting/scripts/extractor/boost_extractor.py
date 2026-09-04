@@ -369,6 +369,49 @@ def parse_boost_active(console_error: str) -> Optional[bool]:
     return None
 
 
+def parse_shadow_lines(console_error: str) -> dict:
+    """The ISF and volume-weighted dose shadows, parsed from the console block they write into.
+
+    Both print a single line per cycle and neither was ever extracted, so seven months of one and
+    none of the other sat unparsed. Numbers are formatted with the device's locale, so a European
+    participant writes "raw=0,890" where an English one writes "raw=0.890"; matching digits and
+    full stops alone stops at the comma and reads zero.
+    """
+    out = {k: None for k in
+           ("isf_shadow_raw", "isf_shadow_ema", "isf_shadow_bounded", "isf_shadow_warmup",
+            "vwa_blend", "vwa_projection", "vwa_expected", "vwa_delivered",
+            "vwa_day_fraction", "vwa_curve_days", "vwa_used_prev_day")}
+    if not console_error:
+        return out
+
+    def num(m, cast=float):
+        if not m:
+            return None
+        v = m.group(1).replace(",", ".")
+        if v.count(".") > 1:
+            return None
+        try:
+            return cast(float(v))
+        except ValueError:
+            return None
+
+    n = r"(-?[0-9][0-9.,]*)"
+    if "IsfShadow:" in console_error:
+        out["isf_shadow_raw"] = num(re.search(rf"IsfShadow:.*?raw={n}", console_error))
+        out["isf_shadow_ema"] = num(re.search(rf"IsfShadow:.*?\)={n}", console_error))
+        out["isf_shadow_bounded"] = num(re.search(rf"IsfShadow:.*?bounded={n}", console_error))
+        out["isf_shadow_warmup"] = num(re.search(rf"IsfShadow:.*?warmup={n}", console_error))
+    if "VwaTdd:" in console_error:
+        out["vwa_day_fraction"] = num(re.search(rf"VwaTdd: day={n}", console_error))
+        out["vwa_delivered"] = num(re.search(rf"VwaTdd:.*?deliv={n}", console_error))
+        out["vwa_projection"] = num(re.search(rf"VwaTdd:.*?proj={n}", console_error))
+        out["vwa_expected"] = num(re.search(rf"VwaTdd:.*?expected={n}", console_error))
+        out["vwa_blend"] = num(re.search(rf"VwaTdd:.*?blend={n}", console_error))
+        out["vwa_curve_days"] = num(re.search(rf"VwaTdd:.*?curveDays={n}", console_error), int)
+        out["vwa_used_prev_day"] = "(prev)" in console_error
+    return out
+
+
 def parse_isf_blend(console_error: str) -> dict:
     """Pull TDD blend components."""
     out = {"tdd_7d": None, "tdd_1d": None, "tdd_24h": None, "tdd_4h": None,
@@ -688,6 +731,7 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
         "anticip_meal_conf": _anticip(reason, 8, int), "anticip_meal_bo": _anticip(reason, 9, int),
         "anticip_mins_ex": _anticip(reason, 10, int), "anticip_mins_meal": _anticip(reason, 11, int),
         "anticip_n_ex": _anticip(reason, 12, int), "anticip_n_meal": _anticip(reason, 13, int),
+        **parse_shadow_lines(console_error),
         "ml_hypo_risk": sug.get("mlHypoRisk"),
         # 2026-09 refit, logged and never dosed on. NOT comparable to ml_hypo_risk by
         # level: different base-rate calibration, so it reads higher for the same risk.
@@ -886,6 +930,10 @@ CREATE TABLE IF NOT EXISTS {TABLE} (
     hr_avg               double precision,
     hrr_pct              double precision,
     hr_zone              text,
+    isf_shadow_raw       double precision,
+    isf_shadow_ema       double precision,
+    isf_shadow_bounded   double precision,
+    isf_shadow_warmup    double precision,
     tdd_7d               double precision,
     tdd_1d               double precision,
     tdd_24h              double precision,

@@ -574,18 +574,6 @@ open class OpenAPSBoostPlugin @Inject constructor(
                         debug.append("\nSens ratio: ${Round.roundTo(ratio, 0.01)} (24H/7D = ${Round.roundTo(tddLast24H, 0.1)}/${Round.roundTo(tdd7D, 0.1)}) → ISF=${Round.roundTo(sensNormalTarget, 0.1)}")
                     }
 
-                    // ISF shadow — compute the V4.4.2-style EMA(τ=3h) sensitivity ratio
-                    // in parallel. Does not modify sensNormalTarget; result is returned
-                    // alongside the real BoostIsfResult for direct comparison.
-                    isfShadowResult = boostIsfShadow.computeShadow(
-                        tddLast24H = tddLast24H,
-                        tdd7D = tdd7D,
-                        autosensMin = autosensMin,
-                        autosensMax = autosensMax
-                    )
-                    if (isfShadowResult != null) {
-                        debug.append("\n${isfShadowResult.debugLine}")
-                    }
 
                     // Volume-weighted dose shadow. Computes an alternative blend from the
                     // insulin delivered so far today against the participant's own delivery
@@ -593,25 +581,6 @@ open class OpenAPSBoostPlugin @Inject constructor(
                     // downstream: the candidate failed one of the four pre-registered targets
                     // it was judged on, and the only route from here to dosing is a
                     // pre-registered within-person trial.
-                    val nowForVwa = System.currentTimeMillis()
-                    val sinceAnchorH = ((nowForVwa - vwaTddShadow.dayAnchorMs(nowForVwa))
-                        / 3_600_000L).coerceIn(0L, 24L)
-                    val deliveredToday = if (sinceAnchorH > 0L)
-                        tddCalculator.calculateDaily(-sinceAnchorH, 0L)?.totalAmount else 0.0
-                    // Read one day of stored history per cycle until the curve stands on the
-                    // participant rather than on the population. Costs 48 window totals on a
-                    // cycle and stops after seven days.
-                    vwaTddShadow.warmFromHistory(nowForVwa) { startH, endH ->
-                        tddCalculator.calculateDaily(startH, endH)?.totalAmount
-                    }
-                    vwaShadowResult = vwaTddShadow.compute(
-                        nowMs = nowForVwa,
-                        deliveredSinceDayStart = deliveredToday,
-                        tdd7D = tdd7D
-                    )
-                    if (vwaShadowResult != null) {
-                        debug.append("\n${vwaShadowResult.debugLine}")
-                    }
                 } else {
                     debug.append("\n⚠ TDD calculation produced invalid values (tdd=$tdd, logTerm=$logTerm) — using profile ISF")
                     aapsLogger.warn(LTag.APS, "Boost TDD ISF: invalid tdd=$tdd or logTerm=$logTerm, falling back to profile ISF")
@@ -622,6 +591,64 @@ open class OpenAPSBoostPlugin @Inject constructor(
             }
         } else {
             debug.append("TDD-based ISF: disabled (using profile ISF ${Round.roundTo(profileSens, 0.1)})")
+        }
+
+        // Observation shadows, deliberately outside the useTdd branch above.
+        //
+        // Both used to sit three guards deep inside it: enabled, then all five TDD windows present,
+        // then the dosing ISF calculation valid. None of those conditions is about the shadows.
+        // The effect was that turning off TDD-driven sensitivity silently stopped two components
+        // that observe rather than dose, and their output is wanted whatever the sensitivity
+        // setting is, because a volume-weighted dose curve and a smoothed sensitivity ratio may
+        // turn out to be useful for something other than the ISF they were built beside.
+        //
+        // Full-day totals come from the persistence layer's cache, so the added cost when the
+        // branch above is off is one partial-day window per cycle.
+        run {
+            val tdd7DForShadow = tddCalculator.averageTDD(
+                tddCalculator.calculate(7, allowMissingDays = true))?.data?.totalAmount
+            val tdd24HForShadow = tddCalculator.calculateDaily(-24, 0)?.totalAmount
+            if (tdd7DForShadow != null && tdd7DForShadow > 0.0 && tdd24HForShadow != null) {
+                runCatching {
+                    isfShadowResult = boostIsfShadow.computeShadow(
+                        tddLast24H = tdd24HForShadow,
+                        tdd7D = tdd7DForShadow,
+                        autosensMin = autosensMin,
+                        autosensMax = autosensMax
+                    )
+                    isfShadowResult?.let { debug.append("\n${it.debugLine}") }
+                }.onFailure { t ->
+                    aapsLogger.error(LTag.APS, "ISF shadow failed (swallowed, dosing untouched)", t)
+                }
+
+                runCatching {
+                    val nowForVwa = System.currentTimeMillis()
+                    val anchorMs = vwaTddShadow.dayAnchorMs(nowForVwa)
+                    val sinceAnchorH = ((nowForVwa - anchorMs) / 3_600_000L).coerceIn(0L, 24L)
+                    // allowMissingData = true, unlike calculateDaily, which refuses the whole
+                    // window if any moment in it lacks a profile. That strictness is right for a
+                    // dosing calculation and is why this shadow returned null on every cycle it
+                    // ever ran: it produced no rows at all, on any participant, in seven months.
+                    val deliveredToday =
+                        if (sinceAnchorH > 0L)
+                            tddCalculator.calculateInterval(anchorMs, nowForVwa, allowMissingData = true)
+                                ?.totalAmount ?: 0.0
+                        else 0.0
+                    vwaTddShadow.warmFromHistory(nowForVwa) { startH, endH ->
+                        tddCalculator.calculateDaily(startH, endH)?.totalAmount
+                    }
+                    vwaShadowResult = vwaTddShadow.compute(
+                        nowMs = nowForVwa,
+                        deliveredSinceDayStart = deliveredToday,
+                        tdd7D = tdd7DForShadow
+                    )
+                    vwaShadowResult?.let { debug.append("\n${it.debugLine}") }
+                }.onFailure { t ->
+                    aapsLogger.error(LTag.APS, "VWA TDD shadow failed (swallowed, dosing untouched)", t)
+                }
+            } else {
+                debug.append("\nShadows: no TDD available (7D=$tdd7DForShadow 24H=$tdd24HForShadow)")
+            }
         }
 
         // Temp target sensitivity adjustment
