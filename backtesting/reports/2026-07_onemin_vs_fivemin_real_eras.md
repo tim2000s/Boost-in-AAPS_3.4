@@ -442,14 +442,12 @@ there is to hear.
 
 Analyses are in `backtesting/scripts/2026-07-onemin-cadence/`:
 
-- `20_real_eras_noise_and_signal.py`, variograms of both real eras, nugget fits, signal-shape
-  normalisation
-- `21_real_eras_verdict.py`, the three variogram tests, with day-level block-bootstrap
-  intervals
-- `22_what_cgms_are_used_for.py`, the four categories of use, and forecast/alarm skill at
-  each era's native cadence
-- `23_predictive_horizon.py`, the horizon sweep, normalised RMSE and base-rate-free lift with
-  bootstrap intervals
+| Script | What it does |
+|---|---|
+| 20_real_eras_noise_and_signal.py | variograms of both real eras, nugget fits, signal-shape normalisation |
+| 21_real_eras_verdict.py | the three variogram tests, with day-level block-bootstrap intervals |
+| 22_what_cgms_are_used_for.py | the four categories of use, and forecast/alarm skill at each era's native cadence |
+| 23_predictive_horizon.py | the horizon sweep, normalised RMSE and base-rate-free lift with bootstrap intervals |
 
 Scripts `10` to `19` are the earlier decimation-based study. They answer a different question, what a consumer of this signal would lose by sampling it more slowly, and should not be read
 as a comparison between sensors. `19` documents the difference between a real five-minute

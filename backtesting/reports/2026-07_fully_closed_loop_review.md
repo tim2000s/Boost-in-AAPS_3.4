@@ -15,13 +15,14 @@ not an ideal.
 
 Two honesty constraints shape everything below:
 
-- There is no glucodynamic simulator. We cannot generate the counterfactual glucose
-  trace for a dosing change, so we cannot *prove* that a different policy would have done
-  better. Detection and prediction claims are validated out-of-sample and are clean. Policy
-  claims are priced against what actually happened and are associational unless a
-  within-person design backs them.
-- Effect sizes carry uncertainty. Where it matters, figures come with a bootstrap 95%
-  confidence interval, and claims are tiered SOLID / PROVISIONAL / SPECULATIVE.
+The first is that there is no glucodynamic simulator. The counterfactual glucose trace for a dosing
+change cannot be generated, so no policy claim here is proved. Detection and prediction claims are
+validated out of sample and are clean; policy claims are priced against what actually happened and
+stay associational unless a within-subject or randomised design backs them.
+
+The second is that effect sizes carry uncertainty. Where it matters, figures come with a bootstrap
+95 per cent interval and an explicit verdict on whether they are distinguishable from baseline, with
+the participant as the resampling unit.
 
 The controller under review is deterministic, a state machine with multipliers, caps and a
 composed brake, plus two small pre-trained models applied at inference. Nothing learns and

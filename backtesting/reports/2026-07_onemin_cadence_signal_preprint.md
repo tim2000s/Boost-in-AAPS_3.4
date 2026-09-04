@@ -747,21 +747,16 @@ it.
 Analyses are in `backtesting/scripts/2026-07-onemin-cadence/`. The controller-independent
 results in this paper are produced by:
 
-- `10_generic_signal_analysis.py`, spectrum, noise floor, rate estimation, prediction,
-  fixed-threshold detection latency
-- `11_generic_rigour.py`, reconstruction from the five-minute subsequence, rate estimation
-  on a common mask, detection latency at matched false-alarm rate
-- `12_generic_metrics_and_mechanism.py`, aggregate metrics by interval, interstitial filter
-  attenuation, AR(2) noise attribution
-- `13_rise_vs_fall_symmetry.py`, the matched-false-alarm detection design run on rises and
-  falls side by side
-- `14_what_is_the_latency_worth.py`, `15_actionability.py` and `16_actionability_challenge.py`, the actionability series, of which 16 is the adversarial challenge to the detection design
-- `17_corrected_cadence_tests.py`, rate, prediction and detection re-run with an index-based
-  five-minute view and phase averaging
-- `18_actionability_corrected.py`, warning time, decision-change counts and control-cycle
-  comparison on the corrected construction
-- `19_real_5min_era_comparator.py`, the subject's real five-minute era against their
-  one-minute era and against the decimated proxy
+| Script | What it does |
+|---|---|
+| 10_generic_signal_analysis.py | spectrum, noise floor, rate estimation, prediction, fixed-threshold detection latency |
+| 11_generic_rigour.py | reconstruction from the five-minute subsequence, rate estimation on a common mask, detection latency at matched false-alarm rate |
+| 12_generic_metrics_and_mechanism.py | aggregate metrics by interval, interstitial filter attenuation, AR(2) noise attribution |
+| 13_rise_vs_fall_symmetry.py | the matched-false-alarm detection design run on rises and falls side by side |
+| 14_what_is_the_latency_worth.py | `15_actionability.py` and `16_actionability_challenge.py`, the actionability series, of which 16 is the adversarial challenge to the detection design |
+| 17_corrected_cadence_tests.py | rate, prediction and detection re-run with an index-based five-minute view and phase averaging |
+| 18_actionability_corrected.py | warning time, decision-change counts and control-cycle comparison on the corrected construction |
+| 19_real_5min_era_comparator.py | the subject's real five-minute era against their one-minute era and against the decimated proxy |
 
 Scripts `01` to `09` are the earlier implementation-specific study and are retained for the
 provenance checks and the earlier prediction results cited in section 4.5.

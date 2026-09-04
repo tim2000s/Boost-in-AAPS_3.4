@@ -116,22 +116,23 @@ It would be dishonest to present this as a set of discoveries against a naive fi
 big questions the data simply confirms what experienced loopers and clinicians already believe, and
 that is worth saying clearly, because it is the part that should make the rest credible.
 
-- Exercise is the hard case, and the answer is carbohydrate and anticipation, not a dosing tweak.
-  The community's instinct to set a higher target before activity, to eat for exercise, and not to
-  expect the loop to save you is correct. The data explains why it is correct.
-- Unannounced meals have a ceiling, and announcing or pre-bolusing helps. Almost nine in ten of
-  the highs began with no carbs entered. People who count and pre-bolus are not being fussy; they are
-  working around a real, measured limit of the closed loop.
-- Faster insulin would do more than any algorithm. The post-meal high is speed-bound and the
-  reactive ceiling has arrived. The field is right to be more excited about insulin kinetics than
-  about the next controller.
-- Fewer knobs, trust the automation, personalise from your own history. Background control is
-  effectively solved, and the honest number of dials a person needs is small. The drift toward
-  simpler, self-tuning settings matches the data.
-- Safety first. Conservative defaults, low-glucose-suspend floors, and watching before you trust:
-  nothing in this data ever argues to loosen those, and plenty of it argues to keep them.
-- Around 85 to 90% time in range is the realistic fully-closed ceiling. The cohort sits at 87
-  plus or minus 7. No miracle, no disappointment; the community's calibration is accurate.
+Exercise is the hard case, and the answer there is carbohydrate and anticipation rather than a
+dosing adjustment. The community's instinct to raise the target before activity, to eat for it, and
+not to expect the loop to rescue you is correct; what the data adds is the reason it is correct.
+Unannounced meals have a ceiling, and announcing or pre-bolusing raises it. Almost nine in ten of
+the highs began with no carbohydrate entered, so people who count and pre-bolus are working around a
+measured limit rather than being fussy.
+
+Faster insulin would do more than any algorithm. The post-meal high is speed-bound and the reactive
+ceiling has arrived, which is why the field is right to be more interested in insulin kinetics than
+in the next controller. Alongside that sits the case for fewer knobs: background control is
+effectively solved, the honest number of dials a person needs is small, and the drift toward
+simpler self-tuning settings matches what the data shows. Conservative defaults, low-glucose-suspend
+floors and a period of watching before trusting all survive the same test. Nothing here argues to
+loosen any of them and a good deal argues to keep them.
+
+The realistic ceiling for a fully closed loop is somewhere around 85 to 90 per cent time in range.
+This cohort sits at 87 plus or minus 7, which makes the community's calibration accurate.
 
 ## Points of disagreement with the data
 

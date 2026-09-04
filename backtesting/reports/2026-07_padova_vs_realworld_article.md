@@ -38,11 +38,12 @@ reality.
 We assembled four independent real-world datasets from a local research database, each a
 different automated-insulin-delivery system built by a different community:
 
-- Boost, a fully closed loop with no meal announcement (9 users).
-- Trio, an iAPS and Trio-lineage cohort (29 users).
-- OpenAPS, the oref0 lineage from the OpenAPS Commons data-sharing project (110 users),
-  several of them with multiple years of continuous data.
-- AndroidAPS classic, a pre-dynamic-ISF AndroidAPS cohort (44 users).
+| Cohort | Participants | Lineage |
+|---|---|---|
+| Boost | 9 | a fully closed loop with no meal announcement |
+| Trio | 29 | an iAPS and Trio-lineage cohort |
+| OpenAPS | 110 | the oref0 lineage from the OpenAPS Commons data-sharing project several of them with multiple years of continuous data |
+| AndroidAPS classic | 44 | a pre-dynamic-ISF AndroidAPS cohort |
 
 Together, close to two hundred people and, for many, a year or more of five-minute
 continuous glucose data. If four different algorithms worn by different people agree with

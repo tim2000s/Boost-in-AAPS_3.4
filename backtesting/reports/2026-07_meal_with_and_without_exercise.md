@@ -119,12 +119,12 @@ cleanly into two non-overlapping groups.
 *Figure 4. Each user's post-meal high burden (x) versus their post-meal-exercise low burden (y).
 The two clusters do not overlap.*
 
-- High-runners (bottom-right, users A, B, F, self): 24 to 37% of post-meal time above 180, with
-  post-meal lows at or near zero. Exercise *helps* them, it knocks down a peak they have glucose
-  to spare. They are under-treated at meals and have measured headroom for more.
-- Tight-runners (top-left, users C, D, E): little post-meal high, but exercise tips them low
-  (6%, 9%, 14% of post-meal-exercise time below 70). They have no glucose buffer, so the
-  exercise drain runs straight through the floor.
+Two groups fall out of it. The high-runners, users A, B, F and `self` in the bottom right, spend 24
+to 37 per cent of post-meal time above 180 with post-meal lows at or near zero. Exercise helps them,
+knocking down a peak they have the glucose to spare, and they are under-treated at meals with
+measured headroom for more. The tight-runners, users C, D and E in the top left, show little
+post-meal high but exercise tips them low, at 6, 9 and 14 per cent of post-meal-exercise time below
+70. They have no buffer, so the exercise drain runs straight through the floor.
 
 The people who need *more* meal insulin are not the people who need exercise protection. A single
 global change would help one group and harm the other, which is exactly why the fix has to be
@@ -152,8 +152,7 @@ temp-basal reduction that unwinds if the activity does not appear, this is the a
 shadow now banking data across the cohort. Its pricing (does it prevent the lows, at what cost)
 is the next milestone, and needs exactly the tight-runners' own data to settle.
 
-Confidence. The contrast (Figure 1), the dose refutation (Figure 2), and the disjoint
-populations (Figure 4) are SOLID, cohort-wide, CI-backed where relevant, robust to how the
+Confidence. The contrast (Figure 1) and the disjoint populations (Figure 4) are SOLID, cohort-wide, CI-backed where relevant, robust to how the
 events are counted. The physiological mechanism is PROVISIONAL. Everything about the two
 levers' live benefit is untested, that is what the trials exist to decide. As ever, without a
 glucodynamic simulator these are associations priced against observed outcomes, not proven

@@ -86,11 +86,7 @@ Boost-V1 versus Boost-V5/V6, not Boost versus a reference controller.
 
 Three moves are distinguishable from zero, and they do not point one way:
 
-- C's TBR<70 rose 3.73 pp [+0.91, +6.71]. C is now one of the floor breaches above.
-- F improved on both hypo measures, −1.47 pp [−2.79, −0.18] and −0.29 pp [−0.53, −0.06].
-- H's TING fell 6.60 pp [−12.48, −0.52]. H is the user whose loop went offline twice on
-  the confirm-crash in this window, so the H number is contaminated by the incident and
-  its aftermath rather than being a clean read on the engine.
+Three participants moved measurably. C's time below 70 rose 3.73 percentage points (+0.91 to +6.71), which puts C among the floor breaches above. F improved on both hypoglycaemia measures, by 1.47 points (-2.79 to -0.18) and 0.29 (-0.53 to -0.06). H's TING fell 6.60 points (-12.48 to -0.52); H is the user whose loop went offline twice on the days concerned.
 
 E's TBR<54 "+0.02 [+0.00, +0.06]" is degenerate, both arms are ~0.
 
@@ -151,11 +147,7 @@ On V7-shadow the gate excludes negative basal IOB from the total and latches the
 consecutive-compression counter while the pattern persists. dev has neither. The
 consequences on dev, per the fix's own rationale:
 
-- Negative temp-basal IOB (the loop zero-temping through a genuine descent) shrinks the
-  IOB total, so the compression gate is *most* armed exactly when the loop is already
-  fighting a real insulin-driven low, damping the very drop it should be following.
-- Resetting the counter on a cap-trip lets an ongoing low re-arm for another burst every
-  cycle, defeating the ~15-minute bound the cap exists to enforce.
+Negative temporary-basal IOB, which is the loop zero-temping through a genuine descent, shrinks the IOB total, so the compression gate is most armed exactly when the loop is already fighting a real insulin-driven low, damping the very drop it should be following. Separately, resetting the counter on a cap trip lets an ongoing low re-arm for another burst every cycle, defeating the roughly fifteen-minute bound the cap exists to enforce.
 
 4b. Sleep detector merge and PRE_SLEEP escape (`SleepStateDetector.kt`). V7-shadow
 folds the lie-in into the state machine (live-wired: `sleepInWindowMin = sleepInHours * 60`)

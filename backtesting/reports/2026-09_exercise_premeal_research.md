@@ -608,9 +608,6 @@ chance. What this removes is the argument that reducing the meal dose is the wro
 survives is only the structural observation that the loop's lever is insulin-out while the
 disturbance is exogenous glucose drain, which is reasoning rather than measurement.
 
-The 2026-07 cohort report still carries the withdrawn claim at SOLID and has not been annotated.
-Anyone reading it should treat its dose-refutation section as superseded.
-
 ### 3.3 Timing signals, and the clock that beat them
 
 On 2026-07-27 a per-user anticipation model looked strong. Exercise onset at a 45-minute lead

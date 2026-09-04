@@ -117,11 +117,12 @@ nothing is applied to one side but not the other. The pipeline is open and re-ru
 The real cohorts are anonymised AID users held in a local research database, each a
 different system built by a different community:
 
-- Boost (9 users), a fully closed loop with no meal announcement.
-- Trio (29 users), the iAPS and Trio lineage.
-- OpenAPS (110 users), the oref0 lineage from the OpenAPS Data Commons, several with
-  multiple years of continuous data.
-- AndroidAPS classic (44 users), AndroidAPS predating dynamic insulin sensitivity.
+| Cohort | Participants | Lineage |
+|---|---|---|
+| Boost | 9 | a fully closed loop with no meal announcement |
+| Trio | 29 | the iAPS and Trio lineage |
+| OpenAPS | 110 | the oref0 lineage from the OpenAPS Data Commons, several with multiple years of continuous data |
+| AndroidAPS classic | 44 | AndroidAPS predating dynamic insulin sensitivity |
 
 All record continuous glucose at a five-minute cadence. A user is included only if they have
 at least 500 CGM readings. No trace is smoothed, trimmed or cleaned beyond dropping null
@@ -144,28 +145,17 @@ an unfair scenario.
 Eleven statistics were computed per user or per persona. Each is defined below so the result
 can be read without the source.
 
-- Glucose variability (CV%): 100 times the SD over the mean of the CGM.
-- Rise tail: among consecutive samples 4 to 6 minutes apart, the percentage whose rise
-  exceeds 10 mg/dL. A fat positive tail marks the onset of an unannounced meal.
-- Autocorrelation at 30 and 60 minutes: the Pearson correlation between each CGM value and
-  the value 30 or 60 minutes later, matched on the actual timestamps to within 90 seconds. It
-  measures how quickly the glucose curve decorrelates.
-- Outcome SD at a stuck high: for samples with CGM between 180 and 240 mg/dL, the SD of the
-  change over the next 30 minutes. A wide spread means the next half hour is hard to predict
-  from a stuck high; a narrow one means it is nearly deterministic. At least 200 in-band
-  samples are required.
-- Diurnal amplitude: the peak minus the trough of the hour-of-day mean profile, which is
-  invariant to time-zone shifts.
-- Hypo recovery: for each crossing below 70 mg/dL, the time to return to 100 mg/dL, together
-  with the fraction of recoveries that then overshoot above 180 mg/dL within two hours.
-- Compression lows: sharp reversing dips below 70, defined as a fall of more than 25 mg/dL
-  from a pre-dip level of at least 85 that recovers to within 15 mg/dL of that level inside 30
-  minutes. This is the shape of a sensor compression artefact rather than a physiological low,
-  reported as events per 30 days.
-- Sensor jitter: the SD of the second difference of the five-minute series, taken over
-  contiguous five-minute triples only. It captures high-frequency measurement noise.
-- ISF drift: the algorithm's insulin-sensitivity value reduced to a weekly median, then the
-  coefficient of variation of those weekly medians over at least six weeks.
+| Metric | Definition |
+|---|---|
+| Glucose variability (CV%) | 100 times the SD over the mean of the CGM |
+| Rise tail | among consecutive samples 4 to 6 minutes apart, the percentage whose rise exceeds 10 mg/dL. A fat positive tail marks the onset of an unannounced meal |
+| Autocorrelation at 30 and 60 minutes | the Pearson correlation between each CGM value and the value 30 or 60 minutes later, matched on the actual timestamps to within 90 seconds. It measures how quickly the glucose curve decorrelates |
+| Outcome SD at a stuck high | for samples with CGM between 180 and 240 mg/dL, the SD of the change over the next 30 minutes. A wide spread means the next half hour is hard to predict from a stuck high; a narrow one means it is nearly deterministic. At least 200 in-band samples are required |
+| Diurnal amplitude | the peak minus the trough of the hour-of-day mean profile, which is invariant to time-zone shifts |
+| Hypo recovery | for each crossing below 70 mg/dL, the time to return to 100 mg/dL, together with the fraction of recoveries that then overshoot above 180 mg/dL within two hours |
+| Compression lows | sharp reversing dips below 70, defined as a fall of more than 25 mg/dL from a pre-dip level of at least 85 that recovers to within 15 mg/dL of that level inside 30 minutes. This is the shape of a sensor compression artefact rather than a physiological low, reported as events per 30 days |
+| Sensor jitter | the SD of the second difference of the five-minute series, taken over contiguous five-minute triples only. It captures high-frequency measurement noise |
+| ISF drift | the algorithm's insulin-sensitivity value reduced to a weekly median, then the coefficient of variation of those weekly medians over at least six weeks |
 
 ### 3.3 Aggregation and verdict
 
