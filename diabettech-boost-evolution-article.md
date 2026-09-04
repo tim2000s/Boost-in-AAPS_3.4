@@ -47,6 +47,13 @@ The meal state machine is the core. Around it:
 - **Caps** on how much insulin can go to a single meal, and on cumulative micro-bolus volume in a rolling window.
 - A **sleep detector** built from heart rate and step activity rather than a clock, which learns your usual sleep and wake times and suppresses the aggressive tiers overnight. Overnight is where a fully closed loop can hurt you, because nobody's watching and a meal-shaped rise at 2am is almost never a meal.
 - **Steps as a live input**, blended across phone and watch, withdrawing insulin when you're active.
+- **Heart rate**, which is wired in and off by default.
+
+Heart rate deserves a note, because it's the one part of this I've built out properly and then left switched off for most people. When it's on, a Garmin or Wear watch feeds heart rate in, and Boost classifies it into Karvonen zones and an exercise state: vigorous aerobic, moderate, light, resistance, stress, resting. Vigorous aerobic pulls the profile back a further 10% and raises the target; resistance and stress raise the target without touching the profile, because those raise glucose rather than lowering it. The reference points for all of that are learned from you rather than assumed, with resting heart rate taken as the median of the tenth percentile during sleep and the daytime figure the same statistic while awake, neither available until you've accumulated about a week of nights.
+
+There's one branch of it I'd keep even if I switched off everything else. Boost has an inactivity behaviour that raises insulin when you've been sitting still, and a heart rate at or above moderate suppresses that entirely. Sitting still with a heart rate of 130 is not the same as sitting still, and steps alone can't tell you which one you're in. Cycling, rowing and lifting all look sedentary to a pedometer.
+
+The reason it's off by default is boring rather than principled: it needs a watch that reports reliably, and overnight heart rate collection on Wear has died on me repeatedly through the OS killing the listener. If you're wearing something that behaves, it's worth turning on. If you're not, the steps path covers most of it.
 
 And underneath all of it, the bit I'd most want anyone else building this sort of thing to copy: nothing reaches the dose path without running as a shadow first. A shadow computes what it *would* have done, writes it to the log, and delivers nothing. It runs like that across everyone for as long as it takes to build up evidence, and only then does anyone argue about it.
 
