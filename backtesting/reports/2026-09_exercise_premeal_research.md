@@ -1,20 +1,22 @@
-# Pre-meal exercise mode: evidence base and what Boost already has
+# Pre-meal exercise mode: the published protocols, the existing machinery, and a build
 
-Research note, 2026-09-03. Sections 1 to 5 set out what the published guidance recommends
-before exercise when a meal is involved, what machinery already exists in the Boost fork, and
-what the programme's own measurements say about the problem. Section 6 states how the mode is
-built in the app and what each piece costs, since the survey on its own left that unanswered.
+Research note, 2026-09-03.
 
-Three decisions are already taken and shape what the survey covers. The trigger is user-declared,
-so the person tells the loop that exercise is coming, and detection appears below only as the
-question of what happens when nobody declares. The levers come from the published corpus rather
-than from first principles, with EXTOD treated as central alongside the Riddell consensus and the
-AID-specific position statement. And the mode logs what it would have done and delivers nothing,
-across the cohort, before anything touches dosing.
+Someone is about to exercise and there is a meal involved. The published guidance on what an
+automated system should then do is reasonably specific, and most of the mechanisms it asks for
+already exist in this fork, wired to different triggers. Sections 1 to 5 set that out. Section 6
+describes the build, which the survey on its own left unstated.
 
-The hard rules apply unchanged. Absolute time-below-range floors sit under every statistical
-decision and can only tighten. No dosing change ships without the two-test bar and a
-pre-registered within-user trial. Nothing trains or infers online in the dose path.
+Three decisions were taken before any of this was written and they bound what follows. The trigger
+is a declaration, meaning the person tells the loop exercise is coming; detection appears below only
+as the question of what happens when nobody declares, which turns out to be the harder half. Levers
+are taken from the published corpus rather than derived, with EXTOD treated as central alongside the
+Riddell consensus and the AID-specific position statement. And nothing doses. The mode logs what it
+would have done, across the cohort, before any of it reaches the dose path.
+
+The programme's hard rules apply unchanged: absolute time-below-range floors sit under every
+statistical decision and can only tighten, no dosing change ships without the two-test bar and a
+pre-registered within-user trial, and nothing trains or infers online where a dose is decided.
 
 Confidence tiers follow the project convention: SOLID for out-of-sample, interval-backed and
 challenged; PROVISIONAL for a single test or an unknown interval; SPECULATIVE for reasoning
@@ -306,7 +308,7 @@ On recent hypoglycaemia, EXTOD is more restrictive than a dosing algorithm can b
 episode needing assistance in the last 24 hours means do not exercise that day, and a
 self-treated episode means do not exercise alone and monitor more often.
 
-### 1.8 Where the protocols agree and where they differ
+### 1.8 Points of agreement and disagreement
 
 | Question | EXTOD | Riddell 2017 / Zaharieva 2017 | EASD-ISPAD AID 2025 |
 |---|---|---|---|
@@ -345,7 +347,7 @@ has the weakest direct support as a number, though the programme containing it h
 piloted; its value here is that it is the simplest rule that anybody has taught at scale, and
 simplicity is worth something when the input is a person declaring an intention.
 
-### 1.9 What the protocols specify, and what Boost could implement it with
+### 1.9 Specified values against available mechanisms
 
 This table states what the corpus specifies and names the mechanism that already exists, or
 does not. Section 6.6 takes the same rows and says what promotion would change in each.
@@ -364,10 +366,9 @@ does not. Section 6.6 takes the same rows and says what promotion would change i
 | Reduce the next meal's bolus by ~50% | EXTOD, Riddell | Same meal multiplier path as the pre-exercise cut | Multiplier exists; no post-exercise conditioning on it |
 | Do not exercise after a severe hypo in 24 h | EXTOD | Not a dosing lever; the composed brake and TBR floors act on the same risk | Related machinery exists, different purpose |
 
-## 2. What the Boost fork already has
+## 2. The existing machinery
 
-Surveyed on branch `dev` at `/Users/timstreet/StudioProjects/Boost-AAPS-core`. Everything below
-was read from the code rather than from notes. Where a claim is about live versus shadow, the
+Read from the code on the vehicle branch rather than from notes. Where a claim is about live versus shadow, the
 deciding line is named.
 
 All of the activity machinery lives in the V1 engine,
@@ -461,7 +462,7 @@ at line 1607, which gates the fast-carb confirm path. The night-mode master flag
 false on its first line, but `detectorAsleep` and the night-window test are read regardless of
 that flag.
 
-### 2.4 The activity ISF shadow is genuinely shadow, with one edge
+### 2.4 The activity ISF shadow, and its one side effect
 
 `boost_activity_shadow_enabled` maps to `BooleanKey.ApsBoostActivityShadowEnabled`, default true,
 at `core/keys/.../BooleanKey.kt:165`. The block runs at `OpenAPSBoostPlugin.kt:2216-2354` and
@@ -480,7 +481,7 @@ One edge is worth knowing. Turning this shadow off also disables Health Connect 
 `OpenAPSBoostPlugin.kt:2247`, which feeds the sleep detector's wake evidence, which gates
 `boostActive`. The flag is not fully inert.
 
-### 2.5 Temporary targets: a working template already exists
+### 2.5 Temporary targets as a template
 
 The persistence surface is `core/interfaces/.../db/PersistenceLayer.kt`, with
 `getTemporaryTargetActiveAt`, `insertAndCancelCurrentTemporaryTarget` and
@@ -510,7 +511,7 @@ Two related facts. A high user temporary target disables Boost outright at line 
 high-target-raises-sensitivity branch in `DetermineBasalBoost.kt:491` never fires; there is no
 plugin-level exercise mode of any kind.
 
-### 2.6 Signals available at decision time
+### 2.6 Signals present at decision time
 
 Everything a pre-meal mode would want to read is already assembled each cycle, with one gap.
 
@@ -552,7 +553,7 @@ Finally, `openAPSBoostTwin/AnticipationShadow.kt` is present and shadow-only, wi
 onset test at more than 150 steps in five minutes, appending to the reason string and delivering
 nothing. It is the residue of the anticipation work described in section 3.
 
-## 3. What the programme has already measured
+## 3. Prior measurements
 
 Source: `backtesting/RELATIONSHIPS_REGISTER.md`, plus the study directories it cites. Everything
 in this section is Boost's own data, and several of the entries constrain the design more
@@ -610,7 +611,7 @@ disturbance is exogenous glucose drain, which is reasoning rather than measureme
 The 2026-07 cohort report still carries the withdrawn claim at SOLID and has not been annotated.
 Anyone reading it should treat its dose-refutation section as superseded.
 
-### 3.3 Timing signals: the hour of day beats everything built
+### 3.3 Timing signals, and the clock that beat them
 
 On 2026-07-27 a per-user anticipation model looked strong. Exercise onset at a 45-minute lead
 gave a per-user temporal AUC of 0.779 (all eight users 0.72 to 0.83) against 0.672 for a
@@ -640,7 +641,7 @@ clustered intervals and survived being the losing arm of its own test.
 That makes the hour-of-day exercise prior the strongest per-user timing signal measured anywhere
 in this programme. It is also, on its own, a weak classifier in absolute terms.
 
-### 3.4 Activity withdrawal has been priced and it is close to break-even
+### 3.4 The price of reactive activity withdrawal
 
 `backtesting/scripts/2026-07-v6-activity/FINDINGS.md`, 2026-07-19, verdict MARGINAL. On 837
 bouts of activity with insulin on board, 220 went below 70 mg/dL and 68 below 54. A reactive
@@ -703,7 +704,7 @@ The trigger is user-declared: the person tells the loop that exercise is coming.
 covers what a declaration has to carry for the protocol levers to be applied, what the existing
 machinery already accepts, and what happens when nobody declares.
 
-### 4.1 What a declaration must carry
+### 4.1 The contents of a declaration
 
 The protocol levers in section 1.9 are functions of four things, and none of the four can be
 inferred from a temporary target as it exists today.
@@ -739,7 +740,7 @@ declaration is retractable and on what evidence. The post-exercise recovery code
 retracts its own target when glucose recovers 20 mg/dL above a recent low
 (`OpenAPSBoostPlugin.kt:1304`), which is the pattern.
 
-### 4.2 What the existing machinery already accepts
+### 4.2 The payload the existing routes accept
 
 A declaration can be made today, through five routes, and all of them collapse to the same
 narrow payload.
@@ -834,14 +835,14 @@ retractable anticipatory withdrawal, the cohort report proposes one purely as a 
 and `2026-07-v6-activity/FINDINGS.md` explicitly recommends against building the anticipatory
 arm. Tier SPECULATIVE.
 
-## 5. What the shadow must record
+## 5. The shadow's field list
 
 Nothing here touches dosing until it has been logged across the cohort, priced against real
 exercise, and taken through the two-test bar and a pre-registered within-user trial. The shadow
 is what makes that trial possible, so its field list is determined by what the trial will have to
 estimate rather than by what is convenient to log.
 
-### 5.1 What the shadow computes and does not do
+### 5.1 Scope and side effects
 
 Each cycle the shadow decides whether a declared pre-meal exercise mode would be active, and if
 so what it would have done to the target and to the meal dose. It writes those as telemetry and
@@ -884,7 +885,7 @@ Cadence is the loop cycle, so every five minutes, with the shadow running whethe
 declaration is present. The undeclared cycles are what the analysis needs as its comparison set;
 logging only declared sessions would leave no way to price a missed declaration.
 
-### 5.4 What has to be recorded to price the trigger
+### 5.4 Scoring the declaration itself
 
 A declaration is a claim about the future, so the shadow has to record enough to score it. For
 each declaration, whether measured activity followed within a tolerance of the declared start,
@@ -934,7 +935,7 @@ long enough to produce a per-user event count that supports a within-user compar
 long that is should be estimated from the observed declaration rate in the first weeks rather
 than assumed.
 
-## 6. How the mode is built in the app
+## 6. The build
 
 ### 6.1 One session, start to finish
 
@@ -954,7 +955,7 @@ post-exercise window.
 
 Throughout, it writes what it would have done and delivers nothing.
 
-### 6.2 The declaration is the only real new construction
+### 6.2 The declaration, the one new component
 
 Section 4.2 established that the gap is in what a declaration can carry rather than in the
 plumbing behind it. `TT.Reason` holds six values, `CUSTOM`, `HYPOGLYCEMIA`, `ACTIVITY`,
@@ -973,49 +974,47 @@ The record persists as a JSON blob in a new `StringKey`, following `ApsBoostSlee
 `ApsBoostMealTimeHistory`. Blank or corrupt means no declaration, which is both the safe default
 and the behaviour every other blob in that file already has.
 
-### 6.3 The shadow sits beside one that already works
+### 6.3 Placement of the per-cycle shadow
 
 The per-cycle shadow belongs next to the activity-load shadow in `OpenAPSBoostPlugin.kt`, which
 already computes a would-be ISF delta every cycle, logs it and doses nothing. Its fields are
-already extracted into the decision table, so the pattern for getting a shadow from the plugin to
-the database is established rather than invented.
+extracted into the decision table, so the route from plugin to database is a worn path.
 
-That block carries one lesson worth taking with it. It also seeds the Health Connect daily step
-total, so disabling it changes sleep-detector wake behaviour, which gates dosing. A shadow with a
-side effect is not a shadow. The exercise mode's version computes and writes, and touches nothing
-else.
+That block carries a warning with it. It also seeds the Health Connect daily step total, so
+disabling it changes sleep-detector wake behaviour, which in turn gates dosing. The exercise mode's
+version computes and writes and touches nothing else, which is what a shadow has to be if turning it
+off is to remain a safe operation.
 
 It runs on every cycle whether or not a declaration exists, because the undeclared cycles are the
 comparison set. Logging only declared sessions would leave no way to price a missed declaration,
 which is the quantity section 5.4 needs and which nobody has measured.
 
-### 6.4 Telemetry rides in the reason string
+### 6.4 Telemetry in the reason string
 
 The state and the would-be numbers leave as a tag appended to `reason`, parsed into columns in
 the extractor, in the same way the KAIROS twin forecast, the tranche telemetry and the shadow
 hypo-risk score already travel.
 
-This is not a stylistic preference. `RT` is constructed inside `determine_basal` in every engine
-in this repository, so one added field costs one register in each of them, and
-`DetermineBasalBoostV3MLG3.determine_basal` has no headroom: a build carrying one extra field
-crashed at startup on 2026-09-02, measured at 274 registers where 273 runs. The failure produces
-no stack trace and no log line, because it happens before the app starts. `RtFieldCountTest` now
-fails on any attempt, and the reason string costs nothing.
+That is a hard constraint rather than a preference. `RT` is constructed inside `determine_basal`
+in every engine here, so one added field costs one register in each, and
+`DetermineBasalBoostV3MLG3.determine_basal` has none to spare. A build carrying a single extra field
+crashed at startup on 2026-09-02, measured at 274 registers where 273 runs. It produces no stack
+trace and no log line, since it happens before the app starts, so the symptom is a phone that opens
+and closes. `RtFieldCountTest` now fails instead. The reason string costs no registers at all.
 
-### 6.5 The switch, and which direction it points
+### 6.5 The switch and its auto-enable gate
 
 The toggle is managed by `BoostV5AutoConfig` under the 2026-07-17 convention, which means adding
 it to `managedBooleanKeys` and `suggestionBoolean` in the plugin together with a derived flag on
 `V5Suggestion`, rather than shipping it off for every user to discover.
 
-The auto-enable gate is the part that needs stating rather than copying. The convention's strict
-time-below-range cut exists to stop insulin-adding features reaching people who are already
-running low. A pre-exercise target raise withholds insulin instead, so that gate is the wrong
-one, and the cost it has to be priced against is time above range rather than time below. The
-programme's own position is that a tightening and a loosening do not need to clear the same
-evidence bar, and this is a case where applying the symmetric bar would be the error.
+The auto-enable gate should not be copied across without thought. Its strict time-below-range cut
+exists to keep insulin-adding features away from people already running low. A pre-exercise target
+raise withholds insulin, so that cut is the wrong test, and what this feature has to be priced
+against is time above range. The programme already holds that a tightening and a loosening need not
+clear the same bar. Applying the symmetric one here would be the error it warns about.
 
-### 6.6 What promotion would change
+### 6.6 Changes required on promotion
 
 Almost nothing, which is the point of building it this way. Every lever in the section 1.9 table
 already has a live call site.
@@ -1037,19 +1036,19 @@ One ordering constraint has no call site and is the only sequencing work in the 
 statement puts the target raise before the bolus reduction, which means the target write has to
 precede `MealHypothesis.step`. Both operations exist and neither currently runs before the other.
 
-### 6.7 What is not settled by building this
+### 6.7 Residual uncertainty
 
-The lever with the strongest external grading is the one the programme's own data likes least.
-Raising the target one to two hours ahead carries the AID statement's level A, and withdrawal at
-a 60-minute lead has been priced here at 0.70 lows prevented per high caused, against 1.05 for
-the reactive step withdrawal already shipping. Building the declaration path does not resolve
-that, and the shadow exists precisely because it is unresolved.
+The lever carrying the strongest external grading is the one this programme's own data likes least.
+Raising the target one to two hours ahead has the AID statement's level A behind it. Measured here,
+withdrawal at a 60-minute lead prices at 0.70 lows prevented per high caused, against 1.05 for the
+reactive step withdrawal that already ships. Building the declaration path does not settle that
+disagreement. The shadow is there because it is unsettled.
 
-What the declaration route has behind it is the announcement result rather than any lever in
-particular: announced with a bolus cut, announced with a full bolus, and unannounced gave 2.0,
-7.0 and 13.0 per cent time below 3.9 mmol/L. That gap is wider than the gap between any two
-detection strategies in the literature, and it is the reason the trigger is a person rather than
-a classifier. Tier SPECULATIVE throughout, since no part of this has been measured in the field.
+The evidence for a declared trigger rests on the announcement result rather than on any particular
+lever. Announced with a bolus cut, announced with a full bolus, and unannounced gave 2.0, 7.0 and
+13.0 per cent time below 3.9 mmol/L. No published pair of detection strategies differs by anything
+approaching that, which is why the trigger here is a person. Tier SPECULATIVE throughout: none of it
+has been measured in the field.
 
 ## References
 

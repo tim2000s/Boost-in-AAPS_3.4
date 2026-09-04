@@ -117,7 +117,7 @@ score.
 
 ## Where the training code lives
 
-The training scripts are in `/Users/timstreet/oref-investigations/`, which is not a git repository and
+The training scripts are in `a working directory outside the repository`, which is not a git repository and
 has no history. The shipped assets are byte-identical to files in that directory, verified by MD5, so
 the mapping from artefact to producing directory is certain even though the production runs are not.
 
