@@ -6,7 +6,7 @@
 
 I've written about Boost twice before at any length: once when it was [a possibility](https://www.diabettech.com/fully-closed-loop-with-an-open-source-aid-system-a-possibility/), and once when [V6 arrived](https://www.diabettech.com/) and I described how it had stopped thinking in tiers and started thinking in meals. Both of those were, broadly, "here's a thing I built and here's why I think it helps."
 
-This one is a bit different. At some point I stopped adding things to Boost and started measuring the things already in it, which is a different activity and tends to retire more than it confirms. So: what Boost was for, how it got to where it is, what's in it now, where the machine learning sits, and what came out of going back and checking whether the parts I'd built were doing anything.
+This one is a bit different. At some point I stopped adding things to Boost and started measuring the things already in it, which is a different activity and tends to retire more than it confirms. So: what Boost was for, how it got to where it is, what's in it now, where the machine learning sits, and which parts of it have earned their place.
 
 ## What it was for
 
@@ -44,31 +44,44 @@ The meal state machine is the core. Around it:
 
 And underneath all of it, the bit I'd most want anyone else building this sort of thing to copy: nothing reaches the dose path without running as a shadow first. A shadow computes what it *would* have done, writes it to the log, and delivers nothing. It runs like that across everyone for as long as it takes to build up evidence, and only then does anyone argue about it.
 
-That last part is worth going into, because it's where most of this year's work has gone.
+That last part is where most of this year's work has gone, so it's worth going into.
 
-## What happened when I checked
+## Which of the shadows earn their place
 
-There are thirteen of those shadow components. I recently scored all of them against the outcome each one claims to predict, which in several cases hadn't been done before. The results split fairly cleanly.
+Thirteen components run in shadow at the moment. Scoring them against the outcome each one claims to
+predict is how anything gets promoted here, and it's also how things get dropped.
 
-**One is genuinely earning its place.** A detector for accelerating meals fires on 8.8% of cycles, and 40.6% of those are followed by a rise of at least 1.7 mmol/L within 45 minutes, against a base rate of 19.6%. That's on 154,000 cycles across eleven people. A detector with roughly double the base rate at that firing rate is worth having.
+The clear success is the **accelerating-meal detector**. It fires on 8.8% of cycles, and 40.6% of
+those are followed by a rise of at least 1.7 mmol/L within 45 minutes, against a background rate of
+19.6%. That's measured on 154,000 cycles across eleven people. Roughly double the base rate, at a
+firing rate low enough to act on, is exactly what you want from something whose job is to notice a
+meal starting when nobody has announced it. It's the strongest detection result anywhere in the
+system, and it's the one I'd build on next.
 
-**One is real but too small to care about.** There's a physiological forecaster in there, a proper ensemble Kalman thing, and its thirty-minute prediction beats "assume glucose stays where it is" by about 0.06 mmol/L of error. That's statistically solid and clinically irrelevant, and what it actually taught me is how good "assume nothing changes" is over half an hour, which I hadn't appreciated.
-
-**One is worse than just reading the screen.** A component estimating whether a rise will end up somewhere that matters scores 0.730. Current glucose, on its own, scores 0.785. It should go.
-
-**One is finding the wrong thing entirely.** A plateau detector looks for a high that's stuck and won't come down on its own, and proposes a small nudge. When I scored it properly, the highs it flags come down *better* than the ones it ignores — a median fall of 1.6 mmol/L against 1.5, and less likely to be stalled than the background rate. It isn't finding stuck highs. It's finding highs that are already resolving, which is exactly the population that everything I've learned says you shouldn't add insulin to.
-
-I got that one wrong twice before I got it right, incidentally. First I read the wrong field out of the log. Then I compared against the wrong group of cycles, which flattered it. The number only stopped moving when I went and read the code that emits it.
-
-**Two produce nothing at all.** One has a fault that made every failure look identical to a quiet day. The other has never produced a single row for anyone, because it asked for the day's insulin total through a function that refuses the whole window if any moment in it lacks a profile, and then silently gave up. It has never produced a row since it went in.
-
-**And four had simply never been asked.** The oldest of them had been running for months. Its output wasn't even being saved — 355,000 cycles of it were sitting in a text field nobody had ever parsed. When I finally did parse it and score it, it came out at chance, and worse than the thing it was proposed to replace for eight of the nine people I could compare.
+The **physiological forecaster** is the interesting near-miss. It's a proper ensemble Kalman model
+of glucose and insulin, and its thirty-minute prediction does beat "assume glucose stays where it
+is" by about 0.06 mmol/L of error, consistently and across nearly everyone. That's a real result and
+a clinically meaningless one. What it actually taught me is how good "assume nothing changes" is
+over half an hour, which I hadn't appreciated and which is worth knowing before anyone builds
+another forecaster.
 
 ![Four shadow components scored against what each claims to anticipate](backtesting/reports/figs_boost_evolution/fig1_shadow_verdicts.png)
 
-*Four of them, scored against the thing each says it predicts. A lift of 1.0 means it's telling you nothing you didn't already know.*
+*Four of them against the thing each says it predicts. A lift of 1.0 means it's telling you nothing you didn't already know.*
 
-A shadow that never gets scored is just telemetry with a cost attached. The code was doing what it was written to do in each case; what was missing was anyone going back to ask whether it was worth having, and that's on me.
+Three are being dropped. A component estimating whether a rise will end somewhere that matters
+scores 0.730, where the current glucose reading on its own scores 0.785. An anticipatory backout
+barely separates the cycles it arms on from the ones it doesn't. And a plateau detector, which looks
+for a high that's stuck and proposes a small nudge, turns out to flag highs that come down slightly
+*better* than the ones it ignores, so it's finding highs that are already resolving rather than
+stuck ones. That last one matters more than the other two, because adding insulin to a recovering
+high is the specific thing that everything I've learned says not to do.
+
+Two more had faults rather than verdicts. One returned a bare null on every rejection, so a model
+that failed to load and a genuinely quiet day looked identical from outside. The other asked for the
+day's insulin total through a function that refuses the whole window if any moment in it lacks a
+profile, and then gave up silently. Both are fixed and both are now running properly for the first
+time, which means they get scored on the next pass rather than this one.
 
 ## Where the machine learning actually sits
 
