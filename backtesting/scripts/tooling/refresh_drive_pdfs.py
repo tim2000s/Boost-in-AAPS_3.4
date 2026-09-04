@@ -53,7 +53,7 @@ MAP = [
     # single-source entry: md2pdf sets base_url from the first file's directory.
     ("Boost_evolution_article_2026-09-04.pdf",
      [os.path.expanduser("~/StudioProjects/Boost-AAPS-core/diabettech-boost-evolution-article.md")],
-     "Boost: what it was, what it became, and where the machine learning sits"),
+     "Boost, and what happened when I measured it"),
     ("Boost_shadow_audit_2026-09-04.pdf",
      [f"{R}/2026-09_shadow_audit.md"], "What the shadow layers have delivered"),
     ("TimSim_second_machine_requirements_2026-09-04.pdf",

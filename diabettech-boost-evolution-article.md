@@ -1,4 +1,4 @@
-# Boost, and what six months of measuring it actually found
+# Boost, and what happened when I measured it
 
 *The usual preamble, because it matters. Everything described here is highly experimental. It uses insulin in an off-label fashion, it isn't in any released, supported version of AndroidAPS or Trio, and nothing here is medical advice. It's an n=1 that's grown into a slightly-larger-than-n=1, shared in the open-source, #WeAreNotWaiting spirit so the learning is useful to others. Take the ideas, not the dose settings.*
 
@@ -6,7 +6,7 @@
 
 I've written about Boost twice before at any length: once when it was [a possibility](https://www.diabettech.com/fully-closed-loop-with-an-open-source-aid-system-a-possibility/), and once when [V6 arrived](https://www.diabettech.com/) and I described how it had stopped thinking in tiers and started thinking in meals. Both of those were, broadly, "here's a thing I built and here's why I think it helps."
 
-This one is different, and a bit less comfortable. Over the last few months I've stopped adding things to Boost and started measuring the things already in it. That turns out to be a very different activity, and it retires more than it confirms. So this is what Boost was for, how it got to where it is, what's actually inside it, where the machine learning sits — and then the part I'd have preferred not to write, which is what happened when I went and checked.
+This one is different, and a bit less comfortable. At some point I stopped adding things to Boost and started measuring the things already in it. That turns out to be a very different activity, and it retires more than it confirms. So this is what Boost was for, how it got to where it is, what's actually inside it, where the machine learning sits — and then the part I'd have preferred not to write, which is what happened when I went and checked.
 
 ## What it was for
 
@@ -60,9 +60,9 @@ There are thirteen of those shadow components. This month I sat down and scored 
 
 I got that one wrong twice before I got it right, incidentally. First I read the wrong field out of the log. Then I compared against the wrong group of cycles, which flattered it. The number only stopped moving when I went and read the code that emits it.
 
-**Two produce nothing at all.** One has a fault that made every failure look identical to a quiet day. The other has never produced a single row on any person, because it asked for the day's insulin total through a function that refuses the whole window if any moment in it lacks a profile, and then silently gave up. It has never produced a row since it went in.
+**Two produce nothing at all.** One has a fault that made every failure look identical to a quiet day. The other has never produced a single row for anyone, because it asked for the day's insulin total through a function that refuses the whole window if any moment in it lacks a profile, and then silently gave up. It has never produced a row since it went in.
 
-**And four had simply never been asked.** The oldest has been running since May. Its output wasn't even being saved — 355,000 cycles of it were sitting in a text field nobody had ever parsed. When I finally did parse it and score it, it came out at chance, and worse than the thing it was proposed to replace for eight of the nine people I could compare.
+**And four had simply never been asked.** The oldest of them had been running for months. Its output wasn't even being saved — 355,000 cycles of it were sitting in a text field nobody had ever parsed. When I finally did parse it and score it, it came out at chance, and worse than the thing it was proposed to replace for eight of the nine people I could compare.
 
 ![Four shadow components scored against what each claims to anticipate](backtesting/reports/figs_boost_evolution/fig1_shadow_verdicts.png)
 
@@ -84,7 +84,9 @@ Except it isn't small where it counts, and working out why explained something t
 
 *Take out the cycles the low-glucose guard already handles and both models fall a long way. The refit's lead over the shipped one widens as they go.*
 
-Then I made a mess of the calibration, twice. The refit ranks better but reads on a completely different scale — fed to the existing thresholds it would restrain insulin six times as often. So I built a conversion table from the Commons data. That was wrong too, because this group isn't a Commons sample. The rate at which the current model triggers its damper runs from 0.26% of cycles for one person to 39.8% for another, against 6.6% on the Commons. ![Each participant's own damper trigger rate against the Commons figure](backtesting/reports/figs_boost_evolution/fig3_firing_rates.png)
+Then I made a mess of the calibration, twice. The refit ranks better but reads on a completely different scale — fed to the existing thresholds it would restrain insulin six times as often. So I built a conversion table from the Commons data. That was wrong too, because this group isn't a Commons sample. The rate at which the current model triggers its damper runs from 0.26% of cycles for one person to 39.8% for another, against 6.6% on the Commons.
+
+![Each participant's own damper trigger rate against the Commons figure](backtesting/reports/figs_boost_evolution/fig3_firing_rates.png)
 
 *Everyone's own trigger rate, against the population I'd built the conversion from. There's no single threshold that sits sensibly across that.*
 
@@ -102,7 +104,9 @@ Further out, a pre-meal exercise mode. Exercise near a meal is where these syste
 
 It'll be a declaration rather than a detector, and that's settled by one number. Announced exercise with a reduced bolus, announced with a full bolus, and unannounced give 2.0%, 7.0% and 13.0% time below 3.9. Nothing in the detection literature separates two approaches by anything like that much, and a trial of automatic detection from wearables couldn't be told apart from simply asking the person to confirm.
 
-And one I'm watching rather than building. I moved to a one-minute loop cycle a few days ago. It's delivering 22% more insulin a day, at the same glucose, and my time below 3.9 has roughly doubled. Matched on glucose, the one-minute loop doses more in every band — at 6.1 to 7.2 mmol/L, where nothing needs correcting at all, it's giving 1.26 units an hour against 0.45. ![Delivery and time below range across the three settings](backtesting/reports/figs_boost_evolution/fig4_cadence.png)
+And one I'm watching rather than building. I moved to a one-minute loop cycle recently. It's delivering 22% more insulin a day, at the same glucose, and my time below 3.9 has roughly doubled. Matched on glucose, the one-minute loop doses more in every band — at 6.1 to 7.2 mmol/L, where nothing needs correcting at all, it's giving 1.26 units an hour against 0.45.
+
+![Delivery and time below range across the three settings](backtesting/reports/figs_boost_evolution/fig4_cadence.png)
 
 *Me, 28 days. Switching sensitivity to fixed changed nothing I can measure. Going to a one-minute cycle moved both delivery and time below range.*
 
