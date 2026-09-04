@@ -1,4 +1,4 @@
-# Boost, and what happened when I measured it
+# Boost: the current design, and what measuring it has changed
 
 *The usual preamble, because it matters. Everything described here is highly experimental. It uses insulin in an off-label fashion, it isn't in any released, supported version of AndroidAPS or Trio, and nothing here is medical advice. It's an n=1 that's grown into a slightly-larger-than-n=1, shared in the open-source, #WeAreNotWaiting spirit so the learning is useful to others. Take the ideas, not the dose settings.*
 
@@ -6,7 +6,7 @@
 
 I've written about Boost twice before at any length: once when it was [a possibility](https://www.diabettech.com/fully-closed-loop-with-an-open-source-aid-system-a-possibility/), and once when [V6 arrived](https://www.diabettech.com/) and I described how it had stopped thinking in tiers and started thinking in meals. Both of those were, broadly, "here's a thing I built and here's why I think it helps."
 
-This one is different, and a bit less comfortable. At some point I stopped adding things to Boost and started measuring the things already in it. That turns out to be a very different activity, and it retires more than it confirms. So this is what Boost was for, how it got to where it is, what's actually inside it, where the machine learning sits — and then the part I'd have preferred not to write, which is what happened when I went and checked.
+This one is a bit different. At some point I stopped adding things to Boost and started measuring the things already in it, which is a different activity and tends to retire more than it confirms. So: what Boost was for, how it got to where it is, what's in it now, where the machine learning sits, and what came out of going back and checking whether the parts I'd built were doing anything.
 
 ## What it was for
 
@@ -44,11 +44,11 @@ The meal state machine is the core. Around it:
 
 And underneath all of it, the bit I'd most want anyone else building this sort of thing to copy: nothing reaches the dose path without running as a shadow first. A shadow computes what it *would* have done, writes it to the log, and delivers nothing. It runs like that across everyone for as long as it takes to build up evidence, and only then does anyone argue about it.
 
-Which brings me to the uncomfortable part.
+That last part is worth going into, because it's where most of this year's work has gone.
 
 ## What happened when I checked
 
-There are thirteen of those shadow components. This month I sat down and scored all of them properly for the first time, against the outcome each one claims to predict. Here's how that went.
+There are thirteen of those shadow components. I recently scored all of them against the outcome each one claims to predict, which in several cases hadn't been done before. The results split fairly cleanly.
 
 **One is genuinely earning its place.** A detector for accelerating meals fires on 8.8% of cycles, and 40.6% of those are followed by a rise of at least 1.7 mmol/L within 45 minutes, against a base rate of 19.6%. That's on 154,000 cycles across eleven people. A detector with roughly double the base rate at that firing rate is worth having.
 
@@ -56,7 +56,7 @@ There are thirteen of those shadow components. This month I sat down and scored 
 
 **One is worse than just reading the screen.** A component estimating whether a rise will end up somewhere that matters scores 0.730. Current glucose, on its own, scores 0.785. It should go.
 
-**One is finding the wrong thing entirely,** and this is the one that stung. A plateau detector looks for a high that's stuck and won't come down on its own, and proposes a small nudge. When I scored it properly, the highs it flags come down *better* than the ones it ignores — a median fall of 1.6 mmol/L against 1.5, and less likely to be stalled than the background rate. It isn't finding stuck highs. It's finding highs that are already resolving, which is exactly the population that everything I've learned says you shouldn't add insulin to.
+**One is finding the wrong thing entirely.** A plateau detector looks for a high that's stuck and won't come down on its own, and proposes a small nudge. When I scored it properly, the highs it flags come down *better* than the ones it ignores — a median fall of 1.6 mmol/L against 1.5, and less likely to be stalled than the background rate. It isn't finding stuck highs. It's finding highs that are already resolving, which is exactly the population that everything I've learned says you shouldn't add insulin to.
 
 I got that one wrong twice before I got it right, incidentally. First I read the wrong field out of the log. Then I compared against the wrong group of cycles, which flattered it. The number only stopped moving when I went and read the code that emits it.
 
@@ -68,7 +68,7 @@ I got that one wrong twice before I got it right, incidentally. First I read the
 
 *Four of them, scored against the thing each says it predicts. A lift of 1.0 means it's telling you nothing you didn't already know.*
 
-A shadow that never gets scored is just telemetry with a cost attached. That's not a bug in the code, it's a gap in how I've been working, and it's mine.
+A shadow that never gets scored is just telemetry with a cost attached. The code was doing what it was written to do in each case; what was missing was anyone going back to ask whether it was worth having, and that's on me.
 
 ## Where the machine learning actually sits
 
@@ -94,7 +94,7 @@ You can't calibrate a group against a population that doesn't look like them. It
 
 Two more are in the pipe. One asks whether a fall that's already twenty minutes old is going to end below 3.9 — it scores 0.780 on the sixteen people who contributed no training data at all, against 0.746 for glucose plus the time of day, and it's better for every one of those sixteen. The other isn't a model, it's a feature: a person's own hypo rate by hour of day turns out to be worth more than tripling the training set was. The *population's* hour-of-day rate is worth nothing at all.
 
-That last one is the result I keep coming back to. Scaling the training data stops paying somewhere around 112 people. Whatever's left in this system doesn't look like it's in bigger models. It looks like it's in each person's own history, which is a good deal less glamorous.
+That last one is the result I keep coming back to. Scaling the training data stops paying somewhere around 112 people. Whatever's left in this system looks like it's in each person's own history rather than in bigger models, which is a less interesting answer than I was hoping for but a more practical one.
 
 ## What's next
 
