@@ -5,11 +5,17 @@
 Two settings on one person's automated insulin delivery system changed within a week of each other.
 Because the dates differ, their effects separate.
 
-Switching the insulin sensitivity factor (ISF) from glucose-responsive to fixed, with the loop still cycling every
-five minutes, changed nothing measurable. Time in range moved by 3.8 percentage points with an
-interval from -11.2 to +4.3, and every other measure spanned zero as widely. With six days in that
-arm the study cannot resolve a difference smaller than roughly eight points, so this is
-underpowered rather than negative.
+Switching the insulin sensitivity factor (ISF) from glucose-responsive to fixed, with the loop still
+cycling every five minutes, moved time below 70 mg/dL (3.9 mmol/L) from 5.51 to 3.53 per cent. That
+is 1.94 percentage points and a relative reduction of about a third, alongside 3.8 points less time
+in range and a mean 7.4 mg/dL higher, which is the trade a loop giving slightly less insulin would
+be expected to make.
+
+None of it is distinguishable from chance. The interval on the time-below-range difference runs from
+4.81 points better to 1.03 worse, and every other measure spans zero as widely. With six days in
+that arm the study cannot resolve a difference smaller than roughly eight points of time in range,
+so this is underpowered rather than negative, and the point estimate is the more useful thing to
+carry forward than the verdict.
 
 Moving the loop from a five-minute to a one-minute cycle raised total insulin delivery by about a
 fifth, from 32.7 to 39.9 units per day, and roughly doubled time below 70 mg/dL (3.9 mmol/L) from
