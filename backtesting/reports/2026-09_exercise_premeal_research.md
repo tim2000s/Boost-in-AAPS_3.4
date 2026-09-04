@@ -4,27 +4,25 @@ Research note, 2026-09-03.
 
 ## Summary
 
-Exercise close to a meal is the situation in which automated insulin delivery most often fails a
-person, and the published guidance on what to do is reasonably specific: raise the glucose target
-one to two hours beforehand, reduce the meal bolus by a quarter to three quarters depending on the
-protocol, exempt brief intense work from any reduction, and stop the loop replacing the insulin it
-has just withheld.
+Exercise close to a meal is where automated insulin delivery fails people most often. The published
+guidance on what to do about it is specific: raise the glucose target one to two hours ahead, reduce
+the meal bolus by somewhere between a quarter and three quarters, leave brief intense work alone,
+and stop the loop putting back the insulin it has just withheld.
 
-Almost every mechanism that guidance asks for already exists in this system. What does not exist is
-a way for a person to say that exercise is coming, with the four things the protocols are functions
-of: when it starts, what kind it is, how hard, and for how long. A temporary target carries a value,
-a duration and a reason from a fixed list of six, all beginning now. That is the gap.
+Almost all of that machinery already exists here, wired to other triggers. The missing piece is a
+way for someone to say exercise is coming and carry the four quantities the protocols depend on:
+when it starts, what kind, how hard, how long. A temporary target carries a value, a duration and a
+reason chosen from six, and it begins the moment it is set.
 
-The case for a declared trigger rather than an automatic one rests on the strongest single contrast
-in the literature. Announced exercise with a reduced bolus, announced with a full bolus, and
-unannounced gave 2.0, 7.0 and 13.0 per cent time below 3.9 mmol/L; no published pair of detection
-strategies differs by anything approaching that. A trial of automatic detection from wearable data
-was also indistinguishable from asking the person to confirm.
+Whether that trigger should be a person or a detector is settled by one contrast. Announced exercise
+with a reduced bolus, announced with a full bolus, and unannounced gave 2.0, 7.0 and 13.0 per cent
+time below 3.9 mmol/L. Nothing in the detection literature separates two strategies by that much,
+and a trial of automatic detection from wearable data could not be told apart from simply asking the
+person to confirm.
 
-Nothing here is measured in the field. Sections 1 to 5 set out the guidance, the existing
-mechanisms and what this programme has already measured; section 6 describes what would be built,
-which would log its decisions across the cohort and deliver nothing until a pre-registered
-within-person trial says otherwise.
+None of this has been measured in the field. Sections 1 to 5 cover the guidance, the machinery that
+exists, and what has already been measured here. Section 6 describes what would be built, which logs
+its decisions and delivers nothing until a pre-registered within-person trial says otherwise.
 
 Three decisions were taken before any of this was written and they bound what follows. The trigger
 is a declaration, meaning the person tells the loop exercise is coming; detection appears below only
