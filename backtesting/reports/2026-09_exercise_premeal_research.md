@@ -570,7 +570,7 @@ Finally, `openAPSBoostTwin/AnticipationShadow.kt` is present and shadow-only, wi
 onset test at more than 150 steps in five minutes, appending to the reason string and delivering
 nothing. It is the residue of the anticipation work described in section 3.
 
-## 3. What is already established
+## 3. The established constraints
 
 Five things constrain the design. All are measured on this cohort unless stated, with the
 participant as the resampling unit.
