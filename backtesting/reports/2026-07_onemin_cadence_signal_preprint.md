@@ -372,7 +372,7 @@ curve of 0.962.
 
 Decimating the same record and recomputing standard metrics:
 
-| Interval | n | Mean | CV% | TIR% | TING% | <70% | Hypo episodes | L2 hypo | Hyper episodes |
+| Interval | n | Mean | CV% | TIR% | time in normoglycaemia (TING)% | <70% | Hypo episodes | L2 hypo | Hyper episodes |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 min | 83,550 | 125.8 | 31.0 | 86.2 | 70.4 | 3.92 | 66 | 2 | 11 |
 | 5 min | 16,710 | 125.8 | 31.1 | 86.2 | 70.4 | 3.95 | 64 | 2 | 12 |

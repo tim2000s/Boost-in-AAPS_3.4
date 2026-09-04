@@ -2,9 +2,9 @@
 
 Scripts: `backtesting/scripts/2026-07-evening-confirms/` (`A_evening_confirms.py`,
 `B_floor_cap_day1.py`; CSV in `out/`). Data: TimescaleDB `oref`, refreshed to 2026-07-07T17:38
-(backfill_all.sh since 07-06; only failure was oref-pipeline site U018, not a boost cohort user;
+(backfill_all.sh since 07-06; only failure was the OpenAPS reference algorithm (oref)-pipeline site U018, not a boost cohort user;
 self + A to F all fresh, the 07-06 21:44Z incident is captured). Dedup: last row per (user, 5-min bucket).
-Local time ≈ UTC+1 (BST). ISF = logged `variable_sens` at the confirm cycle; "needed" = insulin to
+Local time ≈ UTC+1 (BST). Insulin sensitivity factor (ISF) = logged `variable_sens` at the confirm cycle; "needed" = insulin to
 return to target from the ACTUAL realized peak.
 
 ---
@@ -28,7 +28,7 @@ Evening-broad is not worse than daytime on lows (20% vs 27% <70). But split the 
 | 19:00–21:59 | 244 | 0.48 | 17.6% | 7.0% | 31% |
 | **≥22:00 (pre-sleep)** | 101 | **0.85** | **25.7%** | **13.9%** | **41%** |
 
-Pre-sleep confirms are bigger, fizzle more, and double the <54 rate. IOB carried toward sleep with no
+Pre-sleep confirms are bigger, fizzle more, and double the <54 rate. Insulin on board (IOB) carried toward sleep with no
 daytime activity to burn it. The 07-06 incident (22:44 local) sits squarely in this band. Per-user, self's
 evening <54 is 19% (day 16%); D's evening is 71%/38% (n=21, but D is already over the absolutes). Most
 other users' evening ≈ or better than day. So a blanket evening damper is unjustified; a pre-sleep one is.
@@ -45,10 +45,10 @@ other users' evening ≈ or better than day. So a blanket evening damper is unju
 - The incident is the high-ISF tail (from DB, self 07-06 22:44Z): budget 2.22 to prosp 5.19 (x1.8x1.3),
   confirmedCap-bound to 3.0U; realized peak 219, self ISF≈132 to correction need 0.92U to over-delivered +2.08U; nadir 52. It is classed "sustained>180" (BG genuinely reached 219), so it is
   not a fizzle, it is a *modest* real rise on which a knob-amplified, eventualBG-projected 3U shot is ~3x the
-  ISF-correction scale. 36% of self's confirms exceed 1.5x his current-BG correction-need (cohort 31%).
+  ISF-correction scale. 36% of self's confirms exceed 1.5x their current-BG correction-need (cohort 31%).
 
 Root cause: the confirm shot is a velocity/eventualBG bet (budgetx1.8xknob), decoupled from the user's
-ISF-correction scale. For high-ISF/low-TDD self, that decoupling makes any 2 to 3U shot a hypo risk; pre-sleep
+ISF-correction scale. For high-ISF/low-total daily dose (TDD) self, that decoupling makes any 2 to 3U shot a hypo risk; pre-sleep
 removes the daytime burn that masks it elsewhere.
 
 ### 3. Mitigations, priced (removal levers to strictly reduce hypo; cost = under-covered real evening meals)
@@ -78,14 +78,14 @@ Removed-U split by fizzle (good to remove) vs sustained-real-meal (cost = under-
 
 Test A (absolute): all mitigations are *removal* levers to they can only reduce hypo exposure; no user is
 pushed toward the 4%/1% ceilings. The cost is time-high on under-covered real evening meals (32 to 40% of removed U),
-which is a TING trade, not a safety one. Recommend pre-sleep (≥22:00 local, or within 90 min of night-window
+which is a time in normoglycaemia (TING) trade, not a safety one. Recommend pre-sleep (≥22:00 local, or within 90 min of night-window
 start) first-confirm cap = min(confirmedCap, base-wouldx1.5) with remainder available to holds, shadow-first.
 
 ### 4. self trailing-14d TBR (incl. last night)
 
 - TBR<70 = 3.11%, TBR<54 = 0.51% (n=3762 cycles).
 - Excluding the incident night window: 2.48% / 0.46%, the single incident added +0.63pp to <70, +0.05pp to <54.
-- For the 07-10 floor-activation gate: self passes (<70 3.11 < 3.5, <54 0.51 < 0.8) but his <70 is now
+- For the 07-10 floor-activation gate: self passes (<70 3.11 < 3.5, <54 0.51 < 0.8) but their <70 is now
   within 0.4pp of the gate, and pre-sleep confirms are the largest movable contributor. The pre-sleep damper
   buys back the margin the incident consumed.
 
@@ -121,11 +121,11 @@ start) first-confirm cap = min(confirmedCap, base-wouldx1.5) with remainder avai
 ---
 
 ## Caveats
-- "Needed" uses logged dynISF (`variable_sens`) at the confirm cycle, for self (ISF≈132, TDD≈15) this makes his
-  correction-scale tiny and his shots look large; the finding is robust to that (it IS his physiology), but the
+- "Needed" uses logged dynISF (`variable_sens`) at the confirm cycle, for self (ISF≈132, TDD≈15) this makes their
+  correction-scale tiny and their shots look large; the finding is robust to that (it IS their physiology), but the
   per-user ISF sensitivity is the point, not an artifact.
 - base-would is only in reason text on ~10% of confirms (V6-active override rows); `v1_units` on meal-state rows
-  records the *delivered* SMB, so mitigation (b) is priced off the prospective-shot pipeline and an absolute cap,
+  records the *delivered* supplementary microbolus (SMB), so mitigation (b) is priced off the prospective-shot pipeline and an absolute cap,
   not a per-cycle base-would.
 - <70/<54 outcomes attribute any low within 4h of the confirm regardless of intervening cause (rescue carbs,
   activity), consistent with all prior pricing; no glucose sim, so mitigation nadir effects are directional.

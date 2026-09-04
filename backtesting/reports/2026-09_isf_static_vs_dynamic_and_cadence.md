@@ -1,4 +1,4 @@
-# Static against dynamic ISF, and 5-minute against 1-minute cadence, on one device
+# Static against dynamic insulin sensitivity factor (ISF), and 5-minute against 1-minute cadence, on one device
 
 Single participant, `self`, 28 days to 2026-09-03 17:06 local. Database refreshed to t=now before
 the analysis. Scripts and outputs in `backtesting/scripts/2026-09-isf-cadence-tir/`.
@@ -29,7 +29,7 @@ Every reading is snapped to a common 5-minute grid before any metric is computed
 
 ## Glucose outcomes
 
-| arm | days | hours | TIR 70-180 | TING 63-140 | <70 | <54 | >180 | mean mg/dL | CV % |
+| arm | days | hours | TIR 70-180 | time in normoglycaemia (TING) 63-140 | <70 | <54 | >180 | mean mg/dL | CV % |
 |---|---|---|---|---|---|---|---|---|---|
 | A dynamic ISF, 5 min | 21 | 456 | 85.0 | 72.4 | 5.51 | 0.40 | 9.5 | 121 | 34.0 |
 | B static ISF, 5 min | 6 | 125 | 81.2 | 66.6 | 3.53 | 0.53 | 15.3 | 129 | 38.8 |
@@ -48,7 +48,7 @@ with six days in arm B the study cannot resolve a difference smaller than roughl
 points of time in range. Nothing here says the two are equivalent; it says this window cannot tell
 them apart.
 
-For the cadence change, time in range is also not distinguishable. Time below 70 mg/dL is: it rises
+For the cadence change, time in range is also not distinguishable. Time below 70 mg/dL (3.9 mmol/L) is: it rises
 by 5.25 percentage points and the interval excludes zero. That is the one result in this report that
 clears its own bar, and it is the one worth acting on.
 
@@ -58,7 +58,7 @@ Reconstructed from the treatment stream, each temporary basal running until the 
 stated duration expires. Arm A reconstructs to 33.2 U per 24 h against the engine's own `tdd_24h`
 median of 33.7, which is the check that the integration is doing what it claims.
 
-| arm | SMBs per 24 h | median SMB U | basal U/24h | SMB U/24h | total U/24h | temp basal coverage |
+| arm | SMBs per 24 h | median supplementary microbolus (SMB) U | basal U/24h | SMB U/24h | total U/24h | temp basal coverage |
 |---|---|---|---|---|---|---|
 | A dynamic ISF, 5 min | 47.2 | 0.20 | 13.69 | 19.49 | 33.18 | 89.0% |
 | B static ISF, 5 min | 55.6 | 0.20 | 13.20 | 19.48 | 32.68 | 90.2% |
@@ -112,7 +112,7 @@ meet.
 
 The rise in time below range is not one bad night. Per local day in arm C it runs 1.69, 11.19, 6.29
 and 11.65 per cent, so three of the four days sit above 6 per cent. On 2026-09-01, 2.53 per cent of
-the day was spent below 54 mg/dL, which is past the consensus absolute floor of 1 per cent that the
+the day was spent below 54 mg/dL (3.0 mmol/L), which is past the consensus absolute floor of 1 per cent that the
 programme treats as a kill-switch criterion. Arm C's 8.94 per cent below 70 is also past the 4 per
 cent floor, though it should be noted that arm A sits at 5.51 per cent and is already above it, so
 the floor was not being met before the cadence change either.

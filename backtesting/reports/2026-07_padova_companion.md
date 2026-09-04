@@ -22,7 +22,7 @@ from hundreds of people, some of it openly shared. We used it.
 
 We took four independent real-world datasets, each a different loop built by a different
 community: a fully closed loop with no meal announcement, an iAPS/Trio cohort, the
-OpenAPS/oref0 cohort from the OpenAPS Data Commons, and a pre-dynamic-ISF AndroidAPS
+OpenAPS/oref0 cohort from the OpenAPS Data Commons, and a pre-dynamic-insulin sensitivity factor (ISF) AndroidAPS
 cohort. Close to two hundred people in total, many with more than a year of data.
 
 The first thing we found is the thing that makes everything else meaningful. These four

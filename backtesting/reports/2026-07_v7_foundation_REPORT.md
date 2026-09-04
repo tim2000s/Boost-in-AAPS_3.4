@@ -6,7 +6,7 @@ Data: TimescaleDB `oref`, refreshed to 2026-07-07T09:59 (backfill_all.sh, since 
 Dedup: last row per (user, 5-min bucket). Users self, A to F, H (G excluded: thin, no era map).
 
 Expected-BG model used throughout (the honest subset of what the DB carries): the DB does not
-log the +30/+60/+90 predBG curves, so all three backtests use the IOB-only projection
+log the +30/+60/+90 predBG curves, so all three backtests use the insulin on board (IOB)-only projection
 `predBG(t+h) = bg + (−iob_activity × variable_sens × 5) × h/5`. Residuals in meal regimes contain
 unmodeled absorption by construction; consumers condition on regime. This choice turns out to be
 the binding limitation of Backtests 2 and 3 (see verdicts).
@@ -34,7 +34,7 @@ Per-user quantiles (mg/dL) at h=60, 30d window (full table in `out/residual_quan
   is statistically sound.
 - Systematic positive bias (median +12 to +38 at 60 min for 7/8 users): the IOB-only
   projection under-predicts because unannounced carbs live in the residual. C is inverted
-  (median −8: projection over-predicts; his sens/activity fields run hot). Regime splits behave
+  (median −8: projection over-predicts; their sens/activity fields run hot). Regime splits behave
   as expected (meal ≫ quiet ≫ night) but "quiet" still contains unannounced meal onsets
   (IDLE/OBSERVING cycles), so the bias survives regime conditioning. Any consumer of these
   quantiles inherits this bias unless the point prediction absorbs it, see Backtest 3.
@@ -60,7 +60,7 @@ Innovation = observed ΔBG(5m) − BGI5; `innov30` = 30-min rolling mean.
   (dynISF + activity-load pipelines have absorbed exercise into sens before we measure), so the
   innovation is centered precisely when the adaptation works. The damper statistic as specced
   measures the residual of a system that already contains the damper's signal. A sens-frozen
-  variant (expected-ΔBG under profile/TDD-static ISF) is the follow-up that could give the
+  variant (expected-ΔBG under profile/total daily dose (TDD)-static insulin sensitivity factor (ISF)) is the follow-up that could give the
   damper teeth; untested here.
 
 (b) FLAG side, stays evidence-free, per the red-team prediction.
@@ -160,6 +160,6 @@ Findings, in order of importance:
 - vf/brakes unobservable historically; the envelope uses state multipliers without them (that IS
   the transplant under test). H's era caps 0.8 to 1.8 self-set (07-06); self knob 1.3 not applied to
   the CONFIRMED envelope (conservative). Local time ≈ UTC+1 for the awake filter.
-- `v1_units` = recorded would-SMB; the Episode-B forensic discrepancy (0 vs 0.3) is flagged in
+- `v1_units` = recorded would-supplementary microbolus (SMB); the Episode-B forensic discrepancy (0 vs 0.3) is flagged in
   §3.3 and should be resolved from live shadow-floor telemetry before the floor's activation
   review.

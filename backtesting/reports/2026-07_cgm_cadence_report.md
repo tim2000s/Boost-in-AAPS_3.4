@@ -177,7 +177,7 @@ one-minute sensor from 2026-05-23 to 2026-07-31. The records comprise 24,012 rea
 
 Glycaemic control differed between the two periods. Mean glucose was 118.4 mg/dl during the
 earlier period against 125.6 mg/dl during the later, with coefficients of variation of 25.9%
-and 31.1%. Time in the range 70 to 180 mg/dl was 93.5% and 86.2%. Time below 70 mg/dl was
+and 31.1%. Time in the range 70 to 180 mg/dL (3.9 to 10.0 mmol/L) was 93.5% and 86.2%. Time below 70 mg/dl (3.9 mmol/L) was
 2.49% and 4.00%, and time above 180 mg/dl 4.00% and 9.80%. The later period was thus the
 more volatile, by a factor of approximately 1.44 in variance. Glycaemic variability is a
 property of the subject and the period rather than of the sensor, and all comparisons below

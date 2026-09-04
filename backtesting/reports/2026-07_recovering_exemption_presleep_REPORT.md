@@ -2,7 +2,7 @@
 
 Scripts: `backtesting/scripts/2026-07-recovering-exemption/` (`bt1_recovering_exemption.py`,
 `bt2_presleep_damper.py`; CSV in `out/`). Data: TimescaleDB `oref`, refreshed to 2026-07-07T21:18
-(backfill since 07-07; only oref-pipeline site U018 failed, no boost cohort impact). Dedup: last row
+(backfill since 07-07; only the OpenAPS reference algorithm (oref)-pipeline site U018 failed, no boost cohort impact). Dedup: last row
 per (user, 5-min bucket). Local ≈ UTC+1 (BST). Both feed the 07-10 decisions.
 
 ---
@@ -33,7 +33,7 @@ verdict (only magnitudes; full sweep in stdout).
 
 ### The delta≥0 gate does NOT separate the exemption from the rejected re-engage population, VERIFIED, and it matters
 
-- Floor-exemption cycles (delta≥0): IOB 11 to 12% TDD median.
+- Floor-exemption cycles (delta≥0): insulin on board (IOB) 11 to 12% total daily dose (TDD) median.
 - Re-engage-rejected cycles (sustained-delta δ>3x3): IOB 11 to 12% TDD median, the same population.
 - The distinction is dose size only: floor delivers `budget×0.25` (median 0.25U) vs re-engage's
   full COMMITTED `budget×1.0` (median 0.80U), ~3x less.
@@ -77,7 +77,7 @@ Incident (self 07-06 22:44Z, from DB reason line): fd 3.0, base_would 2.0, confi
 
 The incident's overshoot was V6 delivering 3.0 vs oref's own base_would of 2.0 (+1.0U); base_wouldx1.5 = 3.0
 permits the full shot. The damper as specced does nothing here. (Both 2.0 and 3.0 already exceed self's
-ISF-97 correction need of 1.37U for a 219 peak, the excess is upstream of the x1.5 rule.)
+Insulin sensitivity factor (ISF)-97 correction need of 1.37U for a 219 peak, the excess is upstream of the x1.5 rule.)
 
 - Where base_wouldx1.5 *does* bite across the pre-sleep set, it is a clean fizzle filter: removes 4.93U
   at 100% fizzle, 0% real-meal. Good component, wrong tool for the incident.
@@ -132,7 +132,7 @@ strictly TBR-improving; cost is time-high on 1 to 3 real evening meals each (~92
 - BT2 base_would parseable only on V6-active override rows (213 confirms); shadow-mode confirms don't reach the
   pump so are correctly excluded. Pre-sleep V6-active n is small (14 with base_would; 18 by clock gate), the
   incident finding is decisive but cohort sizing is thin; re-measure at +7d.
-- "needed-from-peak" uses logged dynISF; self's high ISF (97 to 132) is physiology, not artifact, it is why his
+- "needed-from-peak" uses logged dynISF; self's high ISF (97 to 132) is physiology, not artifact, it is why their
   confirm shots overshoot.
 - low70/low54 attribute any low within 3 to 4h regardless of intervening cause; consistent with all prior pricing.
 - committedCap eras include self's 07-07 raise to 1.0 (live-verified). U018 (oref) refresh failure, no boost

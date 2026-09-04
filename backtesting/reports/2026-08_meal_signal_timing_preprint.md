@@ -144,7 +144,7 @@ in six declared rises are consequential on that definition whoever is wearing th
 why the thresholds examined here begin at 60 mg/dL.
 
 Where the rise started carries most of what is predictable. Glucose at the onset, a single number
-the controller already holds, reaches 0.812 for whether the excursion will exceed 180 mg/dL and
+the controller already holds, reaches 0.812 for whether the excursion will exceed 180 mg/dL (10.0 mmol/L) and
 0.677 for whether the peak rise will reach 60 mg/dL. Adding the hour of the clock, which is free,
 gives 0.829 and 0.717.
 

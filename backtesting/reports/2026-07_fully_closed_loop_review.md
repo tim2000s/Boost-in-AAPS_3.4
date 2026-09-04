@@ -33,8 +33,8 @@ doses inside the loop.
 ## The good
 
 It works, and mostly it works without being told anything. Over 30 days the cohort
-sat at a mean Time in Range (70 to 180 mg/dL) of 87% (±7) and Time in Normoglycaemia
-(63 to 140 mg/dL, TING) of 72% (±11), with time below 54 mg/dL of just 0.62%, all of
+sat at a mean Time in Range (70 to 180 mg/dL, 3.9 to 10.0 mmol/L) of 87% (±7) and Time in Normoglycaemia
+(TING, 63 to 140 mg/dL, 3.5 to 7.8 mmol/L) of 72% (±11), with time below 54 mg/dL (3.0 mmol/L) of just 0.62%, all of
 that achieved with no carb counting and no pre-bolusing. For a system reacting to
 unannounced food, this is a genuinely good result, and the best-controlled individual reached
 98% TIR and 88% TING fully closed. That is close to the ceiling of what any therapy

@@ -106,7 +106,7 @@ The earlier "self 62 d / 10.8 U-day / mostly-shadow" figures are void. Corrected
 
 Over matched V6-ACTIVE windows, the direction holds but numbers shift: H doses MORE than self. 16.1 vs 9.9 U/day (was 10.8), max shot 6.0 vs 3.0, big-shot >2U 0.6% vs 0.3%; higher caps
 (confirmedCap 6.0 vs 3.0, committedCap 1.2 vs 0.5, maxIOB 8 vs 5). self TBR<70 now 3.0% (was 5.2 over
-the inflated window), TBR<54 0.5%. So "user H gets no aggression" is still not an aggregate reality, his complaint is the COMMITTED-hold pattern below, not overall dosing.
+the inflated window), TBR<54 0.5%. So "user H gets no aggression" is still not an aggregate reality, their complaint is the COMMITTED-hold pattern below, not overall dosing.
 
 ---
 
@@ -119,7 +119,7 @@ COMMITTED 86% match, reliable; CONFIRMED 47%, attribution approximate, delivered
 Small n: CONFIRMED n=30, COMMITTED n=100 over 8 active days.
 
 ### CONFIRMED shots are NOT the problem
-Delivered fd: p50 1.19U, p90 4.10U, max 6.0U; 63% ≥1U, 43% ≥2U. His confirm shots are healthy and
+Delivered fd: p50 1.19U, p90 4.10U, max 6.0U; 63% ≥1U, 43% ≥2U. Their confirm shots are healthy and
 sometimes large. (The 3.75 fresh confirms/day is fewer than self's 5.67, but each is a real shot.)
 
 ### COMMITTED holds ARE the "little dose", two distinct causes
@@ -128,40 +128,40 @@ Delivered fd: p50 0.00U, p90 0.75U, max 1.30U; 51% deliver exactly 0. Decomposed
 | dominant reason | % cycles | % of suppressed-U | med fd | class |
 |---|---|---|---|---|
 | **committedCap clamp (all bound at 0.5)** | 16 | **36** | 0.50 | settings |
-| iobHeadroomBrake (IOB building thru meal) | 8 | 29 | 0.78 | algorithm |
+| iobHeadroomBrake (insulin on board (IOB) building thru meal) | 8 | 29 | 0.78 | algorithm |
 | velocityFactor (plateau/slow rise → 0.4×) | 16 | 17 | 0.50 | algorithm |
 | G3_HOLD | 3 | 13 | 0.00 | rare |
 | minGuardBG (HARD) | 10 | 3 | 0.00 | rare |
 | decelBrake | 2 | 2 | 0.10 | algorithm |
-| budget_small (oref wanted ~0) | 43 | 0 | 0.00 | not-suppression |
+| budget_small (the OpenAPS reference algorithm (oref) wanted ~0) | 43 | 0 | 0.00 | not-suppression |
 
 Two-part answer:
 1. ~half (51%) legitimately deliver ~0, `budget_small`: on 37 of the 51 zero-holds oref's own
-   insulinReq/budget was ≈0 (BG near his low target ~80, or IOB already covers eventualBG). That is oref
+   insulinReq/budget was ≈0 (BG near their low target ~80, or IOB already covers eventualBG). That is oref
    correctly declining to dose, not suppression.
 2. Of the holds that DO want to dose (budget median 1.73U), the single dominant everyday cut is the
    committedCap clamp, every clamped hold bound at cap = 0.5U (budget 1.73 to delivered 0.50), 36% of
    all suppressed COMMITTED-U. Then iobHeadroomBrake (29%, IOB rising through the meal) and velocityFactor
-   (17%, his rises are slow/plateau to the 0.4x floor).
+   (17%, their rises are slow/plateau to the 0.4x floor).
 
 ### THE one dominant everyday reason
 The committedCap = 0.5 clamping holds that want 1.4 to 3.3U down to 0.5. Note 0.5 is the *factory-default*
-committedCap, the chronic-masking value; his real committedCap only became 1.2 on 07-05, so raising/
+committedCap, the chronic-masking value; their real committedCap only became 1.2 on 07-05, so raising/
 un-masking the cap directly lifts the biggest suppressor. (Same Simple-Mode-default family as the maxIOB
 bug, but as a persistent cap rather than the acute maxIOB=1.0 event.)
 
-### Factors that DON'T matter for him (as asked)
+### Factors that DON'T matter for them (as asked)
 - maxIOB clamp/mask: negligible in meal cycles, only 4 cycles, none dominant (consistent with the
-  0.6% rare finding; the acute maxIOB=1.0 event hit IDLE/OBSERVING budgets, not his meal-state holds).
+  0.6% rare finding; the acute maxIOB=1.0 event hit IDLE/OBSERVING budgets, not their meal-state holds).
 - decelBrake: only 2% of COMMITTED suppressed-U, despite §F showing 21% across ALL suppressed cycles,
   in MEAL states specifically it is minor.
-- cumulative cap: did not bind. cap_clamp on CONFIRMED: minor (his confirmedCap 2.5 to 6 rarely binds).
+- cumulative cap: did not bind. cap_clamp on CONFIRMED: minor (their confirmedCap 2.5 to 6 rarely binds).
 - Routine 87% / rare-catastrophic 13% (G3_HOLD + minGuardBG-HARD) for both states.
 
 # NEEDS breakdown, INTENDED vs RETROSPECTIVE-need vs DELIVERED (H)
 
 Tool: `needs_breakdown.py H` to `out/H_needs.csv` (per-cycle) + `out/H_needs_summary.csv`. INTENDED =
-budgetxactionMultxvelocityFactor (pre-cap/round). RETRO_NEED = max(0, (episode actual-peak − target)/ISF
+budgetxactionMultxvelocityFactor (pre-cap/round). RETRO_NEED = max(0, (episode actual-peak − target)/insulin sensitivity factor (ISF)
 − IOB), per-cycle logged target & ISF (first-order, no absorption model). Real = episode BG sustained
 >180 ≥30 min; else fizzle. Small n (CONFIRMED 30 / COMMITTED 100 / 11 real episodes, 8 days).
 
@@ -176,7 +176,7 @@ budgetxactionMultxvelocityFactor (pre-cap/round). RETRO_NEED = max(0, (episode a
 
 ### The headline, episode level, REAL meals (n=11)
 
-delivered/episode med 3.55U vs retro_need/episode med 1.72U to median shortfall 0.00U. Per-episode he is
+delivered/episode med 3.55U vs retro_need/episode med 1.72U to median shortfall 0.00U. Per episode this participant is
 NOT systematically starved: the CONFIRMED shot (2.08U ≈ need 2.13) carries the meal; the small COMMITTED
 holds are cosmetic once the confirm has fired. Residual shortfall concentrates in a few tail episodes, mean 0.38U, max 3.67U/episode (the badly-short ones = confirm didn't fire big + holds capped, incl. the
 maxIOB-mask event).
@@ -190,18 +190,18 @@ maxIOB-mask event).
 
 | cap | to cover intended-on-real | to cover retro-NEED | current | auto-config formula |
 |---|---|---|---|---|
-| committedCap | p50 0.28 / p75 1.28 / **p90 2.13** | p90 3.05 | **1.2** | 1.21 (max(p75-SMB 0.35, TDD/40 1.21)) |
+| committedCap | p50 0.28 / p75 1.28 / **p90 2.13** | p90 3.05 | **1.2** | 1.21 (max(p75-supplementary microbolus (SMB) 0.35, total daily dose (TDD)/40 1.21)) |
 | confirmedCap | p90 6.62 / max 10.15 | p90 **3.38** | **~6** | 1.50 (p95-SMB 1.0 clamp) — **too tight** |
 
 Cap recommendation:
-- confirmedCap: keep ~6, do NOT drop to the auto-config 1.5. His real-meal confirm NEED is p90 3.4U;
-  a 1.5 cap would clamp genuine confirms below need. His current 6 comfortably passes the ~2.1U need.
+- confirmedCap: keep ~6, do NOT drop to the auto-config 1.5. Their real-meal confirm NEED is p90 3.4U;
+  a 1.5 cap would clamp genuine confirms below need. Their current 6 comfortably passes the ~2.1U need.
 - committedCap: 1.2 to ~2.0 to 2.5 closes the per-cycle hold tail (covers p90 intended 2.13 / need p90 3.05).
-  His auto-config already moved him to 2.5 on 07-07, self-correcting; the earlier 0.5 (factory/Simple-Mode
+  Their auto-config already moved them to 2.5 on 07-07, self-correcting; the earlier 0.5 (factory/Simple-Mode
   default) was the real starver of the holds (see §decomposition).
 
 Bottom line for `self`: user H's real meals are essentially covered at the episode level by the confirm
-shot (which matches retrospective need); his "tiny committed doses" are a per-cycle-hold artifact that the
+shot (which matches retrospective need); their "tiny committed doses" are a per-cycle-hold artifact that the
 confirm already compensates. The one lever with residual value is committedCap 1.2 to ~2.5 (already
 auto-applied) for the upper-tail holds; confirmedCap should stay high (~6), not follow the auto-config
 formula. The engine's CONFIRMED intent over-wants vs outcomes, so no case for *more* confirm aggression.
@@ -209,22 +209,22 @@ formula. The engine's CONFIRMED intent over-wants vs outcomes, so no case for *m
 # TARGET / MIN-GUARD effect on H, structural hypothesis REFUTED
 
 Tool: `target_effect.py H` to `out/H_minguard_blocked.csv` + `out/H_target_effect_summary.csv`.
-Threshold confirmed from reason lines: min-guard/LGS = 5.5 mmol (99 mg/dL). His base target 80 IS
+Threshold confirmed from reason lines: min-guard/LGS = 5.5 mmol (99 mg/dL). Their base target 80 IS
 below it, but the data shows that tension does not materialise.
 
-### 1. Min-guard costs him almost nothing when he wants to dose
+### 1. The minimum-guard costs this participant almost nothing when they want to dose
 - All cycles blocked by `HARD:min_guard_bg`: 117/2011 = 5.8%, but only 2/602 (0.3%) of budget>0
   cycles, and 2/231 (0.9%) of budget>0-AND-rising. 115 of the 117 blocks are on budget≈0 cycles (nothing
   wanted anyway to the block is a no-op).
 - Intended insulin lost to min-guard: 1.0U total = 0.13 U/day (upper bound). Negligible.
 
-### 2. The blocks are IOB-prediction crashes at RAISED targets, NOT his base target
-- 0 of 117 blocked cycles are at his base target 80 (the structural hypothesis predicted these). 74
+### 2. The blocks are IOB-prediction crashes at RAISED targets, NOT their base target
+- 0 of 117 blocked cycles are at their base target 80 (the structural hypothesis predicted these). 74
   are at RAISED targets ≥110 (activity/eating-soon TTs), 43 at mid (85 to 109).
 - minGuardBG avg −18 mg/dL (predictions crashing; 50/117 negative). IOBpredBG is the binding minimum
   on 116/117 (99%), the block is driven by IOB aboard (avg 1.18U, >2U on 27) while BG sits *below a
   raised target* (99/117 below-target) and flat/declining. The min-guard is correctly protecting against
-  an exercise/IOB-driven low, at a *raised* target. His low base target is irrelevant to these blocks.
+  an exercise/IOB-driven low, at a *raised* target. Their low base target is irrelevant to these blocks.
 
 ### 3. Counterfactual, raise base target 80 to 100 (the two effects OPPOSE; data decides)
 | effect | U/day |
@@ -233,18 +233,18 @@ below it, but the data shows that tension does not materialise.
 | (b) min-guard unblock (blocks at base target = **0**) | **+0.00** |
 | **NET delivered direction** | **−7.78 U/day (LESS aggressive)** |
 
-Raising his target cuts budget hard (his ISF is low ~33, so +20 mg/dL is a big insulinReq change) and
-unblocks nothing (his min-guard blocks aren't at the base target). Net: unambiguously less dosing, the opposite of his complaint. (The budget figure is an upper bound on the delivered cut, but the min-guard
+Raising their target cuts budget hard (their ISF is low ~33, so +20 mg/dL is a big insulinReq change) and
+unblocks nothing (their min-guard blocks aren't at the base target). Net: unambiguously less dosing, the opposite of their complaint. (The budget figure is an upper bound on the delivered cut, but the min-guard
 benefit is exactly zero, so the sign is certain.) TBR<70 is already 0.6%, so the "safer lows" side of the
 trade buys almost nothing.
 
 ### 4. Reframe + VERDICT
-He is well-controlled: TIR 91.5%, TING 68.8%, TBR<70 0.6%, TAR>180 7.9%, mean 129. His target is NOT
-a useful lever for the "not aggressive enough" complaint, and raising it would make him LESS aggressive,
-not more. The structural target-below-LGS finding, while true on paper (80 < 99), is immaterial in his
-data: min-guard blocks him on 0.3% of dose-wanting cycles, all at raised TTs via IOB-prediction crashes,
-not at his base target. His "small doses" trace to committedCap + budget-small (see §decomposition), not to
-the target/min-guard tension. Leave his target as-is.
+Their glucose sits in the 70 to 180 mg/dL (3.9 to 10.0 mmol/L) range 91.5 per cent of the time, in the tighter 63 to 140 mg/dL (3.5 to 7.8) range 68.8 per cent, below 70 mg/dL 0.6 per cent and above 180 mg/dL 7.9 per cent, at a mean of 129 mg/dL (7.2 mmol/L). Their target is NOT
+a useful lever for the "not aggressive enough" complaint, and raising it would make them LESS aggressive,
+not more. The structural target-below-LGS finding, while true on paper (80 < 99), is immaterial in their
+data: min-guard blocks them on 0.3% of dose-wanting cycles, all at raised TTs via IOB-prediction crashes,
+not at their base target. Their "small doses" trace to committedCap + budget-small (see §decomposition), not to
+the target/min-guard tension. Leave their target as-is.
 
 ## Comparability flags
 

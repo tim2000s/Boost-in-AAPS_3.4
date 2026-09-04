@@ -43,7 +43,7 @@ different automated-insulin-delivery system built by a different community:
 | Boost | 9 | a fully closed loop with no meal announcement |
 | Trio | 29 | an iAPS and Trio-lineage cohort |
 | OpenAPS | 110 | the oref0 lineage from the OpenAPS Commons data-sharing project several of them with multiple years of continuous data |
-| AndroidAPS classic | 44 | a pre-dynamic-ISF AndroidAPS cohort |
+| AndroidAPS classic | 44 | a pre-dynamic-insulin sensitivity factor (ISF) AndroidAPS cohort |
 
 Together, close to two hundred people and, for many, a year or more of five-minute
 continuous glucose data. If four different algorithms worn by different people agree with
@@ -70,7 +70,7 @@ The first result is the one that makes the rest worth reading. The four real coh
 built and worn independently, land in a tight band on almost every measure. Glucose
 variability sits between 30 and 34% for all four. The spread of where a person ends up
 half an hour after a stuck high runs from 27 to 33 mg/dL. A low takes 50 to 59 minutes to
-recover to 100 mg/dL, and overshoots above 180 afterwards about a quarter of the time.
+recover to 100 mg/dL (5.6 mmol/L), and overshoots above 180 afterwards about a quarter of the time.
 High-frequency sensor jitter runs 4.5 to 6.7 mg/dL. Week-to-week insulin-sensitivity
 drift runs 8 to 22%.
 

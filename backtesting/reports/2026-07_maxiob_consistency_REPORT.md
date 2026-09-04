@@ -9,7 +9,7 @@ per (user, 5-min bucket). Code refs: repo `Boost-AAPS-core`, branch `Boost-V6-ex
 ## PART A, MECHANISM (headline, resolved with certainty)
 
 user H's big CONFIRMED/COMMITTED shots are zeroed because SafetyGates receives `maxIob = 1.0`
-(the `ApsBoostMaxIob` factory default) instead of his configured 8, during a percentage
+(the `ApsBoostMaxIob` factory default) instead of their configured 8, during a percentage
 profile-switch window. SafetyGates itself is correct; it is FED the wrong ceiling.
 
 ### The arithmetic (SafetyGates.kt)
@@ -30,7 +30,7 @@ profile-switch window. SafetyGates itself is correct; it is FED the wrong ceilin
 | 17:54 | RECOVERING | 0.92 | 2.54 | **0.60** | **8.0** | 1.2 | 4.0 | **100** | decel:0.55 |
 
 At the instant the profile switch drops 130 to 100 (17:49 to 17:54), all three Boost values flip from
-factory defaults (maxIOB 1.0 / committedCap 0.5 / confirmedCap 2.5) to his real settings (8.0 / 1.2 /
+factory defaults (maxIOB 1.0 / committedCap 0.5 / confirmedCap 2.5) to their real settings (8.0 / 1.2 /
 4.0) in a single cycle. The 0.6U-at-iob-0.93 vs 0-at-iob-1.04 "contradiction" was never a constant-
 ceiling puzzle, the ceiling itself changed from 1.0 to 8.0 across that boundary.
 
@@ -45,7 +45,7 @@ ceiling puzzle, the ceiling itself changed from 1.0 to 8.0 across that boundary.
 
 ### SHARED gate, the zeroing is NOT V6-specific (reconciles V1_units=0 too)
 
-`profile.boost_maxIOB` feeds BOTH engines, so the masked 1.0 zeroes base-oref and V6 identically:
+`profile.boost_maxIOB` feeds BOTH engines, so the masked 1.0 zeroes base-the OpenAPS reference algorithm (oref) and V6 identically:
 - Base engine (DetermineBasalBoost): every boost tier is guarded `iob < boostMaxIOB` and clamps the
   dose to `boostMaxIOB − iob` (`DetermineBasalBoost.kt:1491/1496, 1529/1534, 1550/1553, 1574/1578, 1600,
   1632`). At boostMaxIOB=1.0, iob=1.04: `1.04 < 1.0` = false to ALL boost tiers skipped; the surviving
@@ -54,16 +54,16 @@ ceiling puzzle, the ceiling itself changed from 1.0 to 8.0 across that boundary.
 
 This is why the DB side-by-side shows V6 == V1_would == 0 on the high-budget cycles, both read the
 same masked `profile.boost_maxIOB`, not a V6-only brake. Verified split (all H budget>3 cycles): every
-masked cycle (18:29 to 18:49, maxIOB=1.0) has fd=0 AND v1=0; at maxIOB=8 he DELIVERS. 6.00U at 07-07
+masked cycle (18:29 to 18:49, maxIOB=1.0) has fd=0 AND v1=0; at maxIOB=8 delivery happens. 6.00U at 07-07
 14:54 (CONFIRMED budget 3.17), 2.50U at 07-04 03:34, 1.65 to 1.80U on 07-03 rises. The only maxIOB=8 zeros
-carry `HARD:enable_smb_pre_checks` (a legitimate SMB-eligibility gate on specific cycles, not systematic).
-His target was 80 to 85 during the mask window (NOT the activity-raised 150), so activity/target is ruled
+carry `HARD:enable_smb_pre_checks` (a legitimate supplementary microbolus (SMB)-eligibility gate on specific cycles, not systematic).
+Their target was 80 to 85 during the mask window (NOT the activity-raised 150), so activity/target is ruled
 out as the cause of these zeros; it is the masked boost_maxIOB.
 
-Conclusion: this is a PATH-DIVERGENCE bug, both engines use a `profile.boost_maxIOB` = 1.0 ≠ his
-setting 8, during a %-profile-switch window. Not a low ceiling, not a SafetyGates logic error, not IOB
+Conclusion: this is a PATH-DIVERGENCE bug, both engines use a `profile.boost_maxIOB` = 1.0 ≠ their
+setting 8, during a %-profile-switch window. Not a low ceiling, not a SafetyGates logic error, not insulin on board (IOB)
 exhaustion, not activity/target. The SINGLE thing to fix is the transient factory-default reset of
-boost_maxIOB (and the caps); correcting it restores delivery, empirically, at maxIOB=8 his insulinReq
+boost_maxIOB (and the caps); correcting it restores delivery, empirically, at maxIOB=8 their insulinReq
 lands (6.0U on 07-07 14:54).
 
 ---
@@ -71,14 +71,14 @@ lands (6.0U on 07-07 14:54).
 ## PART B, THE SINGLE FIX (correct boost_maxIOB), not a new lever
 
 The velocity-budget "restore V1 aggression" lever is DEAD for user H, the DB side-by-side shows V6
-doses IDENTICALLY to V1_would for him (budget>4: both avg 0.514, both zero on 5/7; budget>2: 1.22 vs
-1.26), and his real V1-era never gave big shots either (max 2.15 when BG>180). There is no V1 aggression
-to restore. The right question is: what single gate/setting, changed, lets his insulinReq 5.64 deliver?
+doses IDENTICALLY to V1_would for them (budget>4: both avg 0.514, both zero on 5/7; budget>2: 1.22 vs
+1.26), and their real V1-era never gave big shots either (max 2.15 when BG>180). There is no V1 aggression
+to restore. The right question is: what single gate/setting, changed, lets their insulinReq 5.64 deliver?
 Answer from the code + data above: the masked `boost_maxIOB`. Correct it (1.0 to 8) and delivery is
 restored with no new lever, empirically confirmed by 07-07 14:54 (6.0U delivered at maxIOB=8, same
 machinery). The counterfactual below quantifies the specific masked cycles.
 
-Replaying the 4 masked cycles with maxIob=8 and his real caps (confirmedCap 4.0, committedCap 1.2,
+Replaying the 4 masked cycles with maxIob=8 and their real caps (confirmedCap 4.0, committedCap 1.2,
 knob 1.30), through the true clamp+brake:
 
 | time | state | iob | budget | actual fd | fd with maxIob=8 |
@@ -89,14 +89,14 @@ knob 1.30), through the true clamp+brake:
 | 17:49 | COMMITTED | 1.24 | 7.19 | 0.00 | **1.20** |
 
 Delivered 0.00U to counterfactual 7.60U (a 4.0U confirmed shot + three 1.2U holds) on a genuine rise
-(BG 148 to 177, eventualBG projected 310 to 331). This IS the "single big shot" user H says he never gets, his
+(BG 148 to 177, eventualBG projected 310 to 331). This IS the "single big shot" user H says they never gets, their
 4U confirmedCap correction, killed by the maxIob=1.0 mask.
 
-Test A (honest): his 14d TBR is 0.65%/0.02%, enormous headroom; 4.0U is exactly his own configured
-confirmedCap and the rise justified it (eBG 310+). The counterfactual is his INTENDED behaviour, not new
+Test A (honest): their 14d TBR is 0.65%/0.02%, enormous headroom; 4.0U is exactly their own configured
+confirmedCap and the rise justified it (eBG 310+). The counterfactual is their INTENDED behaviour, not new
 aggression. Caveat: with 16k steps and an activity-raised target that day, 7.6U over 20 min carries some
 low risk if the rise had fizzled, but it did not (peaked ~187, drifted down slowly), and the shot is
-bounded by his own caps. Net: the bug is suppressing dosing he configured and that his TBR can absorb.
+bounded by their own caps. Net: the bug is suppressing dosing they configured and that their time below range can absorb.
 
 ---
 
@@ -137,7 +137,7 @@ never checks it against the derived confirmedCap. Per user (14d), `maxIOB_mode �
 6/8 users' derived confirmedCap cannot fully land at their 90th-percentile IOB. Caveat: p90-IOB is
 pessimistic (confirm shots fire at meal onset when IOB is lower), so this overstates the everyday impact, but it confirms auto-config never validates maxIOB ≥ confirmedCap + margin. The consistency floor
 (`maxIOB := max(carriedMaxIob, confirmedCapU + typicalIObMargin)`) is a real latent gap; it is not
-user H's cause (his 8 is adequate, the mask is), and would only tame the residual for H/B/F. Recommend it
+user H's cause (their 8 is adequate, the mask is), and would only tame the residual for H/B/F. Recommend it
 as a low-priority hardening, secondary to fixing the path-divergence.
 
 ---
@@ -159,14 +159,14 @@ The three prefs are not reset or rewritten, they are masked by Simple Mode at re
   `:78` `ApsBoostV5CommittedCapU(…, 0.5, …, defaultedBySM = true)`.
 - `simpleMode = sp.getBoolean(GeneralSimpleMode, …)` (`PreferencesImpl.kt:63`).
 
-So whenever Simple Mode is ON, `preferences.get(ApsBoostMaxIob)` returns 1.0 (and the caps 2.5/0.5), exactly the observed trio, regardless of his stored 8.0/4.0/1.2. That value flows:
+So whenever Simple Mode is ON, `preferences.get(ApsBoostMaxIob)` returns 1.0 (and the caps 2.5/0.5), exactly the observed trio, regardless of their stored 8.0/4.0/1.2. That value flows:
 `OpenAPSBoostPlugin.kt:253/1217 (boost_maxIOB)` to both the base engine's tier guards
 (`DetermineBasalBoost.kt:1491…1632`) AND `OpenAPSBoostV5Plugin.kt:497 min(boost_maxIOB,max_iob)` to SafetyGates.
 Both engines zero together because both read the same masked getter.
 
 Auto-config is EXONERATED: it reads these keys via `getIfExists` (`PreferencesImpl.kt:129`, raw
 `sp.getDouble`, mask-bypassing) and only ever writes DERIVED values, never factory defaults. It marks
-his 8/4/1.2 as user-tuned and keeps them. This is why auto-config "sees" his real values while the dosing
+their 8/4/1.2 as user-tuned and keeps them. This is why auto-config "sees" their real values while the dosing
 engine, using `get()`, sees the masked defaults, a read-path divergence between the two.
 
 Trigger (temporal): the masking is gated purely on `simple_mode` reading `true`. There is no code
@@ -176,8 +176,8 @@ which `simple_mode` read `true` for user H (most likely an app restart re-initia
 import; on-device, read the `simple_mode` boolean during vs outside the window to confirm). The masking
 mechanism itself is certain; only the reason simple_mode flipped for those 65 min needs device confirmation.
 
-This also explains user E (Part C1): E runs in Simple Mode, so his boost_maxIOB is *permanently*
-masked to 1.0, his V6 amplification has been read-suppressed the whole time, not a transient event.
+This also explains user E (Part C1): E runs in Simple Mode, so their boost_maxIOB is *permanently*
+masked to 1.0, their V6 amplification has been read-suppressed the whole time, not a transient event.
 
 ### FIX (code)
 Stop Simple Mode from silently defaulting safety-critical dosing ceilings: drop `defaultedBySM = true`
@@ -196,7 +196,7 @@ maxIOB=1.0 / committedCap=0.5 / confirmedCap=2.5 regardless of what they set.
   the window; the masking itself does not depend on that answer.
 - Part B counterfactual excludes the decel brake (those cycles were CONFIRMED/COMMITTED still climbing,
   decel≈1.0) and assumes the caps also unmask (they do, same cycle).
-- C2 "reachable" uses p90-of-all-IOB (pessimistic vs confirm-time IOB); flags the gap, not everyday size.
+- C2 "reachable" uses p90-of-all-insulin on board (IOB) (pessimistic vs confirm-time IOB); flags the gap, not everyday size.
 - H aggression knob 1.30 (from telemetry). E's chronic maxIOB=1.0 is a distinct issue from the transient
   mask and should be triaged separately.
-- DB refresh since 07-07 failed on oref-site U018 only (no boost impact); H captured through 21:19.
+- DB refresh since 07-07 failed on the OpenAPS reference algorithm (oref)-site U018 only (no boost impact); H captured through 21:19.

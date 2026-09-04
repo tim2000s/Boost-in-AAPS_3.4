@@ -17,7 +17,7 @@ Methods. We compared the open reference implementation of the simulator
 four independent real-world AID datasets covering roughly 192 users, many with more than a
 year of five-minute continuous glucose data. The four are a fully closed loop (Boost), an
 iAPS/Trio cohort, the OpenAPS/oref0 cohort from the OpenAPS Data Commons, and a
-pre-dynamic-ISF AndroidAPS cohort. Eleven statistics of glucose dynamics were computed the
+pre-dynamic-insulin sensitivity factor (ISF) AndroidAPS cohort. Eleven statistics of glucose dynamics were computed the
 same way on both sides, taken per user and then pooled with bootstrap confidence intervals.
 For each statistic we asked whether any persona class reproduced it, not only the adults.
 
@@ -173,8 +173,8 @@ somewhere within the spread of four independent real datasets to pass.
 The first result is what makes the rest interpretable. The four real cohorts, built and worn
 independently, sit in a tight band on almost every measure (Table 1, Figure 1). Glucose
 variability is between 30 and 34% for all four. The outcome spread 30 minutes after a stuck
-high runs from 27 to 34 mg/dL. Hypoglycaemia recovers to 100 mg/dL in 50 to 59 minutes and
-then overshoots above 180 mg/dL about a quarter of the time. Sensor jitter runs from 4.5 to
+high runs from 27 to 34 mg/dL. Hypoglycaemia recovers to 100 mg/dL (5.6 mmol/L) in 50 to 59 minutes and
+then overshoots above 180 mg/dL (10.0 mmol/L) about a quarter of the time. Sensor jitter runs from 4.5 to
 6.7 mg/dL, and week-to-week insulin-sensitivity drift from 8 to 22%.
 
 Nothing forced this agreement, and it is the load-bearing assumption of the method. Because
@@ -226,7 +226,7 @@ The failures carry more weight than the passes, because they land on the situati
 test is meant to probe, and because no persona reproduces any of them at any age.
 
 Consider first the fat tail of sudden glucose rises, which is the fingerprint of an
-unannounced meal. Real cohorts see a sharp five-minute rise 4 to 7% of the time; every
+Unannounced meal. Real cohorts see a sharp five-minute rise 4 to 7% of the time; every
 persona sits at 1 to 3%, and in any case their controllers were told the carbohydrate in
 advance.
 

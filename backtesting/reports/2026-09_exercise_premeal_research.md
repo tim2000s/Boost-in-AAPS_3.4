@@ -403,7 +403,7 @@ Default thresholds, from `core/keys/.../IntKey.kt:60` and `DoubleKey.kt:62`, are
 minutes, 800 in 15, 1200 in 30 and 1800 in 60. An ACTIVE classification sets profile percent to
 80, an INACTIVE one to 130, with the inactivity trigger at fewer than 500 steps in 60 minutes.
 
-The dosing consequence is at `OpenAPSBoostPlugin.kt:1243`. Profile percent scales ISF inversely
+The dosing consequence is at `OpenAPSBoostPlugin.kt:1243`. Profile percent scales insulin sensitivity factor (ISF) inversely
 (`profile.getIsfMgdl(...) / profileScale`) and scales basal directly
 (`pump.baseBasalRate * profileScale` at line 1275), and it is passed into the engine as
 `profileScale` at line 1427, where it scales the Boost dose terms in `DetermineBasalBoost.kt`.
@@ -456,7 +456,7 @@ night window, and a meal-likely signal. It is evaluated every cycle at
 `OpenAPSBoostPlugin.kt:2064` and persisted in `ApsBoostSleepState`.
 
 Its consequences are live. `boostActive = !isInNightSleepPeriod()` at line 704 disables the
-entire Boost SMB ladder when it fires. It excludes the INACTIVE branch. It sets `V5Inputs.asleep`
+entire Boost supplementary microbolus (SMB) ladder when it fires. It excludes the INACTIVE branch. It sets `V5Inputs.asleep`
 at line 1607, which gates the fast-carb confirm path. The night-mode master flag
 (`ApsBoostNightModeEnabled`) defaults false, so out of the box `isInNightSleepPeriod()` returns
 false on its first line, but `detectorAsleep` and the night-window test are read regardless of
@@ -507,7 +507,7 @@ recent low (lines 1304-1323), which is a retraction mechanism already written an
 the same target reason a pre-meal mode would use.
 
 Two related facts. A high user temporary target disables Boost outright at line 712 unless
-`allowBoostWithHighTt` is set. And `SMBDefaults.exercise_mode` is hardcoded false, so the oref
+`allowBoostWithHighTt` is set. And `SMBDefaults.exercise_mode` is hardcoded false, so the the OpenAPS reference algorithm (oref)
 high-target-raises-sensitivity branch in `DetermineBasalBoost.kt:491` never fires; there is no
 plugin-level exercise mode of any kind.
 
@@ -534,7 +534,7 @@ Insulin on board reaches the V6 decision as `V5Inputs.iob` alongside `maxIob` an
 reaches V6 only folded into `baseInsulinReq` and `eventualBg` by the V1 engine. COB is directly
 available in the V1 engine as `mealData.mealCOB` at `OpenAPSBoostPlugin.kt:1153` and is read in
 `DetermineBasalBoost.kt` and by the night-mode test. Any pre-meal mode that wants to condition on
-carbohydrate on board in V6 would have to thread a new field.
+Carbohydrate on board in V6 would have to thread a new field.
 
 Exercise state already crosses into V6 through `OapsProfileBoost.v5_exerciseActive`,
 `v5_inPostExerciseWindow` and `v5_exerciseSubclass`, filled at `OpenAPSBoostPlugin.kt:1467`.
@@ -561,20 +561,20 @@ sharply than the literature does.
 
 ### 3.1 The contrast that stands
 
-Meals followed by activity within two hours end in a low below 70 mg/dL 23 per cent of the time
+Meals followed by activity within two hours end in a low below 70 mg/dL (3.9 mmol/L) 23 per cent of the time
 (95% CI 19 to 27); meals not followed by activity, 15 per cent (95% CI 12 to 18). The intervals
 do not overlap. Eight users with a step feed, about 30 days to 2026-07-28, in
 `backtesting/reports/2026-07_meal_with_and_without_exercise.md`. Tier SOLID. This contrast was
 not affected by the later withdrawal described below.
 
 The same report splits the cohort into two populations that want opposite treatment. Four users
-spend 24 to 37 per cent of post-meal time above 180 mg/dL with post-meal lows at or near zero;
+spend 24 to 37 per cent of post-meal time above 180 mg/dL (10.0 mmol/L) with post-meal lows at or near zero;
 three spend little time high but 6, 9 and 14 per cent of post-meal-exercise time below 70. A
 single cohort-wide pre-meal reduction would help the second group and worsen the first.
 
 Time-in-regime, cohort-pooled over the same window:
 
-| Regime | Share of time | Mean mmol/L | TIR 70-180 | TING 63-140 | <70 | >180 |
+| Regime | Share of time | Mean mmol/L | TIR 70-180 | time in normoglycaemia (TING) 63-140 | <70 | >180 |
 |---|---|---|---|---|---|---|
 | Background, non-meal | 59% | 6.6 | 93% | 82% | 2.7% | 4% |
 | Post-meal, no exercise | 18% | 8.1 | 76% | 54% | 2.4% | 22% |
@@ -743,7 +743,7 @@ A declaration can be made today, through five routes, and all of them collapse t
 narrow payload.
 
 `ui/dialogs/TempTargetDialog.kt` offers Eating Soon, Activity, Hypo and Custom as reasons and
-takes a target and a duration. The Activity preset defaults to 140 mg/dL for 90 minutes
+takes a target and a duration. The Activity preset defaults to 140 mg/dL (7.8 mmol/L) for 90 minutes
 (`UnitDoubleKey.OverviewActivityTarget`, `IntKey.OverviewActivityDuration`). The AAPS Wear watch
 has the same presets, reaching `DataHandlerMobile.handleTempTargetPreCheck` with
 `PRESET_ACTIVITY`, so a one-button declaration from the wrist already exists. The SMS
@@ -902,7 +902,7 @@ information over the clock has to be made against it rather than against nothing
 The primary outcome is time below 70 mg/dL in the three hours from the declared or observed
 exercise onset, which matches the horizon already used across the post-meal-exercise analyses
 (`LOW_HORIZON_MIN = 180`) and matches the trial literature's exercise-plus-one-hour window
-closely enough to be comparable. Time below 54 mg/dL over the same window is the second, because
+closely enough to be comparable. Time below 54 mg/dL (3.0 mmol/L) over the same window is the second, because
 the programme's kill-switches key on the absolute severe-hypoglycaemia rate.
 
 The cost side has to be measured on the same events or the result is not interpretable. The

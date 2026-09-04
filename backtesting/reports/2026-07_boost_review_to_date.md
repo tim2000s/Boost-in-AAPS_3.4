@@ -18,7 +18,7 @@ five long-running users; C, G, H join between December and May. E's feed stops
 
 ## 1. The cohort's current position
 
-Per-user CGM outcomes, 30 days to 2026-07-27. TIR = 70-180, TING = 63-140, all mg/dL.
+Per-user CGM outcomes, 30 days to 2026-07-27. TIR = 70-180, time in normoglycaemia (TING) = 63-140, all mg/dL.
 
 | user | n | TIR | TING | TBR<70 | TBR<54 | TAR>180 | mean | CV |
 |---|---|---|---|---|---|---|---|---|
@@ -48,7 +48,7 @@ re-derived on current data for these users.
 
 The high-side picture is unchanged from the segmentation work: A, B and F carry the
 TAR (11-19% >180) with TING in the 58-65 range, i.e. the residual problem for the
-well-controlled users is time above 140, not time below 70.
+users whose glucose already sits in range is time above 140, not time below 70.
 
 ---
 
@@ -81,7 +81,7 @@ is outcome-neutral in this cohort. Every user's TIR change overlaps zero, and th
 migrated TIR change (−1.24 pp) is indistinguishable from the never-migrated control's
 (−1.17 pp), whatever moved TIR over July moved it for the user who did not migrate too.
 
-Both arms are Boost: V1 is a Boost dosing generation, not oref. So this is
+Both arms are Boost: V1 is a Boost dosing generation, not the OpenAPS reference algorithm (oref). So this is
 Boost-V1 versus Boost-V5/V6, not Boost versus a reference controller.
 
 Three moves are distinguishable from zero, and they do not point one way:
@@ -143,7 +143,7 @@ Two differences are not shadow, they are live-path fixes that exist, are tested,
 have not reached the shipping line.
 
 4a. UKF compression gate hardening (`UnscentedKalmanFilterPlugin.kt`, 2026-07-16).
-On V7-shadow the gate excludes negative basal IOB from the total and latches the
+On V7-shadow the gate excludes negative basal insulin on board (IOB) from the total and latches the
 consecutive-compression counter while the pattern persists. dev has neither. The
 consequences on dev, per the fix's own rationale:
 
@@ -175,7 +175,7 @@ The HR-exercise safety fix. The primer confirm-net, which only ever removes insu
 
 Repeatedly refuted, and worth not revisiting. Online knob tuning lost to static
 per-user auto-config in four separate experiments, both directions, caps and sliders.
-Adding insulin into a high-IOB tail was rejected three separate ways (RECOVERING SMB,
+Adding insulin into a high-IOB tail was rejected three separate ways (RECOVERING supplementary microbolus (SMB),
 re-engage, blanket committedCap raise). Insulin-efficacy detection from current telemetry
 is at chance. The Twin is a descent sensor, not a controller or an MPC model. Cross-user
 meal anticipation is at chance; only per-user exercise anticipation carries signal.
@@ -200,7 +200,7 @@ sat before a low. It is what the identification constraint has been saying all a
 with no counterfactual, the programme can price individual levers well and cannot
 demonstrate an aggregate effect at this cohort size. The residual problems the data
 actually shows are (a) a subset of users above the hypo floors, and (b) time above 140
-for the well-controlled users, and the post-meal-exercise mechanism work already
+for the users whose glucose already sits in range, and the post-meal-exercise mechanism work already
 established that the exercise half of (b) is a carbohydrate-counterweight problem the
 loop cannot solve with insulin.
 

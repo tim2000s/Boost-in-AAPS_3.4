@@ -82,7 +82,7 @@ The high side deserves its own precise diagnosis, because it is easy to blame th
 Away from meals, for roughly 60% of the day including overnight, control is essentially solved:
 around 93% time in range, tight variance, lows no worse than average. The deficit is entirely
 post-meal. In the clean post-meal window, with no exercise involved, more than one minute in five is
-spent above 180 mg/dL. But the lows in that same window are flat, the same 2.5% you see in the
+spent above 180 mg/dL (10.0 mmol/L). But the lows in that same window are flat, the same 2.5% you see in the
 background. That flatness is the tell. The loop is not over-dosing meals, and it is not being timid;
 it is simply too slow to cover an unannounced meal with insulin that takes the better part of an
 hour to act. The post-meal high is a speed problem, and no amount of cleverer dosing logic removes

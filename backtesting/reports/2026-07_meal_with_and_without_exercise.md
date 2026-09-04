@@ -17,7 +17,7 @@ explanation and points the next work at two specific, opposite fixes.
 
 ## 1. Exercise after a meal nearly doubles the low rate
 
-Taking every unannounced-meal confirmation and asking whether glucose fell below 70 mg/dL in the
+Taking every unannounced-meal confirmation and asking whether glucose fell below 70 mg/dL (3.9 mmol/L) in the
 following three hours, the split is stark. Meals *not* followed by activity ended in a low 15%
 of the time (95% CI 12 to 18); meals *followed* by activity within two hours ended in a low 23%
 of the time (95% CI 19 to 27). The confidence intervals do not overlap, this is a real, roughly
@@ -89,7 +89,7 @@ the loop handles very differently (Figure 3, Table 1).
 
 *Figure 3. Share of time in each glucose zone, by regime. Background = away from meals.*
 
-| Regime | % of time | Mean (mmol/L) | TIR 70–180 | TING 63–140 | Time <70 | Time >180 |
+| Regime | % of time | Mean (mmol/L) | TIR 70–180 | time in normoglycaemia (TING) 63–140 | Time <70 | Time >180 |
 |---|---|---|---|---|---|---|
 | Background (non-meal) | 59% | 6.6 | **93%** | 82% | 2.7% | 4% |
 | Post-meal, no exercise | 18% | 8.1 | 76% | 54% | **2.4%** | **22%** |
@@ -102,7 +102,7 @@ of the time, the loop holds 93% time-in-range with lows no worse than average. T
 gain there. Second, the real deficit of fully-closed dosing is the post-meal high, and it is a
 speed problem, not an over-dosing one: in the clean post-meal window (no exercise) more than one
 minute in five is spent above 180, yet lows are *flat* at 2.4%, the loop is too slow to cover an
-unannounced meal, not too aggressive. Third, exercise redistributes post-meal risk, it trims
+Unannounced meal, not too aggressive. Third, exercise redistributes post-meal risk, it trims
 the high (22% to 18% above range) but nearly doubles the low (2.4% to 4.0% below 70). It is the same
 counterweight mechanism at the population level: the exercise drain eats the excess glucose, which
 helps when there is excess and hurts when there is not.
