@@ -82,7 +82,7 @@ our failures. And most importantly, no version has been checked against the real
 we measured here. "The new version fixes it" is itself a claim that should be measured, not
 assumed.
 
-## Why this is time for a different approach
+## The case for a different approach
 
 None of this means the simulator is bad, or that its acceptance was a mistake. Replacing
 animal trials was a genuine advance, and the model is good at what it is good at. The

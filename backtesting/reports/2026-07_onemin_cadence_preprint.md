@@ -68,10 +68,10 @@ of the cohort remained on five-minute sensors, and the same person's own record 
 change. That gives both a between-user contrast and, more usefully, a within-user one. This
 paper reports what we found, including the results that contradicted our own expectations.
 
-## 2. What faster sensing could in principle buy
+## 2. The theoretical gain from faster sensing
 
-It is worth being precise about the mechanisms by which a faster sensor might help, because
-they are different and they fail differently.
+A faster sensor might help by several mechanisms. They are different from one another and they
+fail differently.
 
 The first is latency. If a controller acts on the arrival of new information, then
 information arriving more often reaches it sooner. This is a pure timing benefit and it
@@ -200,7 +200,7 @@ The summary is that a one-minute record tells you reliably that glucose is risin
 you very little about how fast. That distinction turns out to explain the rest of the paper,
 because a first derivative survives quantisation and a second derivative does not.
 
-## 5. Where the extra samples do not help
+## 5. Uses with no measurable gain
 
 ### 5.1 The derived rate signals
 
@@ -239,8 +239,7 @@ The threshold form of the test explains why it looked promising at first. A dete
 comparing the slope over three minutes with the slope over the preceding three minutes fires
 a median of 13.0 minutes before the shipped declining-delta test. At its first firing,
 however, a median of 41.0 milligrams per decilitre of climb remains, with 94.1 per cent of
-episodes having ten or more still to come. It is not detecting the end of a rise. It is
-firing in the middle of one. Sweeping the window from three to fifteen minutes and the
+episodes having ten or more still to come. It fires in the middle of a rise rather than at the end of one. Sweeping the window from three to fifteen minutes and the
 threshold from one to five shows the remaining climb falling monotonically as the window
 lengthens, from 41.0 to 18.0. The only configuration that improves on the shipped detector
 uses a longer window than the shipped detector does, and is therefore not faster.
@@ -263,7 +262,7 @@ deterministic difference, and a thousandth of an area under the curve has no ope
 meaning. The five-minute view already reaches 0.962 on its own, which is the more useful
 observation.
 
-## 6. Where the extra samples do help: fast falls
+## 6. Fast falls, the one case with a gain
 
 The one place the latency mechanism of Section 2 survives is where the change is large
 relative to the sensor's step. Across 5,961 events in which glucose fell by 25 or more

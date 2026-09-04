@@ -33,7 +33,7 @@ wearing real loops. Not whether it is a good model in the abstract, but whether 
 specific statistics that decide whether a controller is safe come out looking like
 reality.
 
-## What we compared, and why it is a fair test
+## The comparison and its fairness
 
 We assembled four independent real-world datasets from a local research database, each a
 different automated-insulin-delivery system built by a different community:
@@ -83,7 +83,7 @@ real cohorts cluster inside it; the personae sit inside it for smoothness and, f
 child, variability, and outside it for every mechanism that makes real-world control
 hard.](../scripts/2026-07-insilico/fidelity_suite/fig_multicohort.png)
 
-## Where the simulator is faithful
+## The simulator's faithful range
 
 The simulator is not wrong everywhere, and the honest account has to say where it is
 right. On the shape of the glucose curve over the short horizon, it is faithful. The
@@ -101,7 +101,7 @@ almost always evaluated on the adult personae, the default in-silico test unders
 variability of real life. Reaching realism required us to lean on the personae the field
 does not usually test.
 
-## Where no persona can follow
+## The limits of persona matching
 
 The failures matter more than the passes, because they are exactly the situations a
 safety test exists to probe, and because no persona reproduces them at any age.
@@ -135,7 +135,7 @@ physiology, drift; the simulator does not.
 Five of the eleven statistics we measured are matched by none of the personae, and a
 sixth, sensitivity drift, is zero in the model by construction.
 
-## Why a matching persona is not a rescue
+## Persona matching as a remedy
 
 It is tempting to read the child persona reaching real-world variability as the simulator
 passing after all. It is not. Nobody evaluates an adult controller on the child personae,
@@ -144,7 +144,7 @@ above: it treats no hypo with carbohydrate, it produces no compression lows, its
 is too clean, and its physiology never drifts. Matching a summary number while missing
 the mechanism behind it is precisely the failure mode a safety test should not have.
 
-## What this means for testing under FDA guidance
+## Implications for testing under FDA guidance
 
 None of this says the UVA/Padova simulator is a bad model, or that its acceptance was a
 mistake. Replacing animal trials was a real advance, and for the questions it answers

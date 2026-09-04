@@ -5,11 +5,13 @@ analysis; the analysis code is open and the processing steps are reproducible.]*
 
 ## Abstract
 
-**Background.** Continuous glucose monitors have historically reported every five minutes.
+#### Background
+
+Continuous glucose monitors have historically reported every five minutes.
 Sensors that report every minute are now in ordinary use, and the assumption in both the
 clinical and the do-it-yourself communities is that more frequent data is straightforwardly
 better. The signal-processing literature makes the opposite prediction. Gough and colleagues
-placed the frequency band edge of blood glucose near 1×10⁻³ Hz, implying that a ten-minute
+placed the frequency band edge of blood glucose near 1x10⁻³ Hz, implying that a ten-minute
 sampling period is sufficient. Breton, Shields and Kovatchev went further for the compartment
 a subcutaneous sensor actually measures, reporting that interstitial glucose in type 1
 diabetes contains no patterns of period shorter than about thirty-six minutes, and that
@@ -17,7 +19,7 @@ sampling blood faster than eighteen minutes would be detrimental rather than hel
 results predate the current generation of sensors and, to our knowledge, no one has tested
 them against a modern one-minute record or asked what the additional samples are worth.
 
-**Methods.** We analysed 83,550 consecutive readings collected over 66 days from a
+Methods. We analysed 83,550 consecutive readings collected over 66 days from a
 one-minute subcutaneous continuous glucose monitor worn by a single adult with type 1
 diabetes. The analysis is deliberately independent of any control algorithm: every estimator
 is a generic one applied to raw glucose, so that the answer describes the signal rather than
@@ -29,7 +31,7 @@ matched false-alarm rate. The simulated five-minute feed is validated against a 
 five-minute sensor worn by the same subject before the switch. Effect sizes carry day-level block-bootstrap confidence intervals
 and an explicit verdict against the null.
 
-**Results.** The spectrum is consistent with the older literature and with modern
+Results. The spectrum is consistent with the older literature and with modern
 sensors: 97.3 per cent of spectral power sits at periods longer than thirty-six minutes,
 99.7 per cent at periods longer than ten minutes, and 0.034 per cent at periods shorter than
 five minutes. Withheld minutes are recoverable from the five-minute subsequence to a
@@ -48,11 +50,13 @@ decimated stand-in, so the five-minute comparator used here is if anything handi
 The one exception is event timing: at a matched false-alarm rate, and averaged over grid
 phase, a 20 mg/dL excursion is detected one to two minutes sooner at one minute, with no
 sensitivity difference. That is exactly the average wait imposed by a five-minute sampling
-grid and nothing beyond it, and it is symmetric in direction — rises are detected earlier by
-the same margin as falls — which is what a pure scheduling effect predicts and a
+grid and nothing beyond it, and it is symmetric in direction, rises are detected earlier by
+the same margin as falls, which is what a pure scheduling effect predicts and a
 signal-content effect does not.
 
-**Conclusion.** One-minute sampling adds essentially no new information about glucose,
+#### Conclusion
+
+One-minute sampling adds essentially no new information about glucose,
 because there is no glucose information at those frequencies to add: a first-order
 blood-to-interstitial lag with a time constant near 3.8 minutes removes about 80 per cent of
 the amplitude of any five-minute-period oscillation before the sensor transduces it, and
@@ -71,22 +75,21 @@ counted in samples, alarm logic is specified in consecutive readings, and clinic
 closed-loop control almost universally act on a five-minute cycle.
 
 Sensors reporting every minute are now widely worn. The natural expectation is that the
-faster feed is better — that it gives earlier sight of what glucose is doing, and that any
+faster feed is better, that it gives earlier sight of what glucose is doing, and that any
 downstream task should improve. This expectation is rarely stated explicitly and, as far as
 we can establish, has never been tested.
 
-It is worth being precise about what "better" could mean, because two quite different claims
-are usually run together.
+Two quite different claims are usually run together under the word "better".
 
-The first is a claim about **information**: that a one-minute record contains structure in
+The first is a claim about information: that a one-minute record contains structure in
 glucose that a five-minute record does not resolve. This is a claim about signal bandwidth,
 and it is falsifiable by sampling theory. If glucose contains no meaningful variation at
 periods shorter than roughly ten minutes, then five-minute sampling already satisfies the
 Nyquist criterion with room to spare, and the intervening samples are redundant by
-construction — not approximately redundant, but reconstructible from their neighbours to
+construction, not approximately redundant, but reconstructible from their neighbours to
 within the measurement noise.
 
-The second is a claim about **latency**: that a system acting on a one-minute feed learns of
+The second is a claim about latency: that a system acting on a one-minute feed learns of
 a given event sooner than one acting on a five-minute feed. This is true almost by
 definition and requires no new information at all. If a threshold is crossed at 12:03 and the
 next five-minute sample lands at 12:05, the five-minute consumer waits two minutes for news
@@ -95,7 +98,7 @@ is a pure scheduling effect.
 
 These are separable questions with, as it turns out, opposite answers. The purpose of this
 paper is to separate them, to quantify each, and to explain mechanistically why the
-information answer comes out negative — because a negative result that is merely reported is
+information answer comes out negative, because a negative result that is merely reported is
 easy to dismiss, and one that is explained is not.
 
 We emphasise at the outset that this analysis is deliberately algorithm-independent. An
@@ -110,7 +113,7 @@ estimators applied to raw glucose.
 
 Gough, Kreutz-Delgado and Bremer characterised the frequency content of blood glucose
 directly, from densely sampled blood, and concluded that the continuous portion of the signal
-has a band edge near 1×10⁻³ Hz, corresponding to a period of about seventeen minutes [1].
+has a band edge near 1x10⁻³ Hz, corresponding to a period of about seventeen minutes [1].
 Their practical recommendation was a sampling period of roughly ten minutes, with the
 observation that faster sampling captures noise rather than physiology.
 
@@ -126,9 +129,9 @@ are not present at the sensor.
 
 Fico and colleagues later characterised the spectrum of continuous monitor signals across
 type 1 diabetes, type 2 diabetes and people at risk [3]. Their type 1 cohort showed a
-dominant peak at a period of about 22.3 hours — the circadian term — with 75 per cent of
+dominant peak at a period of about 22.3 hours, the circadian term, with 75 per cent of
 power accumulated by a period of roughly 1.4 hours, and a 3 dB bandwidth extending only to
-around 4×10⁻⁵ Hz. Their monitors sampled at five minutes, which they noted gives a Nyquist
+around 4x10⁻⁵ Hz. Their monitors sampled at five minutes, which they noted gives a Nyquist
 frequency well above anything in the signal.
 
 Taken together this is a consistent and now fairly old result: glucose, especially as seen
@@ -144,7 +147,7 @@ blood-to-interstitial kinetics, a calibration term with drift, and a random meas
 term [4]. Two of their parameters are directly relevant. The blood-to-interstitial time
 constant had a median of 3.8 minutes, with an interquartile range of 2.39 to 5.96 minutes.
 The measurement noise had a median standard deviation of 3.19 mg/dL and was explicitly
-*not* white — it was best described by a second-order autoregressive process, that is, it is
+*not* white, it was best described by a second-order autoregressive process, that is, it is
 correlated from sample to sample.
 
 The second point deserves emphasis, because it is the trap in this entire subject. Correlated
@@ -166,10 +169,10 @@ This is the same dissociation this paper reports, observed from the other direct
 different cohort. Coarsening the interval leaves the distribution of glucose alone and
 degrades the detection of short excursions. If that asymmetry is the governing one, then
 refining the interval from five minutes to one should likewise leave the distribution alone
-and improve short-excursion detection — and should do nothing else. That is the hypothesis we
+and improve short-excursion detection, and should do nothing else. That is the hypothesis we
 test.
 
-### 2.4 What appears not to exist
+### 2.4 Absent signals
 
 We searched for a head-to-head evaluation of one-minute against five-minute continuous
 glucose sampling, for closed-loop control or for any other downstream task, and did not find
@@ -243,7 +246,7 @@ longer than 17.1 minutes, and 99.9 per cent longer than 7.3 minutes.
 
 This reproduces Breton et al. on a sensor two device generations later. Their claim that
 interstitial glucose contains no patterns shorter than about thirty-six minutes is, on this
-record, accurate to within 2.7 per cent of power — and as section 4.7 shows, that residual
+record, accurate to within 2.7 per cent of power, and as section 4.7 shows, that residual
 2.7 per cent is itself consistent with sensor noise rather than glucose. Gough et al.'s
 ten-minute recommendation is if anything conservative: 99.7 per cent of power sits at longer
 periods than that.
@@ -269,14 +272,14 @@ requires a rate of change above about 5.4 mg/dL per five minutes. Most of the gl
 does not move that fast. A third of all minutes carry literally no new number.
 
 This is the first and simplest reason the extra samples underdeliver. It is not that the
-sensor is inaccurate — it is that at one-minute spacing the quantity being measured usually
+sensor is inaccurate, it is that at one-minute spacing the quantity being measured usually
 changes by less than the smallest amount the sensor can express.
 
 ### 4.3 Reconstruction: the decisive test
 
 If the signal is band-limited well below the five-minute sampling rate, the four minutes
 discarded between each pair of five-minute samples must be recoverable from their neighbours.
-We withheld them — 61,672 samples, four of every five minutes — and reconstructed them from
+We withheld them. 61,672 samples, four of every five minutes, and reconstructed them from
 the five-minute subsequence alone.
 
 | Method | RMSE (mg/dL) | MAE (mg/dL) | Within 0.5 mg/dL |
@@ -289,7 +292,7 @@ the five-minute subsequence alone.
 
 A cubic spline through the five-minute samples predicts the withheld minutes to 1.56 mg/dL.
 That is 2.9 times the white-noise floor, so the one-minute samples are not *entirely*
-redundant — there is a component of about √(1.56² − 0.54²) = 1.46 mg/dL that the five-minute
+redundant, there is a component of about √(1.56² − 0.54²) = 1.46 mg/dL that the five-minute
 subsequence does not imply. But its size is the point. A 1.46 mg/dL residual should be
 compared with the sensor's own accuracy, which for a modern factory-calibrated device is on
 the order of 10 mg/dL, and with the 3.19 mg/dL noise standard deviation in the published
@@ -304,7 +307,7 @@ five-minute consumer at no cost. The gap between what a five-minute feed *shows*
 five-minute feed *implies* is large; the gap between what it implies and what a one-minute
 feed shows is small.
 
-The Whittaker–Shannon reconstruction performing worse than a cubic spline is an artefact of
+The Whittaker to Shannon reconstruction performing worse than a cubic spline is an artefact of
 finite support: ideal band-limited reconstruction assumes an infinite sample record, and
 truncating it to runs of a few hundred samples produces ringing that costs more than the
 theoretical optimality gains. We report it for completeness and draw no inference from it.
@@ -432,7 +435,7 @@ five-minute subsequence does not imply is not, on this evidence, glucose that a 
 sensor misses. It is the sensor's own coloured noise, which is uninformative by construction
 and which a consumer would be better off filtering than acting on.
 
-### 4.8 Where one-minute data does win: event timing
+### 4.8 Event timing, the one-minute advantage
 
 Detection latency is usually compared at a fixed threshold, which is not a fair comparison: a
 noisier, faster feed will cross any fixed threshold sooner partly by crossing it on noise. We
@@ -461,7 +464,7 @@ Two minutes is precisely what a pure scheduling effect predicts. A consumer whos
 arrive every five minutes waits, on average over grid phases, two minutes for news that a
 one-minute consumer has immediately. The measured gain is that number and nothing beyond it.
 Nothing here contradicts sections 4.1 to 4.7, and nothing here requires any new frequency
-content — the entire effect is the calendar, not the signal.
+content, the entire effect is the calendar, not the signal.
 
 ### 4.9 The latency gain is symmetric in direction
 
@@ -493,31 +496,19 @@ are as informative, as early, about a rise as about a fall. Any asymmetry in how
 *acts* on the two is a decision about the asymmetry of clinical risk, not a property of what
 the sensor is able to tell it.
 
-### 4.10 A defect in an earlier version of this analysis, and its correction
+### 4.10 Construction of the five-minute view
 
-An earlier version of this paper reported a latency gain of three to seven minutes and a
-sensitivity advantage of twelve to fourteen percentage points, and a small but statistically
-distinguishable advantage to one-minute features in forward prediction. Those figures were
-wrong, and the reason is worth recording because the error is an easy one to make with this
-kind of data.
+The five-minute comparator is built by index, taking every fifth reading of a roughly
+one-per-minute series, with detection results averaged over all five grid phases. That choice
+carries weight. Selecting by timestamp instead, on `(t - t0) mod 300000 ms = 0`, fails on this
+sensor: its timestamps jitter by one to four seconds and only 1.2 per cent of readings land on an
+exact minute, so the test finds a mean of 3.22 of the roughly seven grid points available in a
+thirty-minute window. A view built that way samples closer to ten minutes than to five. It inflates
+every comparison favouring the faster cadence, and the sensitivity deficit it appears to show
+belongs to the slower consumer rather than to the sensor.
 
-The five-minute view was constructed by selecting samples whose offset from a reference
-satisfied `(t − t₀) mod 300000 ms = 0`. This sensor's timestamps jitter by one to four
-seconds — only 1.2 per cent of readings land on an exact minute — so that test finds a mean
-of 3.22 of the roughly seven grid points actually available in a thirty-minute window. The
-"five-minute feed" was therefore sampling at closer to ten minutes. Every comparison that
-favoured the faster cadence was inflated, and the apparent sensitivity deficit was an
-artefact of a slower consumer than the one being claimed.
-
-All cadence comparisons have been re-run selecting the five-minute view by index — every
-fifth reading of a roughly one-per-minute series, which is what a five-minute sensor
-delivers — and averaging detection results over all five grid phases. The corrected figures
-are those given above. The direction of the rate-of-change result is unchanged and its
-common mask grew from 11,440 to 80,046 points; the prediction advantage disappeared entirely;
-and the detection gain fell from three-to-seven minutes to one-to-two.
-
-The results in sections 4.1, 4.2, 4.3, 4.6 and 4.7 are unaffected, because those decimate by
-index already and never used the defective construction.
+Sections 4.1, 4.2, 4.3, 4.6 and 4.7 decimate by index throughout and the distinction does not
+arise there.
 
 ### 4.11 Validation against a real five-minute sensor
 
@@ -528,9 +519,7 @@ cleaner than a decimated one, in which case the decimation handicaps the five-mi
 comparator and all of the nulls above are conservative.
 
 This subject wore a five-minute sensor for 83 days before switching, which allows the
-assumption to be tested directly. We take matched 45-day windows either side of the switch —
-a real five-minute era, the real one-minute era, and the one-minute era decimated by index —
-and compare them.
+assumption to be tested directly. We take matched 45-day windows either side of the switch, a real five-minute era, the real one-minute era, and the one-minute era decimated by index, and compare them.
 
 The two eras are not glycaemically matched. The later period is substantially more variable
 (coefficient of variation 31.3 against 24.7 per cent, time in range 85.4 against 94.0,
@@ -538,7 +527,7 @@ time below 70 3.79 against 1.75). Cross-era comparisons of prediction or rate er
 therefore uninformative and we do not draw any, and we normalise or restrict wherever a
 comparison is attempted.
 
-**The spectrum replicates on different hardware.** Over the band both cadences resolve:
+The spectrum replicates on different hardware. Over the band both cadences resolve:
 
 | Era | >60 min | 36–60 min | 20–36 min | 10–20 min |
 |---|---|---|---|---|
@@ -550,14 +539,14 @@ Two different sensors, two different 45-day periods with materially different gl
 variability, and the same spectral distribution to within a few tenths of a percentage point.
 The band-limit result of section 4.1 is not a property of one device.
 
-**The residual autocorrelation structure also matches**, which is what licenses the
+The residual autocorrelation structure also matches, which is what licenses the
 decimation. At five-minute spacing the real sensor gives lag-one, -two and -three residual
 autocorrelations of +0.106, −0.490 and −0.123; the decimated proxy gives +0.078, −0.363 and
-−0.093. The real one-minute series, by contrast, gives +0.844, +0.668 and +0.470 — the
+−0.093. The real one-minute series, by contrast, gives +0.844, +0.668 and +0.470, the
 signature of oversampling a band-limited process, and consistent with the coloured-noise
 account in section 4.7.
 
-**But the real five-minute sensor is quieter than the proxy.** Estimating noise only on
+But the real five-minute sensor is quieter than the proxy. Estimating noise only on
 stretches where the centred 25-minute slope is below 1 mg/dL per five minutes, so that the
 second difference is close to pure noise:
 
@@ -578,7 +567,7 @@ normalising rate error by each era's own slope variability, the decimated five-m
 scores 0.760 against 0.811 for the one-minute view on identical data. Five-minute sampling
 estimates rate of change better, and would do so by more against a real five-minute sensor.
 
-## 5. Why the nulls occur
+## 5. Origin of the null results
 
 A negative result is worth little unless the mechanism is identified, because otherwise it
 cannot be generalised. Here the mechanism is a physical filter with a measured time constant.
@@ -600,8 +589,8 @@ a single-pole low-pass filter. Vettoretti et al. estimated the time constant at 
 
 Four-fifths of the amplitude of any five-minute-period oscillation in blood is destroyed
 before the sensor transduces it. For such an oscillation merely to reach one standard
-deviation of the sensor's noise, blood glucose would have to swing by ±15.6 mg/dL — a 31
-mg/dL peak-to-peak excursion every five minutes — which does not occur physiologically. At a
+deviation of the sensor's noise, blood glucose would have to swing by ±15.6 mg/dL, a 31
+mg/dL peak-to-peak excursion every five minutes, which does not occur physiologically. At a
 two-minute period the required amplitude is ±38.2 mg/dL.
 
 This single filter explains every null in section 4 and reconciles all of the prior
@@ -621,21 +610,20 @@ latter amplifies noise in exactly the band where, as shown above, there is nothi
 
 ## 6. Implications
 
-**For information, refining the interval below five minutes is close to worthless.** The
+For information, refining the interval below five minutes is close to worthless. The
 signal is band-limited an order of magnitude below the one-minute Nyquist rate. Withheld
 minutes are reconstructible to 1.56 mg/dL, and the part that is not reconstructible matches
-the sensor's own noise process. Nothing that depends on the *shape* of the glucose curve —
-rate of change, forward prediction, variability, time in range — improves materially, and
+the sensor's own noise process. Nothing that depends on the *shape* of the glucose curve, rate of change, forward prediction, variability, time in range, improves materially, and
 rate of change measurably degrades if the raw feed is used without accounting for the noise
 correlation.
 
-**For latency, refining the interval helps only event detection, and only by about two
-minutes.** Removing the grid wait is worth one to two minutes on the detection of a clinically
+For latency, refining the interval helps only event detection, and only by about two
+minutes. Removing the grid wait is worth one to two minutes on the detection of a clinically
 meaningful excursion in either direction, at matched false-alarm rate and with no sensitivity
 advantage. Anyone whose task is an estimate should not expect a benefit and should check that
 they have not incurred a cost.
 
-**Two minutes is smaller than every response channel it would have to drive.** On this record
+Two minutes is smaller than every response channel it would have to drive. On this record
 1.84 falls per day go on to cross 70 and 4.59 rises go on to cross 180. On those, a
 five-minute feed already provides a median of 25 minutes of warning before hypoglycaemia and
 19 before hyperglycaemia; the one-minute feed extends these to 27 and 20, a median of +2.0
@@ -650,7 +638,7 @@ For an automated system the position is sharper still, because a controller re-d
 cycle. A gain smaller than one cycle changes nothing at all: the decision lands in the same
 epoch either way. The gain exceeds one five-minute cycle on 5.2 per cent of hypoglycaemia-
 bound episode-phases and 7.7 per cent of hyperglycaemia-bound ones, which is 0.09 and 0.20
-occasions per day on which a five-minute controller would have acted one epoch earlier — and
+occasions per day on which a five-minute controller would have acted one epoch earlier, and
 one epoch earlier on an actuator whose onset is 15 to 30 minutes.
 
 Cases where the slower feed gives no usable warning at all are correspondingly rare. Before
@@ -664,13 +652,13 @@ reduction in reporting delay, that this is worth something to an alarm and to a 
 can act immediately, and that it is below the resolution of every automated actuator that
 would otherwise consume it.
 
-**The benefit does not favour one direction.** Rises are detected earlier by the same margin
+The benefit does not favour one direction. Rises are detected earlier by the same margin
 as falls, to within a minute at every operating point. A system that uses a faster feed to
 catch impending hypoglycaemia sooner is entitled to use it to catch a rise sooner as well;
 the signal does not distinguish them. Whether it *should* is a question about the relative
 cost of the two errors, not about the data.
 
-**The asymmetry of the literature is now consistent.** Russon et al. coarsened five to
+The asymmetry of the literature is now consistent. Russon et al. coarsened five to
 fifteen minutes and found distributional metrics unchanged and episode detection degraded
 [5]. We refined five to one and found distributional metrics unchanged and episode detection
 improved. Both are the same finding: across at least a fifteen-fold range, the sampling
@@ -739,42 +727,41 @@ it.
 ## References
 
 1. Gough DA, Kreutz-Delgado K, Bremer TM. Frequency characterization of blood glucose
-   dynamics. *Annals of Biomedical Engineering*. 2003;31(1):91–97.
+   dynamics. *Annals of Biomedical Engineering*. 2003;31(1):91 to 97.
 2. Breton MD, Shields DP, Kovatchev BP. Optimum subcutaneous glucose sampling and Fourier
    analysis of continuous glucose monitors. *Journal of Diabetes Science and Technology*.
-   2008;2(3):495–500.
+   2008;2(3):495 to 500.
 3. Fico G, Hernanz L, Cancela J, et al. Exploring the frequency domain of continuous glucose
    monitoring signals to improve characterization of glucose variability and of diabetic
-   profiles. *Journal of Diabetes Science and Technology*. 2017;11(4):773–779.
+   profiles. *Journal of Diabetes Science and Technology*. 2017;11(4):773 to 779.
    doi:10.1177/1932296816685717
 4. Vettoretti M, Battocchio C, Sparacino G, Facchinetti A. Development of an error model for
    a factory-calibrated continuous glucose monitoring sensor with 10-day lifetime. *Sensors*.
    2019;19(23):5320. doi:10.3390/s19235320
 5. Russon CL, Pulsford RM, Allen MJ, et al. Impact of recording interval in continuous
    glucose monitoring on calculating the metrics of glycemic control. *Journal of Diabetes
-   Science and Technology*. 2025;19(2):590–592. doi:10.1177/19322968241310892
+   Science and Technology*. 2025;19(2):590 to 592. doi:10.1177/19322968241310892
 
 ## Appendix: reproducibility
 
 Analyses are in `backtesting/scripts/2026-07-onemin-cadence/`. The controller-independent
 results in this paper are produced by:
 
-- `10_generic_signal_analysis.py` — spectrum, noise floor, rate estimation, prediction,
+- `10_generic_signal_analysis.py`, spectrum, noise floor, rate estimation, prediction,
   fixed-threshold detection latency
-- `11_generic_rigour.py` — reconstruction from the five-minute subsequence, rate estimation
+- `11_generic_rigour.py`, reconstruction from the five-minute subsequence, rate estimation
   on a common mask, detection latency at matched false-alarm rate
-- `12_generic_metrics_and_mechanism.py` — aggregate metrics by interval, interstitial filter
+- `12_generic_metrics_and_mechanism.py`, aggregate metrics by interval, interstitial filter
   attenuation, AR(2) noise attribution
-- `13_rise_vs_fall_symmetry.py` — the matched-false-alarm detection design run on rises and
+- `13_rise_vs_fall_symmetry.py`, the matched-false-alarm detection design run on rises and
   falls side by side
-- `14_what_is_the_latency_worth.py`, `15_actionability.py`, `16_actionability_challenge.py` —
-  superseded; retained because 16 is the challenge that exposed the defect in section 4.10
-- `17_corrected_cadence_tests.py` — rate, prediction and detection re-run with an index-based
+- `14_what_is_the_latency_worth.py`, `15_actionability.py` and `16_actionability_challenge.py`, the actionability series, of which 16 is the adversarial challenge to the detection design
+- `17_corrected_cadence_tests.py`, rate, prediction and detection re-run with an index-based
   five-minute view and phase averaging
-- `18_actionability_corrected.py` — warning time, decision-change counts and control-cycle
+- `18_actionability_corrected.py`, warning time, decision-change counts and control-cycle
   comparison on the corrected construction
-- `19_real_5min_era_comparator.py` — the subject's real five-minute era against their
+- `19_real_5min_era_comparator.py`, the subject's real five-minute era against their
   one-minute era and against the decimated proxy
 
-Scripts `01`–`09` are the earlier implementation-specific study and are retained for the
+Scripts `01` to `09` are the earlier implementation-specific study and are retained for the
 provenance checks and the earlier prediction results cited in section 4.5.

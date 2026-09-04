@@ -110,37 +110,37 @@ This matters for expectations. In this cohort, successive generations of the rea
 statistically indistinguishable on every outcome we measured. The reactive ceiling is close, and it
 is not going to be pushed much further by a better rule reading the same glucose curve.
 
-## What the community already gets right
+## Settled community practice
 
 It would be dishonest to present this as a set of discoveries against a naive field. On most of the
 big questions the data simply confirms what experienced loopers and clinicians already believe, and
 that is worth saying clearly, because it is the part that should make the rest credible.
 
-- **Exercise is the hard case, and the answer is carbohydrate and anticipation, not a dosing tweak.**
+- Exercise is the hard case, and the answer is carbohydrate and anticipation, not a dosing tweak.
   The community's instinct to set a higher target before activity, to eat for exercise, and not to
   expect the loop to save you is correct. The data explains why it is correct.
-- **Unannounced meals have a ceiling, and announcing or pre-bolusing helps.** Almost nine in ten of
+- Unannounced meals have a ceiling, and announcing or pre-bolusing helps. Almost nine in ten of
   the highs began with no carbs entered. People who count and pre-bolus are not being fussy; they are
   working around a real, measured limit of the closed loop.
-- **Faster insulin would do more than any algorithm.** The post-meal high is speed-bound and the
+- Faster insulin would do more than any algorithm. The post-meal high is speed-bound and the
   reactive ceiling has arrived. The field is right to be more excited about insulin kinetics than
   about the next controller.
-- **Fewer knobs, trust the automation, personalise from your own history.** Background control is
+- Fewer knobs, trust the automation, personalise from your own history. Background control is
   effectively solved, and the honest number of dials a person needs is small. The drift toward
   simpler, self-tuning settings matches the data.
-- **Safety first.** Conservative defaults, low-glucose-suspend floors, and watching before you trust:
+- Safety first. Conservative defaults, low-glucose-suspend floors, and watching before you trust:
   nothing in this data ever argues to loosen those, and plenty of it argues to keep them.
-- **Around 85 to 90% time in range is the realistic fully-closed ceiling.** The cohort sits at 87
+- Around 85 to 90% time in range is the realistic fully-closed ceiling. The cohort sits at 87
   plus or minus 7. No miracle, no disappointment; the community's calibration is accurate.
 
-## Where the data pushes back
+## Points of disagreement with the data
 
 Two places, gently. The reflexive "the loop over-dosed" explanation for an exercise low is, on this
 evidence, usually a misdiagnosis; the crashers carried less insulin, not more. And the hope that an
 AI or a better model will close the meal gap is misplaced, because the gap is not a modelling gap.
 The loop cannot see whether its insulin is working, and it cannot make the insulin act faster.
 
-## Where this leaves us
+## Position
 
 The state of the fully closed loop, read from its own data, is neither triumphant nor bleak. It has
 quietly solved the overnight and fasting problem for most people. Its remaining failures are

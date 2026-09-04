@@ -167,7 +167,7 @@ pre-registered margin of 0.05 by twenty minutes, nothing clears it; the largest 
 is +0.032. The bar is cleared at thirty minutes, by which time the decision that mattered has been
 taken.
 
-## What the controller already holds, and does not use
+## Signals held but unused by the controller
 
 The two quantities that carry the consequence signal, onset glucose and the clock, are available to
 any controller without either a detector or a model. Joining an engine record to the outcomes
@@ -218,7 +218,7 @@ minutes sooner (0.7 to 2.0). On falls, the suspension already in force when gluc
 was 2.6 minutes older (1.1 to 3.0). Each of these is of the order of the sampling interval it came
 from, which is what a scheduling effect looks like and is not what new information looks like.
 
-## What follows
+## Consequences
 
 Three findings sit together. Detection is solved and is not where the difficulty lies. Size is not
 recoverable from the trace at any horizon at which a dose would be sized, and the apparent ability

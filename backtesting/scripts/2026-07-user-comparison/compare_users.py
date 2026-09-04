@@ -155,25 +155,33 @@ def metrics(df, cgm, user):
     m["H.pct_v5active_true"] = pct(df.v5active.notna(), df.v5active.fillna(False))
     return m
 
+TAG_TO_USER = {"self": "tim"}
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("users", nargs="*", default=["tim","H"])
+    # Registry tags rather than database keys, so nothing written from here carries a name.
+    # The registry maps a tag to the key; only one participant's differ.
+    ap.add_argument("users", nargs="*", default=["self", "H"],
+                    help="participant tags as used in the site registry")
     ap.add_argument("--out-dir", default=os.path.join(os.path.dirname(os.path.abspath(__file__)),"out"))
     ap.add_argument("--report", default=None,
                     help="report path; default derives from the user pair. NOT overwritten if it exists "
                          "(protects analyst-authored §I Synthesis) unless --force.")
     ap.add_argument("--force", action="store_true", help="overwrite an existing report scaffold")
     a = ap.parse_args()
-    users = a.users if a.users else ["tim","H"]
-    A,B = users[0], users[1]
+    tags = a.users if a.users else ["self", "H"]
+    # Reports and filenames carry the tag; the database is queried with the key behind it.
+    A, B = tags[0], tags[1]
+    keyA, keyB = TAG_TO_USER.get(A, A), TAG_TO_USER.get(B, B)
     os.makedirs(a.out_dir, exist_ok=True)
     conn = psycopg2.connect("dbname=oref host=127.0.0.1 port=5432")
     res = {}
-    for u in (A,B):
-        df = load_decisions(conn, u)
-        if not len(df): raise SystemExit(f"no V6-era data for {u}")
-        cgm = load_cgm(conn, u, str(df.ts_utc.min()), str(df.ts_utc.max()))
-        res[u] = metrics(df, cgm, u)
+    for tag, key in ((A, keyA), (B, keyB)):
+        df = load_decisions(conn, key)
+        if not len(df): raise SystemExit(f"no V6-era data for {tag}")
+        cgm = load_cgm(conn, key, str(df.ts_utc.min()), str(df.ts_utc.max()))
+        res[tag] = metrics(df, cgm, tag)
     conn.close()
     keys = list(res[A].keys())
     rows = []
@@ -196,7 +204,7 @@ def main():
         report = a.report
     elif {A, B} == {"tim", "H"}:
         report = os.path.join(os.path.dirname(os.path.abspath(__file__)),"..","..","reports",
-                              "2026-07_tim_vs_userH_v6_comparison_REPORT.md")
+                              "2026-07_self_vs_userH_v6_comparison_REPORT.md")
     else:
         report = os.path.join(os.path.dirname(os.path.abspath(__file__)),"..","..","reports",
                               f"2026-07_{A}_vs_{B}_v6_comparison_REPORT.md")

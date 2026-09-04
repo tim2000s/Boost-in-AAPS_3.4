@@ -354,15 +354,15 @@ does not. Section 6.6 takes the same rows and says what promotion would change i
 
 | Protocol lever | Specified value | Boost mechanism | Exists today? |
 |---|---|---|---|
-| Raise glucose target 1-2 h before | AID 2025 level A; e.g. 8.3 mmol/L | `insertAndCancelCurrentTemporaryTarget` with `TT.Reason.ACTIVITY` | Yes, `OpenAPSBoostPlugin.kt:1210`, currently only fired after exercise |
-| Reduce pre-exercise meal bolus | EXTOD 50%; Riddell 25-75%; AID 25-33% | Meal state multiplier in `MealActionMultiplier.kt`, or the confirmed/committed caps in `V5Inputs` | Multiplier exists and is live; no exercise-conditioned path into it |
-| Order: target first, then bolus cut | AID 2025 | Requires the target to be set before the meal is detected, so the target write must precede `MealHypothesis.step` | Both exist; the ordering does not |
-| Reduce basal 50-80% from 60-90 min before | EXTOD 50% at 60 min; Riddell 50-80% at 60-90 min | Activity profile percent, `OpenAPSBoostPlugin.kt:1275` `pump.baseBasalRate * profileScale` | Yes, live, but only triggered by measured steps |
-| No reduction for anaerobic or high intensity | All three | `HrActivityCalculator.ExerciseState` already distinguishes `RESISTANCE` from aerobic subclasses | Classifier exists; a declaration would supply the type directly |
-| Suppress the loop's response to the resulting rise | AID 2025 rationale | The high-TT Boost defeat at `OpenAPSBoostPlugin.kt:712` already disables the ladder on a high target | Yes, as a side effect rather than by design |
+| Raise glucose target 1-2 h before | AID 2025 level A; e.g. 8.3 mmol/L |  1  with  2  | Yes,  3 , currently only fired after exercise |
+| Reduce pre-exercise meal bolus | EXTOD 50%; Riddell 25-75%; AID 25-33% | Meal state multiplier in  4 , or the confirmed/committed caps in  5  | Multiplier exists and is live; no exercise-conditioned path into it |
+| Order: target first, then bolus cut | AID 2025 | Requires the target to be set before the meal is detected, so the target write must precede  6  | Both exist; the ordering does not |
+| Reduce basal 50-80% from 60-90 min before | EXTOD 50% at 60 min; Riddell 50-80% at 60-90 min | Activity profile percent,  7   8  | Yes, live, but only triggered by measured steps |
+| No reduction for anaerobic or high intensity | All three |  9  already distinguishes  10  from aerobic subclasses | Classifier exists; a declaration would supply the type directly |
+| Suppress the loop's response to the resulting rise | AID 2025 rationale | The high-TT Boost defeat at  11  already disables the ladder on a high target | Yes, as a side effect rather than by design |
 | Carbohydrate top-ups by trend | EXTOD table; AID 3-20 g | Not a dosing lever; would be a user prompt | No prompting mechanism |
-| Stop the raised target at the end of activity | AID 2025 level C | `cancelCurrentTemporaryTargetIfAny`, already used for the recovery target | Yes, `OpenAPSBoostPlugin.kt:1310` |
-| Post-exercise: 20% overnight basal for 6 h | EXTOD 50-50-20; Riddell 20% for 6 h | Post-exercise recovery window and `activeRecoveryScale` | Partly: window and dose scale exist, default off, and the tail measured here is flat at ~1.2x |
+| Stop the raised target at the end of activity | AID 2025 level C |  12 , already used for the recovery target | Yes,  13  |
+| Post-exercise: 20% overnight basal for 6 h | EXTOD 50-50-20; Riddell 20% for 6 h | Post-exercise recovery window and  14  | Partly: window and dose scale exist, default off, and the tail measured here is flat at ~1.2x |
 | Reduce the next meal's bolus by ~50% | EXTOD, Riddell | Same meal multiplier path as the pre-exercise cut | Multiplier exists; no post-exercise conditioning on it |
 | Do not exercise after a severe hypo in 24 h | EXTOD | Not a dosing lever; the composed brake and TBR floors act on the same risk | Related machinery exists, different purpose |
 
@@ -1021,12 +1021,12 @@ already has a live call site.
 
 | Lever | Call site today | What promotion changes |
 |---|---|---|
-| Raise the target before exercise | `insertAndCancelCurrentTemporaryTarget` with `TT.Reason.ACTIVITY`, fired only after exercise | Fire it from the declaration instead of from the recovery path |
-| End the raised target | `cancelCurrentTemporaryTargetIfAny`, already keyed on `TT.Reason.ACTIVITY` | Nothing; it already retracts |
-| Cut the pre-exercise meal dose | `MealActionMultiplier` | Add an exercise-conditioned path into a multiplier that is already live |
+| Raise the target before exercise |  194  with  195 , fired only after exercise | Fire it from the declaration instead of from the recovery path |
+| End the raised target |  196 , already keyed on  197  | Nothing; it already retracts |
+| Cut the pre-exercise meal dose |  198  | Add an exercise-conditioned path into a multiplier that is already live |
 | Cut basal before exercise | activity profile percent, driven by measured steps | Let a declaration drive the same scale |
-| No cut for anaerobic work | `HrActivityCalculator.ExerciseState` branch | Nothing; the declared type populates the field the branch already reads |
-| Stop the loop replacing the insulin | the high-target ladder defeat, unless `allowBoostWithHighTt` | Nothing functionally, though it disables the ladder outright where the AID statement asks for a 25 to 33 per cent scaling |
+| No cut for anaerobic work |  199  branch | Nothing; the declared type populates the field the branch already reads |
+| Stop the loop replacing the insulin | the high-target ladder defeat, unless  200  | Nothing functionally, though it disables the ladder outright where the AID statement asks for a 25 to 33 per cent scaling |
 
 Two items in that table are not levers and stay out. Carbohydrate top-ups by trend need a
 prompting mechanism that does not exist, and the advice against exercising within 24 hours of a

@@ -5,14 +5,16 @@ analysis; the analysis code is open and the processing steps are reproducible.]*
 
 ## Abstract
 
-**Background.** Continuous glucose monitors have historically reported every five minutes and
+#### Background
+
+Continuous glucose monitors have historically reported every five minutes and
 sensors reporting every minute are now in ordinary use. The assumption is that the faster feed
 carries more information. Earlier work, including our own first attempt at this question,
 tested that by decimating a one-minute record to simulate a five-minute one. That is not the
 same experiment: a real five-minute sensor filters internally before reporting, so a
 decimated stand-in may be a poor model of it.
 
-**Methods.** One adult with type 1 diabetes wore a five-minute sensor for 83 days
+Methods. One adult with type 1 diabetes wore a five-minute sensor for 83 days
 (2026-03-01 to 05-22, 24,012 readings) and then a one-minute sensor for 61 days (2026-05-23
 to 07-30, 82,691 readings), with a five-day return to the five-minute sensor in between.
 Nothing here is decimated, interpolated or simulated. We compare the two records with the
@@ -21,25 +23,27 @@ directly comparable between cadences with no resampling. For a process observed 
 noise, D has a floor of twice the noise variance at every lag; a filtered, noise-free
 rendering has no such floor. Uncertainty is a day-level block bootstrap.
 
-**Results.** Across every lag both sensors can see — 5 to 120 minutes, a 24-fold range — the
+Results. Across every lag both sensors can see. 5 to 120 minutes, a 24-fold range, the
 ratio D₁ₘᵢₙ(τ) / D₅ₘᵢₙ(τ) is flat at 1.602, varying by only 6.6 per cent of its mean. The
 log-log slope of D is identical in both shared bands: 1.35 [1.30, 1.39] against 1.35 [1.28,
-1.40] over 5–20 minutes, and 1.29 [1.25, 1.32] against 1.29 [1.24, 1.34] over 20–60 minutes.
+1.40] over 5 to 20 minutes, and 1.29 [1.25, 1.32] against 1.29 [1.24, 1.34] over 20 to 60 minutes.
 Neither record shows a noise floor. D falls smoothly to 4.44 mg/dL² [2.92, 7.34] at a
 one-minute lag, which is 22 per cent of the 20.4 mg/dL² that a sensor adding independent noise
 of the published magnitude would impose at every lag. Below five minutes, where only the
-faster sensor can see, the slope is 1.49 [1.13, 1.70] — statistically indistinguishable from
+faster sensor can see, the slope is 1.49 [1.13, 1.70], statistically indistinguishable from
 the 1.35 it shows just above, so no new regime appears.
 
-Put to the tasks a CGM is actually used for, three of the four — display, retrospective
-metrics and reactive alarms — depend only on the newest sample or on an average of thousands,
+Put to the tasks a CGM is actually used for, three of the four, display, retrospective
+metrics and reactive alarms, depend only on the newest sample or on an average of thousands,
 and cadence changes when they arrive rather than how good they are. The fourth, prediction,
 shows no measurable benefit: normalised forecast RMSE is 0.344 against 0.345 at fifteen
 minutes and 0.814 against 0.824 at sixty, with overlapping intervals and an alternating sign,
-and top-decile lift for a predictive hypoglycaemia alarm is 9.14× against 9.18× at fifteen
-minutes and 7.46× against 7.57× at thirty.
+and top-decile lift for a predictive hypoglycaemia alarm is 9.14x against 9.18x at fifteen
+minutes and 7.46x against 7.57x at thirty.
 
-**Conclusion.** The two sensors record the same process, with the same relative noise, and
+#### Conclusion
+
+The two sensors record the same process, with the same relative noise, and
 differ by a single scale factor that is the glycaemic variability of the period. Neither
 cadence is noisier than the other. The one-minute sensor does not reveal any behaviour below
 five minutes that the five-minute record fails to imply; its extra samples continue the same
@@ -47,10 +51,10 @@ power law and are a finer rendering of the same curve rather than new measuremen
 sensors report values that are already filtered, which is why neither shows the measurement
 noise that error models attribute to the raw transducer.
 
-## 1. Why this comparison and not the usual one
+## 1. Rationale for this comparison
 
 The question is whether one-minute continuous glucose data contains anything a five-minute
-record does not. The obvious way to test it — and the way we first tested it — is to take a
+record does not. The obvious way to test it, and the way we first tested it, is to take a
 one-minute record and throw away four samples in five. That is convenient and it is wrong in
 a specific way: it assumes a real five-minute sensor is the same signal with samples removed.
 
@@ -61,7 +65,7 @@ itself therefore measures what a *consumer* would lose by sampling more slowly. 
 measure how the two *sensors* differ, which is the question actually being asked.
 
 This subject wore both, one after the other, which allows the real comparison. The obvious
-objection is that the periods differ — and they do, materially. The later period is more
+objection is that the periods differ, and they do, materially. The later period is more
 volatile. But glycaemic variability is a property of the person and the fortnight, not of the
 sensor. If it is the only thing that differs, it will show up as a single multiplicative
 constant and nothing else, and that is a testable claim rather than an excuse.
@@ -86,18 +90,18 @@ The variogram, or structure function, is
 the mean squared change over a lag of τ minutes. It has three properties that make it the
 right tool here and that a spectrum or an autocorrelation does not share.
 
-It is **expressed in time, not in samples**, so a five-minute record and a one-minute record
+It is expressed in time, not in samples, so a five-minute record and a one-minute record
 can be placed on the same axis without resampling either. No decimation, no interpolation, no
 assumption about what happens between samples.
 
-It **separates noise from signal by construction**. If a sensor adds independent measurement
+It separates noise from signal by construction. If a sensor adds independent measurement
 noise of variance s², then every difference x(t+τ) − x(t) contains two independent noise
 draws, so D is lifted by 2s² *at every lag including the shortest*. Real signal structure, by
-contrast, vanishes as τ → 0 because glucose is continuous. So a noise floor appears as a
-flattening of D at small lag — the "nugget" of the geostatistical literature — and its height
+contrast, vanishes as τ to 0 because glucose is continuous. So a noise floor appears as a
+flattening of D at small lag, the "nugget" of the geostatistical literature, and its height
 is twice the noise variance.
 
-Its **shape is scale-free**. The log-log slope of D distinguishes regimes: a slope of 2 is a
+Its shape is scale-free. The log-log slope of D distinguishes regimes: a slope of 2 is a
 smooth differentiable signal, a slope of 0 is white noise, and intermediate slopes describe
 rougher processes. Comparing slopes compares the character of two records without reference to
 how large their excursions were.
@@ -123,14 +127,14 @@ respects the strong autocorrelation of glucose. Intervals are 95 per cent.
 | 90 min | 1112.1 [994.2, 1237.4] | 1787.5 [1580.1, 2027.9] | 1.607 |
 | 120 min | 1320.9 [1163.4, 1501.7] | 2144.9 [1873.6, 2424.8] | 1.624 |
 
-Across a twenty-four-fold range of lag the ratio is **1.602, with a total spread of 6.6 per
-cent of its mean**. It does not trend, and in particular it does not bend at the short end,
+Across a twenty-four-fold range of lag the ratio is 1.602, with a total spread of 6.6 per
+cent of its mean. It does not trend, and in particular it does not bend at the short end,
 which is the only place the two sensors could differ.
 
 This is the central result. Two records made by different hardware, three months apart, on a
 person whose control changed materially in between, are related by a single multiplicative
-constant. Everything else about them — the shape of the structure at every timescale from five
-minutes to two hours — is the same.
+constant. Everything else about them, the shape of the structure at every timescale from five
+minutes to two hours, is the same.
 
 The constant is roughly the change in variability. The ratio of squared coefficients of
 variation, (31.1 / 25.9)², is 1.438, which accounts for most though not all of the 1.602; the
@@ -156,12 +160,12 @@ the signature of a record with essentially no independent per-sample noise.
 
 The comparison worth making is with the published error models. Vettoretti and colleagues fit
 a measurement-noise standard deviation of 3.19 mg/dL to a factory-calibrated sensor [4]. Noise
-of that size would hold D at 2 × 3.19² = 20.4 mg/dL² *at every lag, including the shortest*.
-The measured D at one minute is 4.44, which is **22 per cent of that floor**.
+of that size would hold D at 2 x 3.19² = 20.4 mg/dL² *at every lag, including the shortest*.
+The measured D at one minute is 4.44, which is 22 per cent of that floor.
 
 The reading is that the values these sensors report are not raw transducer output. They have
 been filtered before they leave the device, and the filtering has removed most of the noise
-the error models describe — which is exactly what those models are for, since they are fit to
+the error models describe, which is exactly what those models are for, since they are fit to
 reconstruct the raw signal behind the reported one. The practical consequence is that a
 consumer of either feed is receiving an already-smoothed estimate, and that the smoothing, not
 the reporting interval, is what determines how noisy the series looks.
@@ -188,7 +192,7 @@ have the same roughness at every timescale they share.
 
 Below five minutes, where only the faster sensor can see, the slope is 1.49 with an interval
 of [1.13, 1.70]. That interval contains the 1.35 measured just above it. There is no
-detectable break — the same power law continues from one minute to sixty. The extra samples
+detectable break, the same power law continues from one minute to sixty. The extra samples
 are not a window onto a different regime; they are a finer rendering of the curve the slower
 sensor was already tracing.
 
@@ -200,13 +204,13 @@ describes a rough, fractional-Brownian-like process, and it describes both senso
 ### 4.4 A within-season check
 
 The five-day return to the five-minute sensor sits inside the one-minute era and so shares its
-season and therapy. Its variogram has the same shape as the other two — normalised to its own
+season and therapy. Its variogram has the same shape as the other two, normalised to its own
 60-minute level, it gives 0.006, 0.053, 0.110, 0.186, 0.368 and 0.586 at 5, 10, 15, 20, 30 and
 40 minutes, against 0.016, 0.076, 0.146, 0.229, 0.421 and 0.623 for the one-minute era over
 the same window. Five days is too little to carry weight on its own, and we report it only as
 a consistency check that does not contradict the main comparison.
 
-## 5. What a CGM is used for, and which of those uses could benefit
+## 5. Uses of a CGM, and the subset that could benefit
 
 The variogram results say the two records contain the same information. It is worth checking
 that against the tasks the signal is actually put to, because a null in a general statistic
@@ -223,13 +227,13 @@ by a faster cadence rather than merely delivered sooner.
 | **Predictive alarm, and an AID dosing against a forecast** | **the shape of recent history** | **Possibly — tested here** |
 
 Each era was analysed at its own native cadence, validated out of sample against itself with
-GroupKFold over whole days, and given the same look-back in *minutes* — the one-minute record
+GroupKFold over whole days, and given the same look-back in *minutes*, the one-minute record
 simply has five times as many samples inside that window. Metrics are scale-free so that the
 difference in glycaemic variability between the eras cannot manufacture a result: normalised
 RMSE is RMSE divided by the standard deviation of the target, where 1.0 means no skill, and
 lift is precision in the top risk decile divided by that era's own base rate.
 
-### 5.1 Forecast accuracy — the AID case
+### 5.1 Forecast accuracy, the AID case
 
 Normalised RMSE, with day-level block-bootstrap intervals:
 
@@ -242,7 +246,7 @@ Normalised RMSE, with day-level block-bootstrap intervals:
 | +90 min | 0.910 [0.885, 0.934] | 0.923 [0.896, 0.954] |
 
 The intervals overlap heavily at every horizon and the direction of the point estimate
-alternates — the one-minute record is nominally better at 30 minutes and nominally worse at
+alternates, the one-minute record is nominally better at 30 minutes and nominally worse at
 15, 45, 60 and 90. There is no forecast advantage to detect. The intervals bound any advantage
 at roughly five per cent in relative terms, in either direction.
 
@@ -264,8 +268,8 @@ Will glucose drop below 70 within H minutes, evaluated only from starting points
 | 60 min | 5-min | 4.28% | 0.7672 [0.7225, 0.8082] | 5.05× [4.57, 5.64] |
 | 60 min | 1-min | 6.22% | 0.7951 [0.7545, 0.8351] | 5.42× [4.93, 6.04] |
 
-**Lift is the metric to read, because it divides out each era's own base rate**, and the base
-rates differ by about forty per cent at every horizon — the later period simply had more
+Lift is the metric to read, because it divides out each era's own base rate, and the base
+rates differ by about forty per cent at every horizon, the later period simply had more
 hypoglycaemia. On lift the two records are indistinguishable: 9.14 against 9.18 at fifteen
 minutes, 7.46 against 7.57 at thirty, 5.05 against 5.42 at sixty, with intervals overlapping
 almost completely throughout.
@@ -275,23 +279,22 @@ saying why we do not read that as a cadence effect. The gap is smallest at the s
 (0.0095 at fifteen minutes) and grows with horizon (0.0295 at thirty, 0.0279 at sixty). A
 genuine benefit from finer sampling would do the opposite: fine-grained recent detail matters
 most for near-term prediction and washes out as the horizon lengthens. A gap that grows with
-horizon is the signature of a difference between the *periods* — more hypoglycaemia, more
-volatility, more predictable excursions — not between the sensors. At the one horizon where a
+horizon is the signature of a difference between the *periods*, more hypoglycaemia, more
+volatility, more predictable excursions, not between the sensors. At the one horizon where a
 cadence effect should be largest, the two records are separated by 0.0095 of AUC and 0.04 of
 lift.
 
 ### 5.3 Reading
 
 Of the four things a CGM is used for, three are answered by the newest sample or by an average
-over thousands of them, and are untouched by cadence except in when they arrive. The fourth —
-prediction, which is what a future-low alarm and an AID both rest on — shows no measurable
+over thousands of them, and are untouched by cadence except in when they arrive. The fourth, prediction, which is what a future-low alarm and an AID both rest on, shows no measurable
 benefit at any horizon from fifteen to ninety minutes, on either a regression or a
 classification framing, with the era-difficulty confound removed by construction.
 
 This is what the variogram predicted. Predictive skill is a property of the process, and
 section 4 established that both sensors record the same process at the same relative noise.
 
-## 6. Why the sensors agree: the filter upstream of both
+## 6. The shared upstream filter
 
 That two cadences record the same process is not a coincidence of this dataset. It follows
 from where the measurement is taken.
@@ -326,7 +329,7 @@ preserve, a manufacturer can filter aggressively at no cost to fidelity, and evi
 The result agrees with a body of work that predates both of these devices.
 
 Gough, Kreutz-Delgado and Bremer characterised blood glucose directly and placed its band edge
-near 1×10⁻³ Hz, a period of about seventeen minutes, recommending a sampling period of roughly
+near 1x10⁻³ Hz, a period of about seventeen minutes, recommending a sampling period of roughly
 ten minutes and noting that faster sampling captures noise rather than physiology [1].
 
 Breton, Shields and Kovatchev asked what happens in the compartment a subcutaneous sensor
@@ -337,11 +340,11 @@ system, because the fast blood dynamics are simply not present at the sensor [2]
 
 Fico and colleagues characterised the spectrum of continuous monitor signals and found 75 per
 cent of power accumulated by a period of about 1.4 hours, with a 3 dB bandwidth reaching only
-about 4×10⁻⁵ Hz [3].
+about 4x10⁻⁵ Hz [3].
 
 Russon and colleagues approached the same asymmetry from the other direction, coarsening
 five-minute records to fifteen minutes. Mean glucose, coefficient of variation and time in
-range were unchanged; detection of glycaemic episodes fell — hypoglycaemic episodes by 19.2
+range were unchanged; detection of glycaemic episodes fell, hypoglycaemic episodes by 19.2
 per cent, level-two hypoglycaemia by 27.9 per cent, hyperglycaemia by 7.5 per cent [5]. The
 sampling interval is a parameter of event detection, not of signal content.
 
@@ -353,34 +356,34 @@ person, rather than an inference from one cadence about the other, and a noise r
 earlier literature could not obtain: that the reported values at both cadences are already
 filtered to well below the noise level that error models attribute to the transducer.
 
-## 8. What this does and does not license
+## 8. Scope of the conclusion
 
-**It does not follow that a one-minute sensor is worse.** Nothing here shows a cost to the
+It does not follow that a one-minute sensor is worse. Nothing here shows a cost to the
 faster feed. The two records are the same process at the same relative noise.
 
-**It does follow that the extra samples carry no additional information about glucose.** The
+It does follow that the extra samples carry no additional information about glucose. The
 variogram ratio is flat across every shared lag, the slopes match in both shared bands, and
 the sub-five-minute band continues the same law rather than opening a new one.
 
-**What a faster feed still changes is when you are told.** A consumer of five-minute data
+What a faster feed still changes is when you are told. A consumer of five-minute data
 waits, on average over grid phases, two minutes for news that a one-minute consumer has
 immediately. That is a scheduling property and requires no extra information; it is worth
 whatever two minutes is worth to whatever acts on it. This paper does not price that, and a
 companion analysis that attempts to should be read with the caution that it rests on decimation
 rather than on the two real records used here.
 
-**Anyone estimating rate of change from a one-minute feed should be careful.** With a
+Anyone estimating rate of change from a one-minute feed should be careful. With a
 variogram exponent near 1.3 and no noise floor, consecutive one-minute values are strongly
-dependent, and an estimator that assumes independent samples — ordinary least squares over a
-short window, for instance — will weight them as though they were independent when they are
+dependent, and an estimator that assumes independent samples, ordinary least squares over a
+short window, for instance, will weight them as though they were independent when they are
 not.
 
 ## 9. Limitations
 
 One subject. The comparison is observational and between eras: sensor hardware, season,
 therapy and glycaemic control all change at the boundary. The design of the analysis is chosen
-to be robust to exactly that — the variogram ratio and the log-log slopes are scale-free, so a
-change in variability cannot produce the flatness reported in section 4.1 — but a single
+to be robust to exactly that, the variogram ratio and the log-log slopes are scale-free, so a
+change in variability cannot produce the flatness reported in section 4.1, but a single
 person cannot establish that the finding generalises across devices or people.
 
 The sensor makes and models are not recorded in the data available to us. We can say the two
@@ -409,8 +412,8 @@ Neither cadence is noisier. Both report values already filtered to about a fifth
 power that published error models attribute to the transducer, so the smoothing rather than
 the sampling interval is what governs how clean the series looks.
 
-Tested on the uses that could plausibly benefit — a predictive low alarm and an automated
-insulin delivery forecast — the faster record is not better at any horizon between fifteen and
+Tested on the uses that could plausibly benefit, a predictive low alarm and an automated
+insulin delivery forecast, the faster record is not better at any horizon between fifteen and
 ninety minutes once the difference in period difficulty is divided out.
 
 The extra samples in a one-minute record are a finer rendering of a curve the five-minute
@@ -420,35 +423,34 @@ there is to hear.
 ## References
 
 1. Gough DA, Kreutz-Delgado K, Bremer TM. Frequency characterization of blood glucose
-   dynamics. *Annals of Biomedical Engineering*. 2003;31(1):91–97.
+   dynamics. *Annals of Biomedical Engineering*. 2003;31(1):91 to 97.
 2. Breton MD, Shields DP, Kovatchev BP. Optimum subcutaneous glucose sampling and Fourier
    analysis of continuous glucose monitors. *Journal of Diabetes Science and Technology*.
-   2008;2(3):495–500.
+   2008;2(3):495 to 500.
 3. Fico G, Hernanz L, Cancela J, et al. Exploring the frequency domain of continuous glucose
    monitoring signals to improve characterization of glucose variability and of diabetic
-   profiles. *Journal of Diabetes Science and Technology*. 2017;11(4):773–779.
+   profiles. *Journal of Diabetes Science and Technology*. 2017;11(4):773 to 779.
    doi:10.1177/1932296816685717
 4. Vettoretti M, Battocchio C, Sparacino G, Facchinetti A. Development of an error model for a
    factory-calibrated continuous glucose monitoring sensor with 10-day lifetime. *Sensors*.
    2019;19(23):5320. doi:10.3390/s19235320
 5. Russon CL, Pulsford RM, Allen MJ, et al. Impact of recording interval in continuous glucose
    monitoring on calculating the metrics of glycemic control. *Journal of Diabetes Science and
-   Technology*. 2025;19(2):590–592. doi:10.1177/19322968241310892
+   Technology*. 2025;19(2):590 to 592. doi:10.1177/19322968241310892
 
 ## Appendix: reproducibility
 
 Analyses are in `backtesting/scripts/2026-07-onemin-cadence/`:
 
-- `20_real_eras_noise_and_signal.py` — variograms of both real eras, nugget fits, signal-shape
+- `20_real_eras_noise_and_signal.py`, variograms of both real eras, nugget fits, signal-shape
   normalisation
-- `21_real_eras_verdict.py` — the three variogram tests, with day-level block-bootstrap
+- `21_real_eras_verdict.py`, the three variogram tests, with day-level block-bootstrap
   intervals
-- `22_what_cgms_are_used_for.py` — the four categories of use, and forecast/alarm skill at
+- `22_what_cgms_are_used_for.py`, the four categories of use, and forecast/alarm skill at
   each era's native cadence
-- `23_predictive_horizon.py` — the horizon sweep, normalised RMSE and base-rate-free lift with
+- `23_predictive_horizon.py`, the horizon sweep, normalised RMSE and base-rate-free lift with
   bootstrap intervals
 
-Scripts `10`–`19` are the earlier decimation-based study. They answer a different question —
-what a consumer of this signal would lose by sampling it more slowly — and should not be read
+Scripts `10` to `19` are the earlier decimation-based study. They answer a different question, what a consumer of this signal would lose by sampling it more slowly, and should not be read
 as a comparison between sensors. `19` documents the difference between a real five-minute
 sensor and a decimated stand-in that motivated the present analysis.

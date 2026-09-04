@@ -194,7 +194,7 @@ provide a target for the simulator to be judged against. Where the real cohorts 
 they do to some degree on the rate of compression lows, the envelope is wider and the test
 on that statistic is correspondingly more forgiving.
 
-## 5. Where the simulator holds, and where it fails
+## 5. The simulator's range of validity
 
 Table 1. Each cell is the per-user median with a bootstrap 95% confidence interval. Sim
 values outside the real-world envelope are marked with an asterisk.
@@ -264,7 +264,7 @@ drift; the simulator does not.
 In all, five of the eleven statistics are matched by no persona at any age, and a sixth,
 sensitivity drift, is zero by construction.
 
-## 6. Why refinement is not the whole answer
+## 6. The limits of refinement
 
 The obvious objection is that we tested the 2008 model and that later versions are better.
 It is a fair objection and part of it is correct, so it deserves a measured answer rather

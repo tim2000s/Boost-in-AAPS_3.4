@@ -93,7 +93,7 @@ explained by where glucose sat. The direction of the mean rules out the alternat
 other side: arm C ran at a lower mean glucose than arm B, 120 against 129, so the extra insulin was
 not a response to running higher.
 
-The band that matters for hypoglycaemia is 110-130 mg/dL, which is 6.1 to 7.2 mmol/L and squarely in
+The band that matters for hypoglycaemia is 110 to 130 mg/dL, which is 6.1 to 7.2 mmol/L and squarely in
 range. There the 1-minute loop delivers 1.26 U/h against 0.45, nearly three times as much insulin at
 a glucose that needs none of it. That is the most plausible mechanism for the extra time below 70.
 
@@ -108,7 +108,7 @@ standing of a randomised comparison. What the matching does establish is that th
 property of how the loop behaves at 1-minute cadence rather than of the conditions it happened to
 meet.
 
-## What this does and does not establish
+## Scope of the conclusion
 
 The rise in time below range is not one bad night. Per local day in arm C it runs 1.69, 11.19, 6.29
 and 11.65 per cent, so three of the four days sit above 6 per cent. On 2026-09-01, 2.53 per cent of
@@ -132,7 +132,7 @@ and it is the most likely mechanism for the extra time below range.
 Tier PROVISIONAL for the cadence result, since it is a single test on one participant with a wide
 interval. Tier unproven for the ISF comparison, which is underpowered rather than negative.
 
-## What follows
+## Consequences
 
 The 1-minute arm is delivering about a fifth more insulin per day than the 5-minute arm on the same
 settings, and time below 70 mg/dL has roughly doubled. Whether the intended change was the cadence
