@@ -60,9 +60,9 @@ There are thirteen of those shadow components. This month I sat down and scored 
 
 I got that one wrong twice before I got it right, incidentally. First I read the wrong field out of the log. Then I compared against the wrong group of cycles, which flattered it. The number only stopped moving when I went and read the code that emits it.
 
-**Two produce nothing at all.** One has a fault that made every failure look identical to a quiet day. The other has never produced a single row on any person in seven months, because it asked for the day's insulin total through a function that refuses the whole window if any moment in it lacks a profile, and then silently gave up.
+**Two produce nothing at all.** One has a fault that made every failure look identical to a quiet day. The other has never produced a single row on any person, because it asked for the day's insulin total through a function that refuses the whole window if any moment in it lacks a profile, and then silently gave up. It has never produced a row since it went in.
 
-**And four had simply never been asked.** One of those has been running since February. Its output wasn't even being saved — 355,000 cycles of it were sitting in a text field nobody had ever parsed. When I finally did parse it and score it, it came out at chance, and worse than the thing it was proposed to replace for eight of the nine people I could compare.
+**And four had simply never been asked.** The oldest has been running since May. Its output wasn't even being saved — 355,000 cycles of it were sitting in a text field nobody had ever parsed. When I finally did parse it and score it, it came out at chance, and worse than the thing it was proposed to replace for eight of the nine people I could compare.
 
 ![Four shadow components scored against what each claims to anticipate](backtesting/reports/figs_boost_evolution/fig1_shadow_verdicts.png)
 

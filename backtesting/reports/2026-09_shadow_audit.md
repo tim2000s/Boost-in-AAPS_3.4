@@ -79,12 +79,13 @@ extractor, and until that is established the columns are misleading.
 All four have now been scored. Three can be discarded and the fourth cannot yet be judged.
 
 The insulin sensitivity shadow computes an alternative sensitivity ratio on every cycle and has done
-since February. Its output was never extracted, because no column existed for it, so 355,482 cycles
+since 2026-05-23, which is the date its first line appears in stored console text that reaches back
+to 2025-08-01. Its output was never extracted, because no column existed for it, so 355,482 cycles
 of it sat unparsed in the console text the app already uploads. Recovered and scored against
 sustained hypoglycaemia within four hours, it reaches an area under the curve of 0.5002, which is
 chance, against 0.5151 for the sensitivity the engine actually applied. It is worse than the engine
-for eight of the nine participants where both can be computed. Seven months of running has produced
-a component that does not beat what it was proposed to replace.
+for eight of the nine participants where both can be computed. Three and a half months of running
+has produced a component that does not beat what it was proposed to replace.
 
 Recovering it turned up a data-quality problem worth naming. The app formats these debug numbers
 with the device's locale, so a participant on a European locale writes `raw=0,890` where an English
@@ -129,7 +130,7 @@ way. It needs the cohort.
 The fall-consequence shadow scores no cycle because every rejection in its path returned a bare
 null. A build that reports which test rejected each cycle is waiting to be flashed.
 
-The volume-weighted total daily dose shadow produces nothing anywhere: no rows in the decision
+The volume-weighted total daily dose shadow, in the tree since 2026-08-19, produces nothing anywhere: no rows in the decision
 table, no fields in the Nightscout payload, and no trace in the console text on any participant.
 Its `compute()` returns null on every cycle. Eight columns are declared for it and all are empty.
 
