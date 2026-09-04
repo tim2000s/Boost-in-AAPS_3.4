@@ -79,7 +79,7 @@ The high side deserves its own precise diagnosis, because it is easy to blame th
 
 ![Time in each glucose zone, by regime](figs_postmeal_exercise/fig3_zones.png)
 
-Away from meals, for roughly 60% of the day including overnight, control is essentially solved:
+Away from meals, for roughly 60% of the day including overnight, background glucose is essentially handled:
 around 93% time in range, tight variance, lows no worse than average. The deficit is entirely
 post-meal. In the clean post-meal window, with no exercise involved, more than one minute in five is
 spent above 180 mg/dL (10.0 mmol/L). But the lows in that same window are flat, the same 2.5% you see in the

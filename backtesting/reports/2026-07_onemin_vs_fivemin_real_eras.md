@@ -224,7 +224,7 @@ by a faster cadence rather than merely delivered sooner.
 | Display: current value, trend arrow | the newest sample | No — a scheduling question only |
 | Retrospective metrics: mean, CV, time in range, GMI | an average over thousands of samples | No |
 | Reactive alarm: glucose is below 70 now | the newest sample | No — a scheduling question only |
-| **Predictive alarm, and an AID dosing against a forecast** | **the shape of recent history** | **Possibly — tested here** |
+| **Predictive alarm, and an automated insulin delivery (AID) dosing against a forecast** | **the shape of recent history** | **Possibly — tested here** |
 
 Each era was analysed at its own native cadence, validated out of sample against itself with
 GroupKFold over whole days, and given the same look-back in *minutes*, the one-minute record

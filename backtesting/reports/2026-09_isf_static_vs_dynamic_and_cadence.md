@@ -1,7 +1,32 @@
-# Static against dynamic insulin sensitivity factor (ISF), and 5-minute against 1-minute cadence, on one device
+# Static against dynamic insulin sensitivity, and 5-minute against 1-minute loop cadence, in one adult on a fully closed loop
 
-Single participant, `self`, 28 days to 2026-09-03 17:06 local. Database refreshed to t=now before
-the analysis. Scripts and outputs in `backtesting/scripts/2026-09-isf-cadence-tir/`.
+## Summary
+
+Two settings on one person's automated insulin delivery system changed within a week of each other.
+Because the dates differ, their effects separate.
+
+Switching the insulin sensitivity factor (ISF) from glucose-responsive to fixed, with the loop still cycling every
+five minutes, changed nothing measurable. Time in range moved by 3.8 percentage points with an
+interval from -11.2 to +4.3, and every other measure spanned zero as widely. With six days in that
+arm the study cannot resolve a difference smaller than roughly eight points, so this is
+underpowered rather than negative.
+
+Moving the loop from a five-minute to a one-minute cycle raised total insulin delivery by about a
+fifth, from 32.7 to 39.9 units per day, and roughly doubled time below 70 mg/dL (3.9 mmol/L) from
+3.5 to 8.9 per cent. One of the four days spent 2.5 per cent below 54 mg/dL (3.0 mmol/L). Both
+figures sit outside the consensus targets of under 4 per cent and under 1 per cent. Time in range
+itself did not separate.
+
+The extra insulin is a property of the faster loop rather than of the conditions it met. Matched on
+glucose, the one-minute loop delivered more in every band, and between 110 and 130 mg/dL (6.1 to
+7.2 mmol/L), where no correction is called for, it delivered 1.26 units per hour against 0.45.
+
+This is a sequential before-and-after comparison in one adult, with no counterfactual glucose
+trajectory available and with carbohydrate intake unrecorded. It prices an association and the
+mechanism behind it; it does not establish what a randomised comparison would have shown.
+
+Single participant, tag `self`, 28 days to 2026-09-03. The database was refreshed to the time of
+analysis first. Scripts and outputs are in `backtesting/scripts/2026-09-isf-cadence-tir/`.
 
 ## Two changes, and why they separate
 
@@ -58,7 +83,7 @@ Reconstructed from the treatment stream, each temporary basal running until the 
 stated duration expires. Arm A reconstructs to 33.2 U per 24 h against the engine's own `tdd_24h`
 median of 33.7, which is the check that the integration is doing what it claims.
 
-| arm | SMBs per 24 h | median supplementary microbolus (SMB) U | basal U/24h | SMB U/24h | total U/24h | temp basal coverage |
+| arm | SMBs per 24 h | median SMB U | basal U/24h | SMB U/24h | total U/24h | temp basal coverage |
 |---|---|---|---|---|---|---|
 | A dynamic ISF, 5 min | 47.2 | 0.20 | 13.69 | 19.49 | 33.18 | 89.0% |
 | B static ISF, 5 min | 55.6 | 0.20 | 13.20 | 19.48 | 32.68 | 90.2% |

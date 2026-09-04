@@ -2,10 +2,29 @@
 
 Research note, 2026-09-03.
 
-Someone is about to exercise and there is a meal involved. The published guidance on what an
-automated system should then do is reasonably specific, and most of the mechanisms it asks for
-already exist in this fork, wired to different triggers. Sections 1 to 5 set that out. Section 6
-describes the build, which the survey on its own left unstated.
+## Summary
+
+Exercise close to a meal is the situation in which automated insulin delivery most often fails a
+person, and the published guidance on what to do is reasonably specific: raise the glucose target
+one to two hours beforehand, reduce the meal bolus by a quarter to three quarters depending on the
+protocol, exempt brief intense work from any reduction, and stop the loop replacing the insulin it
+has just withheld.
+
+Almost every mechanism that guidance asks for already exists in this system. What does not exist is
+a way for a person to say that exercise is coming, with the four things the protocols are functions
+of: when it starts, what kind it is, how hard, and for how long. A temporary target carries a value,
+a duration and a reason from a fixed list of six, all beginning now. That is the gap.
+
+The case for a declared trigger rather than an automatic one rests on the strongest single contrast
+in the literature. Announced exercise with a reduced bolus, announced with a full bolus, and
+unannounced gave 2.0, 7.0 and 13.0 per cent time below 3.9 mmol/L; no published pair of detection
+strategies differs by anything approaching that. A trial of automatic detection from wearable data
+was also indistinguishable from asking the person to confirm.
+
+Nothing here is measured in the field. Sections 1 to 5 set out the guidance, the existing
+mechanisms and what this programme has already measured; section 6 describes what would be built,
+which would log its decisions across the cohort and deliver nothing until a pre-registered
+within-person trial says otherwise.
 
 Three decisions were taken before any of this was written and they bound what follows. The trigger
 is a declaration, meaning the person tells the loop exercise is coming; detection appears below only
@@ -527,7 +546,7 @@ The meal state machine is `openAPSBoostV5/MealHypothesis.kt`, with states `IDLE`
 `exerciseActive` argument. Its dose consequence is the multiplier in
 `openAPSBoostV5/MealActionMultiplier.kt`: 1.0 at idle, 0.3 while observing, 1.8 at confirmed
 (times the user aggression knob), 1.0 while committed and 0.4 while recovering. That is live
-whenever Boost V6 is the selected APS.
+whenever Boost V6 is the selected automated pancreas system (APS).
 
 Insulin on board reaches the V6 decision as `V5Inputs.iob` alongside `maxIob` and
 `baseInsulinReq`. Carbohydrate on board does not. There is no `cob` field in `V5Inputs`; COB
