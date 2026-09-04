@@ -4,9 +4,9 @@
 
 ---
 
-I've written about Boost twice before at any length: once when it was [a possibility](https://www.diabettech.com/fully-closed-loop-with-an-open-source-aid-system-a-possibility/), and once when [V6 arrived](https://www.diabettech.com/) and I described how it had stopped thinking in tiers and started thinking in meals. Both of those were, broadly, "here's a thing I built and here's why I think it helps."
+I've written about Boost here a few times: when it was [a possibility](https://www.diabettech.com/fully-closed-loop-with-an-open-source-aid-system-a-possibility/), when I ran it as [an n=1 experiment](https://www.diabettech.com/the-insulin-only-full-closed-loop-an-n1-experiment/) and reported back on four months of it, and when I wrote about [bringing step counts into the loop](https://www.diabettech.com/everybodys-moving-integrating-stepcounts-into-open-source-automated-insulin-delivery/). If that's where you last left it, quite a lot has changed since, and the version I run now doesn't much resemble the one in those pieces.
 
-This one is a bit different. At some point I stopped adding things to Boost and started measuring the things already in it, which is a different activity and tends to retire more than it confirms. So: what Boost was for, how it got to where it is, what's in it now, where the machine learning sits, and which parts of it have earned their place.
+So this is an update, and a slightly different sort of one. At some point I stopped adding things to Boost and started measuring the things already in it, which is a different activity and tends to retire more than it confirms. What follows is what Boost was for, how it got from tiers to what it does now, what's in it, where the machine learning sits, and which parts of it have earned their place.
 
 ## What it was for
 
@@ -24,9 +24,15 @@ It worked, in the sense that it produced a usable fully closed loop: 81.2% time 
 
 The lineage runs V1, V2, V3, v4.4, v4.4.2, then V6, with a V7 sitting in shadow now. The version numbers aren't worth dwelling on, but two of the changes underneath them are.
 
-**The loop grew a memory.** The ladder decided everything from scratch every five minutes, so it had no way of representing "I think a meal started twenty minutes ago and I've already dealt with it". V6 replaced it with a state machine that carries a meal hypothesis across cycles — idle, observing, confirmed, committed, recovering.
+**The loop grew a memory.** This is the change that took Boost from a ladder to something else, and if you last read about the tiered version it's the bit worth understanding.
 
-Recovering is the one that mattered. Before it existed, a loop watching glucose come down from a meal peak would see a number that was still high, decide it was still high, and dose again, having no idea it had already put the insulin in. Recovering winds down deliberately instead. If you want one change to explain why the post-meal lows I used to live with mostly went away, it's that one.
+The eight tiers were discrete dosing modes, and the algorithm picked one each cycle. Two problems with that, neither of which I could tune my way out of. The world isn't eight states, and a tier that's right at minute zero of a meal is wrong by minute forty. Worse, how hard to push and how much to hold back were decided together inside each tier, so every time I made it braver at chasing meals I made it more dangerous, and I spent a lot of time trading one against the other.
+
+What replaced it asks a different question. Instead of "which tier am I in", Boost now carries a *meal hypothesis* across cycles and asks how confident it is: **idle** when nothing's happening, **observing** when something might be starting and it leans in gently, **confirmed** when the evidence is good enough to commit, **committed** while the meal is clearly running, and **recovering** as the insulin takes hold.
+
+Recovering is the one that mattered most. Before it existed, a loop watching glucose come down from a meal peak would see a number that was still high, decide it was still high, and dose again, with no idea it had already dealt with it. Recovering winds down deliberately instead. If you want one change to explain why the post-meal lows I used to live with mostly went away, it's that one.
+
+The other thing the state machine bought was separation. Confidence and aggression are now decided in different places from the brakes, so I can make Boost keener at recognising a meal without simultaneously making it more dangerous, which was never possible with the tiers.
 
 **The settings stopped being mine.** Early Boost had knobs and the knobs had defaults, and the defaults were whatever suited me. That doesn't survive other people. The group running it now spans total daily doses from 16 to 58 units, and one person doses in U200 where a unit carries roughly twice the mass. V6 derives its settings for each person from their own history, tightens automatically for anyone whose time below range says it should, and re-derives periodically rather than once. Anything that adds insulin only switches itself on for someone whose glucose is already sitting comfortably.
 
