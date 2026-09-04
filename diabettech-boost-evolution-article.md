@@ -1,95 +1,111 @@
-# Boost: what it was, what it became, and where the machine learning actually sits
+# Boost, and what six months of measuring it actually found
 
-*The usual preamble, because it matters. Everything described here is highly experimental. It uses insulin in an off-label fashion, it isn't in any released, supported version of AndroidAPS or Trio, and nothing here is medical advice. It's an n=1 that has grown into a slightly-larger-than-n=1, shared in the open-source, #WeAreNotWaiting spirit so the learning is useful to others. Take the ideas, not the dose settings.*
+*The usual preamble, because it matters. Everything described here is highly experimental. It uses insulin in an off-label fashion, it isn't in any released, supported version of AndroidAPS or Trio, and nothing here is medical advice. It's an n=1 that's grown into a slightly-larger-than-n=1, shared in the open-source, #WeAreNotWaiting spirit so the learning is useful to others. Take the ideas, not the dose settings.*
 
 ---
 
-I get asked what Boost actually is often enough that it's worth setting out properly: what it was built to do, how it changed, what's in it now, where machine learning fits, and what's coming. Some of what follows is less flattering than the last time I wrote about it, because a good deal of measurement has happened since, and measurement has a habit of retiring things you were fond of.
+I've written about Boost twice before at any length: once when it was [a possibility](https://www.diabettech.com/fully-closed-loop-with-an-open-source-aid-system-a-possibility/), and once when [V6 arrived](https://www.diabettech.com/) and I described how it had stopped thinking in tiers and started thinking in meals. Both of those were, broadly, "here's a thing I built and here's why I think it helps."
 
-## 1. The original design
+This one is different, and a bit less comfortable. Over the last few months I've stopped adding things to Boost and started measuring the things already in it. That turns out to be a very different activity, and it retires more than it confirms. So this is what Boost was for, how it got to where it is, what's actually inside it, where the machine learning sits — and then the part I'd have preferred not to write, which is what happened when I went and checked.
 
-Boost has one job: run a closed loop without announcing meals.
+## What it was for
 
-That sounds like a small ask and it isn't. Every automated insulin delivery system on the market assumes you tell it about food, and the ones that tolerate an unannounced meal do so by correcting after the fact. Correcting after the fact is exactly what the physics won't let you do well. Insulin injected under the skin takes the best part of an hour to do most of its work, and a meal is largely absorbed inside that window. If you start dosing when the rise is already obvious, you are always behind.
+Boost has one job, and it's the same job it had at the start: run a closed loop without telling it about food.
 
-The original Boost kept the entire AndroidAPS engine and replaced exactly one thing: the decision about how big the next microbolus should be. Basal, dynamic sensitivity, the glucose predictions and every safety gate stayed as they were. That constraint was deliberate and it still holds. It means the parts of AndroidAPS that stop you coming to harm are the same parts that have been stopping people coming to harm for years, and the experimental surface is small enough to reason about.
+That's a harder ask than it sounds, and the reason is insulin, not software. Injected under the skin, insulin takes the best part of an hour to do most of its work. A meal is largely absorbed inside that window. So if you wait until the rise is obvious before you dose — which is what a conservative loop does, quite sensibly — you're always behind it, and no amount of cleverness afterwards gets that time back.
 
-What went in its place, in the first version, was a ladder. Eight tiers, each one a set of conditions about glucose, its rate of change and its acceleration, and each one licensing a more aggressive microbolus than the last. Alongside it went a small machine-learning model that estimated the probability of going low in the next four hours, whose only power was to shrink the dose the ladder had just chosen. The shape of the idea was: be braver than stock into a rise, and put something in the way that can pull you back.
+The original Boost kept the whole AndroidAPS engine and replaced exactly one thing: the decision about how big the next micro-bolus should be. Basal, dynamic sensitivity, the predictions and **every safety gate** stayed exactly as they were. That constraint was deliberate, it's still there, and it's the main reason I've been willing to run this on myself for as long as I have. The parts that stop you coming to harm are the parts that have been stopping people coming to harm for years.
 
-It worked, in the sense that it produced a usable fully closed loop. I reported 81.2 per cent time in range and 5.6 per cent below over four months, with wider lines than my hybrid setup and post-meal highs I wasn't thrilled about.
+What went in place of that one decision, first time round, was a ladder of eight tiers, each licensing a bit more aggression than the last, with a small machine-learning model watching for hypo risk whose only power was to shrink whatever the ladder had just chosen. Be braver into a rise; have something that can pull you back.
 
-## 2. The evolution
+It worked, in the sense that it produced a usable fully closed loop: 81.2% time in range and 5.6% below over four months. It also produced post-meal highs I wasn't thrilled about and lines noticeably wider than my hybrid setup, and I said so at the time.
 
-The line runs V1, V2, V3, v4.4, v4.4.2, then V6, with a V7 in shadow now. The version numbers are not interesting. Two changes are.
+## How it got here
 
-The first is that the loop grew a memory. The ladder decided everything from scratch every five minutes, which meant it had no way to represent "I think a meal started twenty minutes ago and I have already dosed for it". V6 replaced the ladder with a state machine that carries a meal hypothesis across cycles: idle, then observing while a rise builds, then confirmed when the evidence is good enough, then committed while the meal is clearly running, then recovering.
+The lineage runs V1, V2, V3, v4.4, v4.4.2, then V6, with a V7 sitting in shadow now. The version numbers aren't worth dwelling on, but two of the changes underneath them are.
 
-Recovering is the state that changed the most. Before it existed, a loop watching glucose come down from a meal peak would look at the remaining height, decide it was high, and dose again, having forgotten that it had already put the insulin in. Recovering deliberately winds down instead. It is the single change that did most for the post-meal lows I had been living with.
+**The loop grew a memory.** The ladder decided everything from scratch every five minutes, so it had no way of representing "I think a meal started twenty minutes ago and I've already dealt with it". V6 replaced it with a state machine that carries a meal hypothesis across cycles — idle, observing, confirmed, committed, recovering.
 
-The second change is that the settings stopped being mine. Early Boost had knobs, and the knobs had defaults, and the defaults were whatever suited me. That does not survive contact with other people: the cohort now spans total daily doses from 16 to 58 units, and one participant on U200 where a unit carries roughly twice the mass. V6 derives its settings for each person from their own history, tightening automatically for anyone whose time below range says it should, and it re-derives periodically rather than once. Anything that adds insulin only switches itself on for someone whose glucose is already sitting comfortably.
+Recovering is the one that mattered. Before it existed, a loop watching glucose come down from a meal peak would see a number that was still high, decide it was still high, and dose again, having no idea it had already put the insulin in. Recovering winds down deliberately instead. If you want one change to explain why the post-meal lows I used to live with mostly went away, it's that one.
 
-Across the cohort as it stands, a fully closed loop with no meal announcement runs at about 87 per cent time in range, plus or minus 7, with severe lows at well under one per cent. That is the honest ceiling as I currently understand it, and it is not far off what the community generally believes it should be.
+**The settings stopped being mine.** Early Boost had knobs and the knobs had defaults, and the defaults were whatever suited me. That doesn't survive other people. The group running it now spans total daily doses from 16 to 58 units, and one person doses in U200 where a unit carries roughly twice the mass. V6 derives its settings for each person from their own history, tightens automatically for anyone whose time below range says it should, and re-derives periodically rather than once. Anything that adds insulin only switches itself on for someone whose glucose is already sitting comfortably.
 
-## 3. The advanced features
+Across the group as it stands, a fully closed loop with no meal announcement runs around 87% time in range give or take 7, with severe lows well under 1%. That's the honest ceiling as far as I can see it, and it's not far off what most experienced loopers would guess.
 
-The dosing core is the meal hypothesis described above, and around it sit several things worth naming.
+## What's actually in there
 
-There is a composed brake, which is a set of restraints that compound rather than override each other, and which audits at around 90 per cent correct on the occasions it fires. There are absolute floors under everything: time below range limits that can only ever tighten, and which no statistical argument is permitted to loosen. There are caps on how much insulin can be committed to a single meal and on cumulative microbolus volume in a rolling window.
+The meal state machine is the core. Around it:
 
-There is a sleep detector, built from heart rate and step activity rather than a clock, which learns your usual sleep and wake times over a rolling window and suppresses the aggressive dosing tiers overnight. Overnight is where a fully closed loop can hurt you, because nobody is watching and a meal-shaped rise at two in the morning is almost never a meal.
+- A **composed brake** — restraints that compound rather than override each other, and which audit at about 90% correct when they fire.
+- **Absolute floors** under everything. Time-below-range limits that can only ever tighten, and which no statistical argument is allowed to loosen. That rule has saved me from myself more than once.
+- **Caps** on how much insulin can go to a single meal, and on cumulative micro-bolus volume in a rolling window.
+- A **sleep detector** built from heart rate and step activity rather than a clock, which learns your usual sleep and wake times and suppresses the aggressive tiers overnight. Overnight is where a fully closed loop can hurt you, because nobody's watching and a meal-shaped rise at 2am is almost never a meal.
+- **Steps as a live input**, blended across phone and watch, withdrawing insulin when you're active.
 
-Steps are a live input to dosing, blended across the phone and any watch you happen to be wearing, and they withdraw insulin when you are active. Heart rate is live but off by default.
+And underneath all of it, the bit I'd most want anyone else building this sort of thing to copy: nothing reaches the dose path without running as a shadow first. A shadow computes what it *would* have done, writes it to the log, and delivers nothing. It runs like that across everyone for as long as it takes to build up evidence, and only then does anyone argue about it.
 
-Underneath all of it sits the thing I would most want another developer to copy: nothing reaches the dose path without running as a shadow first. A shadow component computes what it would have done, writes it to the log, and delivers nothing. It runs that way across the cohort for as long as it takes to accumulate evidence, and only then is it argued about.
+Which brings me to the uncomfortable part.
 
-I audited those shadows properly for the first time this week and the result is worth reporting because it is not flattering. There are thirteen of them. One is clearly earning its place: a detector for accelerating meals that fires on 8.8 per cent of cycles, of which 40.6 per cent are followed by a rise of at least 30 mg/dL (1.7 mmol/L) within 45 minutes against a base rate of 19.6, on 154,000 cycles from eleven people. One is real but small: a physiological forecaster that beats "assume glucose stays where it is" by about 1 mg/dL of error at thirty minutes, which is statistically solid and clinically nothing. One turned out to be worse than simply reading the current glucose and should be dropped. Two are producing no data at all. And four have been running for months without anyone asking whether they work, one of them since February.
+## What happened when I checked
+
+There are thirteen of those shadow components. This month I sat down and scored all of them properly for the first time, against the outcome each one claims to predict. Here's how that went.
+
+**One is genuinely earning its place.** A detector for accelerating meals fires on 8.8% of cycles, and 40.6% of those are followed by a rise of at least 1.7 mmol/L within 45 minutes, against a base rate of 19.6%. That's on 154,000 cycles across eleven people. A detector with roughly double the base rate at that firing rate is worth having.
+
+**One is real but too small to care about.** There's a physiological forecaster in there, a proper ensemble Kalman thing, and its thirty-minute prediction beats "assume glucose stays where it is" by about 0.06 mmol/L of error. That's statistically solid and clinically irrelevant, and what it actually taught me is how good "assume nothing changes" is over half an hour, which I hadn't appreciated.
+
+**One is worse than just reading the screen.** A component estimating whether a rise will end up somewhere that matters scores 0.730. Current glucose, on its own, scores 0.785. It should go.
+
+**One is finding the wrong thing entirely,** and this is the one that stung. A plateau detector looks for a high that's stuck and won't come down on its own, and proposes a small nudge. When I scored it properly, the highs it flags come down *better* than the ones it ignores — a median fall of 1.6 mmol/L against 1.5, and less likely to be stalled than the background rate. It isn't finding stuck highs. It's finding highs that are already resolving, which is exactly the population that everything I've learned says you shouldn't add insulin to.
+
+I got that one wrong twice before I got it right, incidentally. First I read the wrong field out of the log. Then I compared against the wrong group of cycles, which flattered it. The number only stopped moving when I went and read the code that emits it.
+
+**Two produce nothing at all.** One has a fault that made every failure look identical to a quiet day. The other has never produced a single row on any person in seven months, because it asked for the day's insulin total through a function that refuses the whole window if any moment in it lacks a profile, and then silently gave up.
+
+**And four had simply never been asked.** One of those has been running since February. Its output wasn't even being saved — 355,000 cycles of it were sitting in a text field nobody had ever parsed. When I finally did parse it and score it, it came out at chance, and worse than the thing it was proposed to replace for eight of the nine people I could compare.
 
 ![Four shadow components scored against what each claims to anticipate](backtesting/reports/figs_boost_evolution/fig1_shadow_verdicts.png)
 
-*Four of the shadow components, each scored against the outcome its own name claims. Only one is doing anything.*
+*Four of them, scored against the thing each says it predicts. A lift of 1.0 means it's telling you nothing you didn't already know.*
 
-A shadow that is never scored is telemetry with no decision attached. That is a process failure rather than a code failure, and it is mine.
+A shadow that never gets scored is just telemetry with a cost attached. That's not a bug in the code, it's a gap in how I've been working, and it's mine.
 
-## 4. Machine learning on the dose path
+## Where the machine learning actually sits
 
-Two models are on the dose path today. Both are gradient-boosted trees, trained offline, exported as JSON and walked on the phone by about fifty lines of Kotlin in a few milliseconds. Nothing trains, learns or adapts inside the loop. That is a rule rather than an implementation detail: a system that learns while it doses can learn something wrong while it doses.
+Two models are on the dose path. Both are gradient-boosted trees, trained offline, exported as JSON and walked on the phone by about fifty lines of Kotlin in a few milliseconds. **Nothing trains, learns or adapts inside the loop.** That's a rule, not an implementation detail. A system that learns while it doses can learn something wrong while it doses.
 
-The first estimates the probability of sustained hypoglycaemia and its only power is to reduce a dose or block the aggressive tiers. The second estimates the probability that an unannounced meal is starting, and it is the only learned component permitted to increase insulin, which is why it gets the harder scrutiny.
+One estimates the probability of a sustained hypo and can only ever reduce a dose. The other estimates the probability that an unannounced meal is starting, and it's the only learned thing allowed to *add* insulin, which is why it gets the harder look.
 
-Recent measurement has changed what I think about both.
+I refitted the hypo model on 183 people from the OpenAPS Data Commons — about eleven million decision cycles — against the 32 it was originally trained on. On 1.7 million rows where both old and new are out of sample, the refit scores 0.861 against 0.847, which is a real improvement and a small one.
 
-I refitted the hypoglycaemia model on 183 participants from the OpenAPS Data Commons, roughly eleven million decision cycles, against the 32 it was originally trained on. Scored on 1.7 million rows where both the old and new model were out of sample, the refit reaches 0.861 against 0.847. That is a real improvement and a small one.
-
-Except it isn't small where it matters. The model is only consulted on cycles that survive the low-glucose guard, which is about half of them, and the half it never sees carries most of the hypoglycaemia. Judged on the population it actually acts in, the refit's advantage roughly triples, to 0.046. It also explains something that had been bothering me: the deployed model scores 0.85 on the Commons and between 0.52 and 0.72 on the people running it, and almost all of that gap is being judged on the harder half rather than the model failing.
+Except it isn't small where it counts, and working out why explained something that had been nagging at me. The model is only consulted on cycles that get past the low-glucose guard, which is about half of them, and the half it never sees carries most of the hypos. Judged on the population where it actually acts, the refit's advantage roughly triples. It also explains why the shipped model scores 0.85 on the Commons and somewhere between 0.52 and 0.72 on the people running it: it's being marked on the hard half.
 
 ![Area under the curve as the highest-risk cycles are removed](backtesting/reports/figs_boost_evolution/fig2_truncation.png)
 
-*Remove the cycles the low-glucose guard already handles and both models fall a long way. The refit's advantage over the shipped model widens as they go.*
+*Take out the cycles the low-glucose guard already handles and both models fall a long way. The refit's lead over the shipped one widens as they go.*
 
-The thing I got wrong, and had to correct twice, was calibration. The refit ranks better but reads on a different scale: fed to the existing thresholds it would restrain insulin six times as often. My first fix was a conversion table built from the Commons. That was wrong too, because the deployment cohort is not a Commons sample. The rate at which the current model triggers its damper runs from 0.26 per cent of cycles for one person to 39.8 for another, against 6.6 on the Commons. Calibrating a population against a sample is exactly the error it sounds like.
+Then I made a mess of the calibration, twice. The refit ranks better but reads on a completely different scale — fed to the existing thresholds it would restrain insulin six times as often. So I built a conversion table from the Commons data. That was wrong too, because this group isn't a Commons sample. The rate at which the current model triggers its damper runs from 0.26% of cycles for one person to 39.8% for another, against 6.6% on the Commons. ![Each participant's own damper trigger rate against the Commons figure](backtesting/reports/figs_boost_evolution/fig3_firing_rates.png)
 
-![Each participant's own damper trigger rate against the Commons figure](backtesting/reports/figs_boost_evolution/fig3_firing_rates.png)
+*Everyone's own trigger rate, against the population I'd built the conversion from. There's no single threshold that sits sensibly across that.*
 
-*Every participant's own trigger rate, against the population the conversion was built from. No single threshold sits sensibly across that range.*
+You can't calibrate a group against a population that doesn't look like them. It has to be per-person, from each person's own shadow data, and that needs everyone running the shadow build for a week.
 
-The right answer is per-person, from each person's own shadow data, and it needs the cohort running the shadow build for a week.
+Two more are in the pipe. One asks whether a fall that's already twenty minutes old is going to end below 3.9 — it scores 0.780 on the sixteen people who contributed no training data at all, against 0.746 for glucose plus the time of day, and it's better for every one of those sixteen. The other isn't a model, it's a feature: a person's own hypo rate by hour of day turns out to be worth more than tripling the training set was. The *population's* hour-of-day rate is worth nothing at all.
 
-Two new models are in the pipe. One asks whether a fall already twenty minutes old is going to end below 70 mg/dL (3.9 mmol/L); it reaches 0.780 on the sixteen people who contributed no training data, against 0.746 for glucose plus the clock, and it is better for all sixteen of them. The other is not a model at all but a feature: a person's own hypoglycaemia rate by hour of day is worth more than tripling the training cohort was, where the population's hour-of-day rate is worth nothing at all.
+That last one is the result I keep coming back to. Scaling the training data stops paying somewhere around 112 people. Whatever's left in this system doesn't look like it's in bigger models. It looks like it's in each person's own history, which is a good deal less glamorous.
 
-That last result is the one I find most interesting, because it points somewhere unfashionable. The gains left in this system do not look like they are in bigger models or more data. Scaling the training cohort stops paying at around 112 participants. They look like they are in each person's own history.
+## What's next
 
-## 5. Next steps
+Getting everyone onto the shadow build, so the refit can be calibrated per person and the fall model can be scored on somebody other than me. Then the fall model as a restraint in the safety gates, where it can only ever withhold. Then the personal hour-of-day feature, once it's been replicated with a different split, because one result from one design isn't enough to build on.
 
-Immediately: getting the cohort onto the shadow build so the hypoglycaemia refit can be calibrated per person rather than globally, and so the fall model can be scored on people other than me.
+Further out, a pre-meal exercise mode. Exercise near a meal is where these systems fail people most often, the published guidance is fairly specific about what to do, and almost all the machinery it asks for already exists here wired to something else. What's missing is any way to tell the loop that exercise is coming, carrying when, what kind, how hard and how long. Everything you can currently tell it carries a target, a duration and a reason from a list of six, and starts immediately, so closing that gap is most of the work.
 
-After that, the fall-consequence model as a restraint in the safety gates, where it can only ever withhold insulin, and the personal clock as a feature, once it has been replicated with a different split.
+It'll be a declaration rather than a detector, and that's settled by one number. Announced exercise with a reduced bolus, announced with a full bolus, and unannounced give 2.0%, 7.0% and 13.0% time below 3.9. Nothing in the detection literature separates two approaches by anything like that much, and a trial of automatic detection from wearables couldn't be told apart from simply asking the person to confirm.
 
-Further out there is a pre-meal exercise mode. Exercise close to a meal is where these systems fail people most often, the published guidance on what to do is specific, and almost all the machinery it asks for already exists here wired to other triggers. What's missing is a way to tell the loop that exercise is coming, carrying the four things the protocols depend on: when, what kind, how hard, how long. Every route into the loop today carries a target, a duration and a reason from a list of six, all starting immediately. That gap is the whole build.
+And one I'm watching rather than building. I moved to a one-minute loop cycle a few days ago. It's delivering 22% more insulin a day, at the same glucose, and my time below 3.9 has roughly doubled. Matched on glucose, the one-minute loop doses more in every band — at 6.1 to 7.2 mmol/L, where nothing needs correcting at all, it's giving 1.26 units an hour against 0.45. ![Delivery and time below range across the three settings](backtesting/reports/figs_boost_evolution/fig4_cadence.png)
 
-The reason it will be a declaration rather than a detector is one contrast. Announced exercise with a reduced bolus, announced with a full bolus, and unannounced give 2.0, 7.0 and 13.0 per cent time below 3.9 mmol/L. Nothing in the detection literature separates two strategies by that much, and a trial of automatic detection from wearables could not be told apart from simply asking the person to confirm.
+*Me, 28 days. Switching sensitivity to fixed changed nothing I can measure. Going to a one-minute cycle moved both delivery and time below range.*
 
-And one thing I am watching rather than building. I moved to a one-minute loop cycle recently and it delivered 22 per cent more insulin a day, at the same glucose, and roughly doubled my time below 70. The caps that bound cumulative microbolus volume were placed for a loop with a fifth as many chances to fire, and they need re-placing before that cadence is a good idea. ![Delivery and time below range across the three settings](backtesting/reports/figs_boost_evolution/fig4_cadence.png)
+The caps that bound cumulative micro-bolus volume were set for a loop with a fifth as many chances to fire, and they need re-setting before I'd recommend that cadence to anyone.
 
-*The same person over 28 days. Switching sensitivity to fixed changed nothing measurable; going to a one-minute cycle moved both delivery and time below range.*
-
-Faster is not automatically better, which is the sort of thing you only find out by measuring it on yourself.
+None of which is where I expected to be when I started writing this. I sat down to describe a set of features and ended up spending most of it on what happened when I checked whether they worked.
