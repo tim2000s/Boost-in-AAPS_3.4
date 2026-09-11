@@ -57,8 +57,35 @@ TRIO_TAG_RE = re.compile(
 )
 
 
-TWIN_RE = re.compile(r"twin=([-\d.,]+)")
+# The twin, consequence-prior, plateau, anticipation and back-out shadows were retired from
+# the engine on 2026-09-04, but their parsers stay: the stored console_error of every
+# historical row still carries these tags, and re-extraction has to keep working.
+# The exponent characters are in these classes deliberately. Kotlin renders a small double as
+# "9.0E-4", and a class of digits and dots alone stops at the "E", so hypo4=0.0068,9.0E-4 parsed
+# as 9.0: the value inflated ten-thousandfold, on 237 of 4,627 cycles before this was found
+# (2026-09-07). Every tag here carries probabilities, so every one of them can go small.
+TWIN_RE = re.compile(r"twin=([-\d.,eE+]+)")
+HYPOSHADOW_RE = re.compile(r"hyposhadow=([-\d.eE+]+)")
+FALLCON_RE = re.compile(r"fallcon=([-\d.,eE+]+)")
+HYPO4_RE = re.compile(r"hypo4=([-\d.,eE+]+)")
+HYPO4SKIP_RE = re.compile(r"hypo4skip=([a-z0-9]+)")
+FALLCONSKIP_RE = re.compile(r"fallconskip=([a-z0-9]+),(\d+)")
 PLATEAU_RE = re.compile(r"plateau=([^;]+);")
+# Tags the cohort-path extractor has always read and this one never did, which is how four days
+# of hypo4 and fallcon were emitted by the phone and dropped on the floor (2026-09-07 to 09-11).
+# Ported here so that one extractor parses everything a current build emits.
+ACCELMEAL_RE = re.compile(r"accelMeal=([^;]+);")
+TRANCHE_RE = re.compile(r"tranche=([^;]+);")
+CONSEQ_RE = re.compile(r"conseq=([^;]+);")
+# 2026-09 V5 primer at the delivery seam. Three tags, emitted only on cycles where a primer was
+# considered, so nulls are the normal case rather than a fault:
+#   primer=<kind[,amountU]>;  primerRoute=<path taken, including a user override>;
+#   primerScale=d=<delta>,fR=<rise>,fB=<bg>,fI=<iob>,tgt=<target>;
+# kind is bolus, tbr, or tbr-subsumed(...)/tbr-skipped(...) carrying the comparison that decided
+# it. The parenthesised detail is kept whole in primer_detail rather than discarded.
+PRIMER_RE = re.compile(r"primer=([^;]+);")
+PRIMERROUTE_RE = re.compile(r"primerRoute=([^;]+);")
+PRIMERSCALE_RE = re.compile(r"primerScale=([^;]+);")
 # 2026-08-03 auto-config breadcrumbs, both replayed EVERY cycle so the DB always carries the
 # CURRENT state rather than the single cycle on which the derivation ran.
 #   autocfg=  onboarding derivation outcome
@@ -69,65 +96,8 @@ AUTORDV_RE = re.compile(r"autordv=([^;]+);")
 # emitted every cycle (not only when the guard fired), so exposure is countable on days the
 # guard never engaged. Pre-reg: backtesting/protocols/2026-08_postrescue_tight_ramp_PREREG.md
 PRTRIAL_RE = re.compile(r"prTrial=([^;]+);")
-# 2026-07-20 acceleration early-meal-detection SHADOW, READ-ONLY: delivers nothing.
-# "accelMeal=<trig 0|1>,<accel>,<shortAvgDelta>,<longAvgDelta>,<bg>,<state>;" emitted every
-# cycle, so the on-device lead and the false-alarm rate are both countable. The cohort-path
-# extractor has parsed this since it shipped; this one did not, which is why the columns
-# are empty for the arms even though every site emits the tag.
-ACCELMEAL_RE = re.compile(r"accelMeal=([^;]+);")
 ANTBACKOUT_RE = re.compile(r"antBackout=([^;]+);")
 ANTICIP_RE = re.compile(r"anticip=([^;]+);")
-CONSEQ_RE = re.compile(r"conseq=([^;]+);")
-TRANCHE_RE = re.compile(r"tranche=([^;]+);")
-
-
-def _accelmeal(reason: str, i: int, cast=float):
-    m = ACCELMEAL_RE.search(reason or "")
-    if not m:
-        return None
-    try:
-        return cast(m.group(1).split(",")[i])
-    except (IndexError, ValueError, TypeError):
-        return None
-
-
-def _tranche(reason: str, i: int, cast=float):
-    """Confirm-tranche tag (2026-08-27). LIVE when the toggle is on; doses less, never more.
-    "tranche=sizedU,deliveredU,heldU,releaseProb,state;"
-    sizedU is what the engine would have given without the tranche and deliveredU is what it gave,
-    so the difference is the withheld amount and the two together price the change without needing
-    a counterfactual. releaseProb is "-" on a confirming cycle, where nothing is being released yet.
-    """
-    m = TRANCHE_RE.search(reason or "")
-    if not m:
-        return None
-    parts = m.group(1).split(",")
-    if i >= len(parts):
-        return None
-    try:
-        return cast(parts[i])
-    except (TypeError, ValueError):
-        return None
-
-
-def _conseq(reason: str, i: int, cast=float):
-    """Consequence-prior SHADOW tag (2026-08-26), READ-ONLY: doses nothing.
-    "conseq=pHigh,pRise,onsetBg,minsSinceOnset,riseSoFar;"
-    pHigh is P(glucose exceeds 180 within 2 h) and pRise is P(peak rise >= 60), both from glucose at
-    the rise onset and the local hour. onsetBg is the anchor the engine used, which is the last
-    non-rising sample and NOT the current glucose; keeping it lets the probability be recomputed
-    offline from the record alone.
-    """
-    m = CONSEQ_RE.search(reason or "")
-    if not m:
-        return None
-    parts = m.group(1).split(",")
-    if i >= len(parts):
-        return None
-    try:
-        return cast(parts[i])
-    except (TypeError, ValueError):
-        return None
 
 
 def _anticip(reason: str, i: int, cast=float):
@@ -231,6 +201,153 @@ def _autordv(reason: str, field: str):
     except (ValueError, IndexError):
         return None
     return None
+
+
+def _hypo4(reason: str, i: int):
+    """Four-column hypo shadow, "hypo4=sustained,near;" (2026-09-04).
+
+    Two probabilities from glucose and the engine's three trend averages. `sustained` carries the
+    deployed mlHypoRisk's own label, below 70 mg/dL for at least 15 minutes beginning within 90,
+    so the pair can be compared row-by-row without an offline join. `near` is below 70 touched
+    within 45 minutes. Null means the shadow returned nothing; hypo4_skip says why.
+    """
+    m = HYPO4_RE.search(reason or "")
+    if not m:
+        return None
+    parts = m.group(1).split(",")
+    if i >= len(parts):
+        return None
+    try:
+        return float(parts[i])
+    except ValueError:
+        return None
+
+
+def _fallcon(reason: str, i: int, cast=float):
+    """Fall-consequence shadow, "fallcon=score,ageMin,onsetBg,fall,stillFalling;".
+
+    Absent on most cycles by design: the anchor is a fall onset, which happens a few times a day,
+    not every five minutes. A null means no qualifying onset, never a score of zero.
+    """
+    m = FALLCON_RE.search(reason or "")
+    if not m:
+        return None
+    parts = m.group(1).split(",")
+    if i >= len(parts):
+        return None
+    try:
+        return cast(parts[i])
+    except ValueError:
+        return None
+
+
+def _accelmeal(reason: str, i: int, cast=float):
+    """Acceleration early-meal-detection shadow, read-only.
+
+    "accelMeal=<trig 0|1>,<accel>,<shortAvgDelta>,<longAvgDelta>,<bg>,<state>;", emitted every
+    cycle, so the on-device lead and the false-alarm rate are both countable.
+    """
+    m = ACCELMEAL_RE.search(reason or "")
+    if not m:
+        return None
+    try:
+        return cast(m.group(1).split(",")[i])
+    except (IndexError, ValueError, TypeError):
+        return None
+
+
+def _conseq(reason: str, i: int, cast=float):
+    """Consequence-prior SHADOW tag, READ-ONLY, retired from the engine on 2026-09-04.
+
+    "conseq=pHigh,pRise,onsetBg,minsSinceOnset,riseSoFar;". pHigh is P(glucose exceeds 180 within
+    2 h) and pRise is P(peak rise >= 60), both from glucose at the rise onset and the local hour.
+    onsetBg is the anchor the engine used, the last non-rising sample rather than current glucose.
+    The parser stays because historical rows still carry the tag and re-extraction has to keep
+    working on them.
+    """
+    m = CONSEQ_RE.search(reason or "")
+    if not m:
+        return None
+    parts = m.group(1).split(",")
+    if i >= len(parts):
+        return None
+    try:
+        return cast(parts[i])
+    except (TypeError, ValueError):
+        return None
+
+
+def _tranche(reason: str, i: int, cast=float):
+    """Confirm-tranche tag. LIVE when the toggle is on; doses less, never more.
+
+    "tranche=sizedU,deliveredU,heldU,releaseProb,state;". sizedU is what the engine would have
+    given without the tranche and deliveredU is what it gave, so the difference is the withheld
+    amount and the two together price the change without needing a counterfactual. releaseProb is
+    "-" on a confirming cycle, where nothing is being released yet.
+    """
+    m = TRANCHE_RE.search(reason or "")
+    if not m:
+        return None
+    parts = m.group(1).split(",")
+    if i >= len(parts):
+        return None
+    try:
+        return cast(parts[i])
+    except (TypeError, ValueError):
+        return None
+
+
+def _primer(reason: str, field: str):
+    """The V5 primer's three tags, flattened into one accessor.
+
+    kind is the token before any parenthesis, so tbr-subsumed(base 4.004>=primer 3.968U/h) reports
+    as "tbr-subsumed" and the whole string survives in detail. amount is the "0.15U" second field
+    where there is one. The five scale factors are stable across every cycle sampled.
+    """
+    if field in ("kind", "u", "detail"):
+        m = PRIMER_RE.search(reason or "")
+        if not m:
+            return None
+        parts = m.group(1).split(",")
+        if field == "detail":
+            return parts[0]
+        if field == "kind":
+            return parts[0].split("(")[0].strip() or None
+        if len(parts) < 2:
+            return None
+        try:
+            return float(parts[1].rstrip("Uu/h"))
+        except ValueError:
+            return None
+    if field == "route":
+        m = PRIMERROUTE_RE.search(reason or "")
+        return m.group(1).strip() if m else None
+    m = PRIMERSCALE_RE.search(reason or "")
+    if not m:
+        return None
+    for kv in m.group(1).split(","):
+        k, _, v = kv.partition("=")
+        if k.strip() == field:
+            try:
+                return float(v)
+            except ValueError:
+                return None
+    return None
+
+
+def _hyposhadow(reason: str) -> Optional[float]:
+    """Shadow hypo-risk score, emitted as "hyposhadow=<0..1>;" once per cycle.
+
+    Absent where the shadow asset failed to load or the feature vector was short, both of
+    which return null rather than a score, so a null here is "no shadow" and never zero.
+    """
+    m = HYPOSHADOW_RE.search(reason or "")
+    if not m:
+        return None
+    try:
+        return float(m.group(1))
+    except ValueError:
+        return None
 
 
 def _twin(reason: str, i: int) -> Optional[float]:
@@ -348,6 +465,25 @@ def parse_hr_features(console_error: str) -> dict:
     return out
 
 
+def parse_glucose_status(console_error: str) -> dict:
+    """The engine's own delta windows, which it prints into the glucose block:
+    'BG: 91.8 mg/dl | Delta: 2.2 | Short avg: 1.5 | Long avg: -1.0'
+
+    These are the values the dosing engine actually used. Reconstructing them from the reading
+    series is measurably worse, so any replay wants them read rather than derived.
+    """
+    out = {"gs_delta": None, "gs_short_avg_delta": None, "gs_long_avg_delta": None}
+    if not console_error:
+        return out
+    m = re.search(r"Delta:\s*(-?[\d.]+)\s*\|\s*Short avg:\s*(-?[\d.]+)\s*\|\s*"
+                  r"Long avg:\s*(-?[\d.]+)", console_error)
+    if m:
+        out["gs_delta"] = float(m.group(1))
+        out["gs_short_avg_delta"] = float(m.group(2))
+        out["gs_long_avg_delta"] = float(m.group(3))
+    return out
+
+
 def parse_steps(console_error: str) -> dict:
     out = {"steps_5m": None, "steps_15m": None, "steps_30m": None, "steps_60m": None}
     if not console_error:
@@ -369,6 +505,49 @@ def parse_boost_active(console_error: str) -> Optional[bool]:
     if "BOOST INACTIVE" in console_error or "Boost OFF" in console_error:
         return False
     return None
+
+
+def parse_shadow_lines(console_error: str) -> dict:
+    """The ISF and volume-weighted dose shadows, parsed from the console block they write into.
+
+    Both print a single line per cycle and neither was ever extracted, so seven months of one and
+    none of the other sat unparsed. Numbers are formatted with the device's locale, so a European
+    participant writes "raw=0,890" where an English one writes "raw=0.890"; matching digits and
+    full stops alone stops at the comma and reads zero.
+    """
+    out = {k: None for k in
+           ("isf_shadow_raw", "isf_shadow_ema", "isf_shadow_bounded", "isf_shadow_warmup",
+            "vwa_blend", "vwa_projection", "vwa_expected", "vwa_delivered",
+            "vwa_day_fraction", "vwa_curve_days", "vwa_used_prev_day")}
+    if not console_error:
+        return out
+
+    def num(m, cast=float):
+        if not m:
+            return None
+        v = m.group(1).replace(",", ".")
+        if v.count(".") > 1:
+            return None
+        try:
+            return cast(float(v))
+        except ValueError:
+            return None
+
+    n = r"(-?[0-9][0-9.,]*)"
+    if "IsfShadow:" in console_error:
+        out["isf_shadow_raw"] = num(re.search(rf"IsfShadow:.*?raw={n}", console_error))
+        out["isf_shadow_ema"] = num(re.search(rf"IsfShadow:.*?\)={n}", console_error))
+        out["isf_shadow_bounded"] = num(re.search(rf"IsfShadow:.*?bounded={n}", console_error))
+        out["isf_shadow_warmup"] = num(re.search(rf"IsfShadow:.*?warmup={n}", console_error))
+    if "VwaTdd:" in console_error:
+        out["vwa_day_fraction"] = num(re.search(rf"VwaTdd: day={n}", console_error))
+        out["vwa_delivered"] = num(re.search(rf"VwaTdd:.*?deliv={n}", console_error))
+        out["vwa_projection"] = num(re.search(rf"VwaTdd:.*?proj={n}", console_error))
+        out["vwa_expected"] = num(re.search(rf"VwaTdd:.*?expected={n}", console_error))
+        out["vwa_blend"] = num(re.search(rf"VwaTdd:.*?blend={n}", console_error))
+        out["vwa_curve_days"] = num(re.search(rf"VwaTdd:.*?curveDays={n}", console_error), int)
+        out["vwa_used_prev_day"] = "(prev)" in console_error
+    return out
 
 
 def parse_isf_blend(console_error: str) -> dict:
@@ -400,7 +579,9 @@ def parse_reason(reason: str) -> dict:
     out = {"reason_Dev": None, "reason_BGI": None, "reason_minPredBG": None,
            "reason_minGuardBG": None, "reason_IOBpredBG": None, "reason_UAMpredBG": None,
            "sleep_state": None, "sleep_learned_onset": None,
-           "sleep_learned_wake": None, "sleep_learned_days": None}
+           "sleep_learned_wake": None, "sleep_learned_days": None,
+           # 2026-09-05 shadow: the learned onset recomputed two corrected ways, logged only
+           "sleep_alt_onset_firstofnight": None, "sleep_alt_onset_gapmerged": None}
     if not reason:
         return out
     for k, key in [("Dev", "reason_Dev"), ("BGI", "reason_BGI"),
@@ -419,6 +600,10 @@ def parse_reason(reason: str) -> dict:
     lm = re.search(r"learned=(\d{1,2}:\d{2})\D+?(\d{1,2}:\d{2})/(\d+)\s*d", reason)
     if lm:
         out["sleep_learned_onset"] = lm.group(1)
+    am = re.search(r"sleepalt=([\d:]{4,5}|-),([\d:]{4,5}|-)", reason)
+    if am:
+        out["sleep_alt_onset_firstofnight"] = am.group(1) if am.group(1) != "-" else None
+        out["sleep_alt_onset_gapmerged"] = am.group(2) if am.group(2) != "-" else None
         out["sleep_learned_wake"] = lm.group(2)
         try:
             out["sleep_learned_days"] = int(lm.group(3))
@@ -675,12 +860,6 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
         "prtrial_enrolled": _prtrial(reason, 0, int),
         "prtrial_arm": _prtrial(reason, 1, str),
         "prtrial_cap": _prtrial(reason, 2),
-        "accelmeal_trig": _accelmeal(reason, 0, int),
-        "accelmeal_accel": _accelmeal(reason, 1),
-        "accelmeal_shortavgdelta": _accelmeal(reason, 2),
-        "accelmeal_longavgdelta": _accelmeal(reason, 3),
-        "accelmeal_bg": _accelmeal(reason, 4, int),
-        "accelmeal_state": _accelmeal(reason, 5, str),
         # 2026-07-20 anticipatory back-out controller SHADOW (read-only; BACKOUT_CONTROLLER_SPEC.md).
         "antbackout_state": _antb(reason, 0, str),
         "antbackout_ra0": _antb(reason, 1), "antbackout_ranow": _antb(reason, 2),
@@ -689,14 +868,6 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
         "antbackout_trip": _antb(reason, 7, int), "antbackout_meallikely": _antb(reason, 8),
         "antbackout_armsrc": _antb(reason, 9, str),
         # 2026-07-27 per-user ANTICIPATION SHADOW (read-only; ANTICIPATION_ARCHITECTURE_SPEC.md).
-        # 2026-08-27 confirm tranche (LIVE when enabled).
-        "tranche_sized_u": _tranche(reason, 0), "tranche_delivered_u": _tranche(reason, 1),
-        "tranche_held_u": _tranche(reason, 2), "tranche_release_p": _tranche(reason, 3),
-        "tranche_state": _tranche(reason, 4, str),
-        # 2026-08-26 consequence-prior SHADOW (read-only).
-        "conseq_p_high": _conseq(reason, 0), "conseq_p_rise": _conseq(reason, 1),
-        "conseq_onset_bg": _conseq(reason, 2, int), "conseq_mins": _conseq(reason, 3, int),
-        "conseq_rise": _conseq(reason, 4, int),
         "anticip_p_ex": _anticip(reason, 0), "anticip_p_meal": _anticip(reason, 1),
         "anticip_src_ex": _anticip(reason, 2, str), "anticip_src_meal": _anticip(reason, 3, str),
         "anticip_ex_arm": _anticip(reason, 4, int), "anticip_ex_conf": _anticip(reason, 5, int),
@@ -705,6 +876,52 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
         "anticip_mins_ex": _anticip(reason, 10, int), "anticip_mins_meal": _anticip(reason, 11, int),
         "anticip_n_ex": _anticip(reason, 12, int), "anticip_n_meal": _anticip(reason, 13, int),
         "ml_hypo_risk": sug.get("mlHypoRisk"),
+        # 2026-09 refit, logged and never dosed on. NOT comparable to ml_hypo_risk by
+        # level: different base-rate calibration, so it reads higher for the same risk.
+        # Read from a [reason] tag, not an RT field: RT cannot take another field without
+        # tripping the ART method verifier in the legacy V3MLG3 engine (see RT.kt).
+        "ml_hypo_risk_shadow": _hyposhadow(reason),
+        # Fall-consequence shadow (2026-09-03). P(reaching 70 mg/dL within 2 h of a fall onset),
+        # calibrated to a 0.221 base rate. NOT comparable to ml_hypo_risk: different question,
+        # different horizon, and no threshold transfers between them.
+        # 2026-09-04 four-column hypo SHADOW (read-only; 2026-09_four_column_hypo_fit.md)
+        # Acceleration early-meal shadow, the one the audit found useful (2.07x lift).
+        "accelmeal_trig": _accelmeal(reason, 0, int),
+        "accelmeal_accel": _accelmeal(reason, 1),
+        "accelmeal_shortavgdelta": _accelmeal(reason, 2),
+        "accelmeal_longavgdelta": _accelmeal(reason, 3),
+        "accelmeal_bg": _accelmeal(reason, 4, float),
+        "accelmeal_state": _accelmeal(reason, 5, str),
+        # Consequence-prior shadow, retired 2026-09-04; parsed for the historical rows.
+        "conseq_p_high": _conseq(reason, 0), "conseq_p_rise": _conseq(reason, 1),
+        "conseq_onset_bg": _conseq(reason, 2, int), "conseq_mins": _conseq(reason, 3, int),
+        "conseq_rise": _conseq(reason, 4, int),
+        # Confirm tranche (LIVE when enabled).
+        "tranche_sized_u": _tranche(reason, 0), "tranche_delivered_u": _tranche(reason, 1),
+        "tranche_held_u": _tranche(reason, 2), "tranche_release_p": _tranche(reason, 3),
+        "tranche_state": _tranche(reason, 4, str),
+        # V5 primer at the delivery seam.
+        "primer_kind": _primer(reason, "kind"),
+        "primer_u": _primer(reason, "u"),
+        "primer_detail": _primer(reason, "detail"),
+        "primer_route": _primer(reason, "route"),
+        "primer_delta": _primer(reason, "d"),
+        "primer_f_rise": _primer(reason, "fR"),
+        "primer_f_bg": _primer(reason, "fB"),
+        "primer_f_iob": _primer(reason, "fI"),
+        "primer_target": _primer(reason, "tgt"),
+        "hypo4_sustained": _hypo4(reason, 0),
+        "hypo4_near": _hypo4(reason, 1),
+        "hypo4_skip": (lambda m: m.group(1) if m else None)(HYPO4SKIP_RE.search(reason or "")),
+        "fallcon_score": _fallcon(reason, 0),
+        "fallcon_onset_age_min": _fallcon(reason, 1, int),
+        "fallcon_onset_bg": _fallcon(reason, 2),
+        "fallcon_fall_mgdl": _fallcon(reason, 3),
+        "fallcon_still_falling": _fallcon(reason, 4, int),
+        # Why no score this cycle: nomodel, norows, rows<n>, noanchor, below70, fall<n>,
+        # shortwin, schema<n>. A silent shadow and a quiet day look identical without this.
+        "fallcon_skip": (lambda m: m.group(1) if m else None)(FALLCONSKIP_RE.search(reason or "")),
+        "fallcon_n_readings": (lambda m: int(m.group(2)) if m else None)(FALLCONSKIP_RE.search(reason or "")),
         "ml_meal_likely": sug.get("mlMealLikely"),
         # 2026-07-07 sensing hardening: which step feeds were live this cycle
         # ("phone+wear"|"phone"|"wear"|"none" — "none" = INACTIVE + sleep-in suppressed), and the
@@ -769,8 +986,10 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
     row["boost_active_console"] = parse_boost_active(ce)
     row["boost_tier"] = parse_boost_tier(ce, sug.get("boostTier"))
     row.update(parse_steps(ce))
+    row.update(parse_glucose_status(ce))
     row.update(parse_hr_features(ce))
     row.update(parse_isf_blend(ce))
+    row.update(parse_shadow_lines(ce))
     row.update(parse_reason(reason))
 
     # Keep raw consoleError so re-parses are possible without re-fetching
@@ -782,6 +1001,43 @@ def build_row(rec: dict, user_id: str) -> Optional[dict]:
 # ───────────────────────────────────────────────────────────────────────────
 # Database
 # ───────────────────────────────────────────────────────────────────────────
+
+def migrate_columns(cur, table, ddl):
+    """Add any column the DDL declares for `table` that the live table lacks.
+
+    CREATE TABLE IF NOT EXISTS does nothing to a table that already exists, so a column added to
+    the DDL never reaches a database built before it. The failure is silent where it matters: the
+    refresh runner reports FAILED in a truncated cell and the only visible symptom is that no new
+    rows arrive. That happened on 2026-09-03, when five fallcon_ columns were declared and the live
+    table was not altered, and every refresh failed for a day before anyone looked.
+
+    The DDL string defines more than one table, so the block for this one is isolated first. An
+    earlier version of this function did not, and added boost_cgm's `direction` column to
+    boost_decisions.
+    """
+    m = re.search(rf"CREATE TABLE IF NOT EXISTS {table}\s*\((.*?)\n\);", ddl, re.S | re.I)
+    if not m:
+        return
+    declared = []
+    for line in m.group(1).splitlines():
+        line = line.strip().rstrip(",")
+        if not line or line.upper().startswith(("PRIMARY", "UNIQUE", "CONSTRAINT", "FOREIGN")):
+            continue
+        parts = line.split(None, 1)
+        if len(parts) == 2 and re.fullmatch(r"[a-z_][a-z0-9_]*", parts[0]):
+            declared.append((parts[0], parts[1]))
+
+    cur.execute("select column_name from information_schema.columns where table_name = %s", (table,))
+    have = {r[0] for r in cur.fetchall()}
+    added = []
+    for name, typ in declared:
+        if name in have:
+            continue
+        cur.execute(f'alter table {table} add column if not exists "{name}" {typ}')
+        added.append(name)
+    if added:
+        print(f"[db] added {len(added)} missing column(s) to {table}: {', '.join(added)}")
+
 
 DDL = f"""
 CREATE TABLE IF NOT EXISTS {TABLE} (
@@ -800,6 +1056,9 @@ CREATE TABLE IF NOT EXISTS {TABLE} (
     tdd                  double precision,
     tdd_ratio            double precision,
     delta_acceleration   double precision,
+    gs_delta             double precision,
+    gs_short_avg_delta   double precision,
+    gs_long_avg_delta    double precision,
     sens_normal_target   double precision,
     variable_sens        double precision,
     dynamic_isf          double precision,
@@ -819,6 +1078,17 @@ CREATE TABLE IF NOT EXISTS {TABLE} (
     boostv5_age           double precision,
     boostv5_gatereduction text,
     ml_hypo_risk          double precision,
+    ml_hypo_risk_shadow   double precision,
+    hypo4_sustained       double precision,
+    hypo4_near            double precision,
+    hypo4_skip            text,
+    fallcon_score         double precision,
+    fallcon_onset_age_min integer,
+    fallcon_onset_bg      double precision,
+    fallcon_fall_mgdl     double precision,
+    fallcon_still_falling integer,
+    fallcon_skip          text,
+    fallcon_n_readings    integer,
     ml_meal_likely        double precision,
     v1_units              double precision,
     iob_iob              double precision,
@@ -836,6 +1106,10 @@ CREATE TABLE IF NOT EXISTS {TABLE} (
     hr_avg               double precision,
     hrr_pct              double precision,
     hr_zone              text,
+    isf_shadow_raw       double precision,
+    isf_shadow_ema       double precision,
+    isf_shadow_bounded   double precision,
+    isf_shadow_warmup    double precision,
     tdd_7d               double precision,
     tdd_1d               double precision,
     tdd_24h              double precision,
@@ -914,16 +1188,6 @@ ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_gi            double prec
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_insu          double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_lo30          double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boosttwin_floorbreach   double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_sized_u            double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_delivered_u        double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_held_u             double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_release_p          double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_state              text;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_p_high              double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_p_rise              double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_onset_bg            double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_mins                double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_rise                double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boostv5_plateau_trig       double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boostv5_plateau_wouldnudge double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS boostv5_plateau_bg         double precision;
@@ -939,12 +1203,6 @@ ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS autordv_changes            text;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS prtrial_enrolled           integer;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS prtrial_arm                text;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS prtrial_cap                double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_trig             integer;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_accel            double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_shortavgdelta    double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_longavgdelta     double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_bg               double precision;
-ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_state            text;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS antbackout_state           text;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS antbackout_ra0             double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS antbackout_ranow           double precision;
@@ -978,8 +1236,35 @@ ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS hr_bpm_max5m          double precis
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS hr_bpm_min5m          double precision;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS sleep_state           text;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS sleep_learned_onset   text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS sleep_alt_onset_firstofnight text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS sleep_alt_onset_gapmerged    text;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS sleep_learned_wake    text;
 ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS sleep_learned_days    integer;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_p_high              double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_p_rise              double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_onset_bg            integer;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_mins                integer;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS conseq_rise                integer;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_trig             integer;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_accel            double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_shortavgdelta    double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_longavgdelta     double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_bg               double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS accelmeal_state            text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_sized_u            double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_delivered_u        double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_held_u             double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_release_p          double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS tranche_state              text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS primer_kind                text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS primer_u                   double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS primer_detail              text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS primer_route               text;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS primer_delta               double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS primer_f_rise              double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS primer_f_bg                double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS primer_f_iob               double precision;
+ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS primer_target              double precision;
 
 CREATE TABLE IF NOT EXISTS boost_cgm (
     user_id  text NOT NULL,
@@ -1094,6 +1379,7 @@ def main():
     conn = psycopg2.connect(f"dbname={DB_NAME}")
     with conn.cursor() as cur:
         cur.execute(DDL)
+        migrate_columns(cur, TABLE, DDL)
     conn.commit()
 
     decision_columns = [k for k in rows[0].keys()] if rows else []
