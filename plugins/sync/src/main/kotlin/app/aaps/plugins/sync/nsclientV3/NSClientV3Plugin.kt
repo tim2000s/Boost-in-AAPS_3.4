@@ -212,6 +212,13 @@ class NSClientV3Plugin @Inject constructor(
      */
     internal fun firstLoadFloor(): Long = max(dateUtil.now() - maxAge, historyBackfillFrom)
 
+    /**
+     * Bound of a backfill that has been accepted but whose chain has not started (0 = none). Guarded
+     * by [fullSyncSemaphore]. In memory only, like [fullSyncRequested]: a request lost to a restart
+     * is retried by the caller's own cooldown.
+     */
+    @VisibleForTesting internal var pendingBackfillFrom: Long = 0L
+
     private val serviceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceDisconnected(name: ComponentName) {
             aapsLogger.debug(LTag.NSCLIENT, "Service is disconnected")
@@ -452,6 +459,7 @@ class NSClientV3Plugin @Inject constructor(
         storeLastLoadedSrvModified()
         dataSyncSelectorV3.resetToNextFullSync()
         synchronized(fullSyncSemaphore) {
+            pendingBackfillFrom = 0L
             fullSyncRequested = true
         }
     }
@@ -464,9 +472,18 @@ class NSClientV3Plugin @Inject constructor(
      * — all of which ship OFF — do not silently discard the very records being fetched. It does NOT
      * touch [dataSyncSelectorV3], so nothing is re-uploaded to the server.
      *
-     * Non-blocking: the actual fetch is the existing LoadBg/LoadTreatments worker chain, kicked on
-     * this plugin's own handler thread. `forceNew = false` so a round already in flight is joined
-     * rather than waited on.
+     * Non-blocking for the caller: the fetch is the existing LoadBg/LoadTreatments worker chain,
+     * started on this plugin's own handler thread.
+     *
+     * The rewind is NOT applied here. It is held in [pendingBackfillFrom] and applied by
+     * [executeLoop] in the same synchronized step that sets [doingFullSync], so the rewound cursors
+     * and the full-sync flag always reach the same chain. Rewinding here (as before 2026-10-04) let a
+     * round already in flight, with [doingFullSync] false, consume the rewound cursors with the
+     * accept preferences in force. On a migrated install that kept boluses ("receive insulin" on)
+     * and dropped every effective profile switch, so no day had a profile throughout, the TDD
+     * calculator returned no days, auto-config stayed at days=0/7 and the full-sync flag was then
+     * spent on a round with nothing left to fetch. `forceNew = true` waits out the round in flight
+     * instead of returning and relying on some later trigger.
      */
     override fun requestHistoryBackfill(fromTimestamp: Long): Boolean {
         if (!isEnabled()) return false
@@ -475,9 +492,22 @@ class NSClientV3Plugin @Inject constructor(
         val handler = this.handler ?: return false
         // Never reach back further than this client would on a first load anyway.
         val from = max(fromTimestamp, dateUtil.now() - maxAge)
-        // Rewind the download cursors only. Zeroing lastLoadedSrvModified is what makes
-        // isFirstLoad() true, which is the branch that honours firstLoadContinueTimestamp/the floor;
-        // the workers restore it themselves when the load completes, exactly as on a fresh install.
+        synchronized(fullSyncSemaphore) {
+            pendingBackfillFrom = from
+            fullSyncRequested = true
+        }
+        rxBus.send(EventNSClientNewLog("● RUN", "History backfill requested from ${dateUtil.dateAndTimeAndSecondsString(from)}"))
+        handler.post { executeLoop("HISTORY_BACKFILL", forceNew = true) }
+        return true
+    }
+
+    /**
+     * Rewind the entries and treatments download cursors to [from]. Zeroing lastLoadedSrvModified is
+     * what makes isFirstLoad() true, which is the branch that honours firstLoadContinueTimestamp and
+     * the floor; the workers restore it themselves when the load completes, as on a fresh install.
+     * Called only from [executeLoop], under [fullSyncSemaphore], with no chain running.
+     */
+    private fun applyHistoryBackfill(from: Long) {
         historyBackfillFrom = from
         firstLoadContinueTimestamp.collections.entries = from
         firstLoadContinueTimestamp.collections.treatments = from
@@ -485,12 +515,6 @@ class NSClientV3Plugin @Inject constructor(
         lastLoadedSrvModified.collections.treatments = 0L
         initialLoadFinished = false
         storeLastLoadedSrvModified()
-        synchronized(fullSyncSemaphore) {
-            fullSyncRequested = true
-        }
-        rxBus.send(EventNSClientNewLog("● RUN", "History backfill requested from ${dateUtil.dateAndTimeAndSecondsString(from)}"))
-        handler.post { executeLoop("HISTORY_BACKFILL", forceNew = false) }
-        return true
     }
 
     override fun handleClearAlarm(originalAlarm: NSAlarm, silenceTimeInMilliseconds: Long) {
@@ -802,7 +826,10 @@ class NSClientV3Plugin @Inject constructor(
     }
 
     internal fun executeLoop(origin: String, forceNew: Boolean) {
-        if (preferences.get(BooleanKey.NsClient3UseWs) && initialLoadFinished) return
+        // A pending backfill must still run on a websocket client whose initial load has finished;
+        // the round in flight when it was requested sets initialLoadFinished on completion.
+        val backfillPending = synchronized(fullSyncSemaphore) { pendingBackfillFrom > 0L }
+        if (preferences.get(BooleanKey.NsClient3UseWs) && initialLoadFinished && !backfillPending) return
         if (preferences.get(NsclientBooleanKey.NsPaused)) {
             rxBus.send(EventNSClientNewLog("● RUN", "paused  $origin"))
             return
@@ -818,13 +845,7 @@ class NSClientV3Plugin @Inject constructor(
             while (workIsRunning()) Thread.sleep(5000)
         }
         rxBus.send(EventNSClientNewLog("● RUN", "Starting next round $origin"))
-        synchronized(fullSyncSemaphore) {
-            if (fullSyncRequested) {
-                fullSyncRequested = false
-                doingFullSync = true
-                rxBus.send(EventNSClientNewLog("● RUN", "Full sync is requested"))
-            }
-        }
+        beginRound()
         rxBus.send(EventNSClientUpdateGuiStatus())
         WorkManager.getInstance(context)
             .beginUniqueWork(
@@ -840,6 +861,25 @@ class NSClientV3Plugin @Inject constructor(
             .then(OneTimeWorkRequest.Builder(LoadDeviceStatusWorker::class.java).build())
             .then(OneTimeWorkRequest.Builder(DataSyncWorker::class.java).build())
             .enqueue()
+    }
+
+    /**
+     * Start-of-round bookkeeping, run by [executeLoop] immediately before it enqueues a load chain.
+     * A requested full sync becomes [doingFullSync] here, and a pending bounded backfill rewinds the
+     * cursors in the same step, so the chain about to start is the one that carries both.
+     */
+    @VisibleForTesting internal fun beginRound() {
+        synchronized(fullSyncSemaphore) {
+            if (fullSyncRequested) {
+                fullSyncRequested = false
+                doingFullSync = true
+                if (pendingBackfillFrom > 0L) {
+                    applyHistoryBackfill(pendingBackfillFrom)
+                    pendingBackfillFrom = 0L
+                }
+                rxBus.send(EventNSClientNewLog("● RUN", "Full sync is requested"))
+            }
+        }
     }
 
     fun endFullSync() {

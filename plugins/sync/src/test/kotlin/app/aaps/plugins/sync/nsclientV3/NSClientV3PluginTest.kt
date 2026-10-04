@@ -36,6 +36,7 @@ import app.aaps.core.nssdk.localmodel.treatment.CreateUpdateResponse
 import app.aaps.core.nssdk.remotemodel.LastModified
 import app.aaps.plugins.sync.nsShared.StoreDataForDbImpl
 import app.aaps.plugins.sync.nsclient.ReceiverDelegate
+import app.aaps.plugins.sync.nsclientV3.keys.NsclientBooleanKey
 import app.aaps.plugins.sync.nsclientV3.keys.NsclientLongKey
 import app.aaps.plugins.sync.nsclientV3.keys.NsclientStringKey
 import app.aaps.plugins.sync.nsclientV3.services.NSClientV3Service
@@ -49,7 +50,9 @@ import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.Mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.spy
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -597,6 +600,83 @@ internal class NSClientV3PluginTest : TestBaseWithProfile() {
         assertThat(sut.lastLoadedSrvModified.collections.entries).isEqualTo(111L)
         assertThat(sut.lastLoadedSrvModified.collections.treatments).isEqualTo(222L)
         assertThat(sut.fullSyncRequested).isFalse()
+    }
+
+    // 2026-10-04: the rewind used to be applied at request time, so a round already in flight with
+    // doingFullSync false consumed it under the accept preferences, and the full-sync flag was then
+    // spent on a round with nothing left to fetch. The rewind now waits for the round that carries it.
+
+    // A spy rather than setPluginEnabledBlocking, which would run onStart and its service wiring.
+    private fun acceptingBackfill(): NSClientV3Plugin {
+        whenever(preferences.get(NsclientBooleanKey.NsPaused)).thenReturn(false)
+        whenever(preferences.get(app.aaps.core.keys.StringKey.NsClientUrl)).thenReturn("https://ns.example")
+        NSClientV3Plugin::class.java.getDeclaredField("handler").apply { isAccessible = true }.set(sut, mock<android.os.Handler>())
+        sut = spy(sut)
+        doReturn(true).whenever(sut).isEnabled()
+        return sut
+    }
+
+    @Test
+    fun `requestHistoryBackfill leaves the cursors alone until the next round starts`() {
+        val now = 1_785_000_000_000L
+        whenever(dateUtil.now()).thenReturn(now)
+        acceptingBackfill()
+        sut.lastLoadedSrvModified = LastModified(LastModified.Collections().apply { entries = 111L; treatments = 222L })
+
+        assertThat(sut.requestHistoryBackfill(now - T.days(14).msecs())).isTrue()
+
+        // A round in flight reads these cursors; they must not move under it.
+        assertThat(sut.lastLoadedSrvModified.collections.entries).isEqualTo(111L)
+        assertThat(sut.lastLoadedSrvModified.collections.treatments).isEqualTo(222L)
+        assertThat(sut.doingFullSync).isFalse()
+        assertThat(sut.fullSyncRequested).isTrue()
+        assertThat(sut.pendingBackfillFrom).isEqualTo(now - T.days(14).msecs())
+        verify(preferences, never()).put(NsclientLongKey.HistoryBackfillFrom, now - T.days(14).msecs())
+    }
+
+    @Test
+    fun `the round that starts after a backfill request carries both the rewind and the full-sync flag`() {
+        val now = 1_785_000_000_000L
+        val from = now - T.days(14).msecs()
+        whenever(dateUtil.now()).thenReturn(now)
+        acceptingBackfill()
+        sut.lastLoadedSrvModified = LastModified(LastModified.Collections().apply { entries = 111L; treatments = 222L })
+        sut.requestHistoryBackfill(from)
+
+        sut.beginRound()
+
+        assertThat(sut.doingFullSync).isTrue()
+        assertThat(sut.fullSyncRequested).isFalse()
+        assertThat(sut.pendingBackfillFrom).isEqualTo(0L)
+        assertThat(sut.lastLoadedSrvModified.collections.entries).isEqualTo(0L)
+        assertThat(sut.lastLoadedSrvModified.collections.treatments).isEqualTo(0L)
+        assertThat(sut.firstLoadContinueTimestamp.collections.entries).isEqualTo(from)
+        assertThat(sut.firstLoadContinueTimestamp.collections.treatments).isEqualTo(from)
+        assertThat(sut.initialLoadFinished).isFalse()
+        verify(preferences).put(NsclientLongKey.HistoryBackfillFrom, from)
+    }
+
+    @Test
+    fun `a round with no full sync requested neither rewinds nor sets the flag`() {
+        sut.lastLoadedSrvModified = LastModified(LastModified.Collections().apply { entries = 111L; treatments = 222L })
+        sut.beginRound()
+        assertThat(sut.doingFullSync).isFalse()
+        assertThat(sut.lastLoadedSrvModified.collections.treatments).isEqualTo(222L)
+    }
+
+    @Test
+    fun `resetToFullSync drops a pending backfill so a manual full sync stays unbounded`() {
+        val now = 1_785_000_000_000L
+        whenever(dateUtil.now()).thenReturn(now)
+        acceptingBackfill()
+        sut.requestHistoryBackfill(now - T.days(14).msecs())
+
+        sut.resetToFullSync()
+        sut.beginRound()
+
+        assertThat(sut.pendingBackfillFrom).isEqualTo(0L)
+        assertThat(sut.doingFullSync).isTrue()
+        verify(preferences, never()).put(NsclientLongKey.HistoryBackfillFrom, now - T.days(14).msecs())
     }
 
     @Test
