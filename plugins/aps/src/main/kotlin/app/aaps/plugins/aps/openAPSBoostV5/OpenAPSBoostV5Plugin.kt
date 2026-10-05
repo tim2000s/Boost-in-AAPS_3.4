@@ -749,6 +749,8 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
             // 2026-07-17 velocity-budget floor — same DUAL would/applied semantics keyed on the
             // ApsBoostV5VelocityBudgetActive toggle (see velocityBudgetFloorTarget). Null = conditions unmet.
             rT.boostV5_velocityBudgetWouldAdd = decision.velocityBudgetWouldAdd
+            // 2026-10-05 announced-meal telemetry, in the reason string rather than an RT field.
+            if (inputs.mealAnnounced) rT.reason.append("mealAnn=1,${if (decision.mealSessionStarted) "commit" else "-"}; ")
 
             val rtJson = v5DecisionToRtJson(decision)
             aapsLogger.info(LTag.APS, "BoostV5_RT: ${rtJson} actual_smb=${rT.units ?: 0.0} actual_insulinReq=${rT.insulinReq ?: 0.0} activeMode=$activeMode")
@@ -922,7 +924,21 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
             primerUseTempBasal = preferences.getBoostDosing(BooleanKey.ApsBoostV5PrimerTbrFallback) &&
                 !preferences.getBoostDosing(BooleanKey.ApsBoostV5PrimerBolusMode),
             nowMs = dateUtil.now(),   // 2026-07-21 wall-clock for the primer-IOB accumulator decay
+            mealAnnounced = mealAnnounced(rT, dateUtil.now()),
         )
+    }
+
+    /**
+     * 2026-10-05: the meal was announced, by carbs on board in this cycle's result or by a manual or
+     * wizard bolus (BS.Type.NORMAL) within [MEAL_ANNOUNCED_BOLUS_WINDOW_MS]. SMBs and priming are not
+     * announcements. A failed read counts as not announced, which leaves the pre-2026-10-05 behaviour.
+     */
+    private fun mealAnnounced(rT: RT, now: Long): Boolean {
+        if ((rT.COB ?: 0.0) > 0.0) return true
+        return runCatching {
+            persistenceLayer.getBolusesFromTimeToTime(now - MEAL_ANNOUNCED_BOLUS_WINDOW_MS, now, true)
+                .any { it.type == BS.Type.NORMAL && it.amount > 0.0 }
+        }.getOrDefault(false)
     }
 
     // When "Boost V5" is the active APS, GlucoseStatusProviderImpl + overview/Wear/Android Auto/

@@ -253,6 +253,14 @@ fun fastConfirmAllowed(fastCarbConfirmEnabled: Boolean, recentLowBg: Double): Bo
 internal const val TIME_JUMP_RESET_MINUTES = 30.0
 
 /**
+ * 2026-10-05: how far back a manual or wizard bolus marks the next confirm as an announced meal.
+ * 120 minutes is a modelling choice, not a calibrated value: it covers a pre-bolus given 20 to 30
+ * minutes before eating plus the 30 to 60 minutes a rise takes to reach CONFIRMED (51 minutes in the
+ * report that prompted it), with margin for a slow eater. Carbs on board cover announced meals beyond it.
+ */
+internal const val MEAL_ANNOUNCED_BOLUS_WINDOW_MS = 120L * 60 * 1000
+
+/**
  * OBSERVING → CONFIRMED eligibility EXCLUDING the dose-adequacy gate — the exact sub-conditions
  * [step]'s OBSERVING branch checks (age gate incl. the 2026-07-03 sustained-score early path,
  * peak score, peak eventualBG offset, single-confirm-per-session lock), minus confirmDoseAdequate.
@@ -331,6 +339,18 @@ fun step(
      * LAST in the list on purpose — existing call sites pass arguments POSITIONALLY.
      */
     nowMs: Long = 0L,
+    /**
+     * 2026-10-05: the meal was announced, by carbs on board or a recent manual or wizard bolus (see
+     * [MEAL_ANNOUNCED_BOLUS_WINDOW_MS]). A transition that would CONFIRM goes to COMMITTED instead.
+     * The 1.8x commit-shot is a catch-up for insulin withheld while OBSERVING, and after a pre-bolus
+     * none was withheld: oref's insulinReq already nets the bolus and the carbs, so the multiplier
+     * landed on a requirement that was already covered. A field report on 2026-10-05 (a child, TDD
+     * about 20 U, 1.5 U pre-bolus and 24 g entered) had CONFIRMED deliver 1.25 U against an insulinReq
+     * of 0.93 U, and BG reached 74 within 45 minutes. The transition timing is unchanged; only the
+     * destination differs, so this can deliver less insulin than before and never more. Defaults false;
+     * LAST in the list because call sites pass arguments positionally.
+     */
+    mealAnnounced: Boolean = false,
 ): MealHypothesisState {
     // 2026-07-30 wall-clock age tick. Ages are cycle counts tuned on a ~5-min loop; gate them on
     // elapsed time so a 1-min loop does not advance them 5x too fast. nowMs<=0 (tests, legacy
@@ -351,12 +371,17 @@ fun step(
     // CONFIRMED on a sharp, accelerating, score-corroborated rise while awake and not exercising.
     val fastConfirm = fastConfirmEnabled && !asleep && !exerciseActive &&
         delta >= FAST_CONFIRM_DELTA && deltaAccl >= FAST_CONFIRM_ACCL && score >= FAST_CONFIRM_SCORE
+    // The state a confirm transition enters: CONFIRMED, or COMMITTED for an announced meal. Either way
+    // the session lock is set, so an announced meal cannot CONFIRM later in the same session.
+    val commitEntry = MealHypothesisState(
+        if (mealAnnounced) MealHypothesis.COMMITTED else MealHypothesis.CONFIRMED, 0, 0.0, 0.0, true, lastAgeMs = enterMs
+    )
 
     return when (state) {
         MealHypothesis.IDLE ->
             if (fastConfirm)
                 // Fast carb caught from IDLE — go straight to CONFIRMED (committedInSession=true).
-                MealHypothesisState(MealHypothesis.CONFIRMED, 0, 0.0, 0.0, true, lastAgeMs = enterMs)
+                commitEntry
             else if (score >= ENTER_OBSERVING_SCORE)
                 // Fresh session: seed both peaks with entry-cycle values; committedInSession=false
                 // explicitly (new meal session begins here — Fix 6).
@@ -388,8 +413,8 @@ fun step(
             when {
                 // Fast-carb fast-path: confirm in a single OBSERVING cycle, bypassing the age +
                 // eventualBg-offset gates, but still honouring the Fix-6 single-confirm guard.
-                fastConfirm && !committedInSession -> MealHypothesisState(MealHypothesis.CONFIRMED, 0, 0.0, 0.0, true, lastAgeMs = enterMs)
-                confirmEligible -> MealHypothesisState(MealHypothesis.CONFIRMED, 0, 0.0, 0.0, true, lastAgeMs = enterMs)
+                fastConfirm && !committedInSession -> commitEntry
+                confirmEligible -> commitEntry
                 score < FALL_BACK_TO_IDLE_SCORE && age >= FALL_BACK_TO_IDLE_AGE ->
                     MealHypothesisState(MealHypothesis.IDLE, 0, 0.0, 0.0, false, lastAgeMs = enterMs)
                 else -> MealHypothesisState(state, age + bumped, newMaxScore, newMaxOffset, committedInSession, lastAgeMs = tickMs)

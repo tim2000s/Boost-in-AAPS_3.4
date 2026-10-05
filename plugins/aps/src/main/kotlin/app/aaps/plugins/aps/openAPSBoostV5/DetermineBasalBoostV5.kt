@@ -125,6 +125,9 @@ data class V5Inputs(
     /** Wall-clock epoch-ms this cycle — for the primer-IOB accumulator's time-based decay. 0 = unknown
      *  (skips decay; accumulator just holds — safe). Supplied by the plugin (dateUtil.now()). */
     val nowMs: Long = 0L,
+    /** 2026-10-05: carbs on board or a manual/wizard bolus within [MEAL_ANNOUNCED_BOLUS_WINDOW_MS];
+     *  a confirm transition then enters COMMITTED rather than CONFIRMED. See [step]. */
+    val mealAnnounced: Boolean = false,
 )
 
 /** Persisted V5 state read from RT at cycle start, written back at cycle end. */
@@ -211,6 +214,9 @@ data class V5Decision(
      *  the pre-rounding target. Non-empty whenever the primer GATE opened, including when the sized
      *  amount rounded to 0, so the shadow can separate "gate never opened" from "sized to nothing". */
     val primerScaleDebug: String = "",
+    /** 2026-10-05: true on the cycle a meal session commits, whether by CONFIRMED or, for an
+     *  announced meal, straight to COMMITTED. The meal-time learner records on this. */
+    val mealSessionStarted: Boolean = false,
 )
 
 // ===== 2026-07-20 V1-acceleration early primer (LIVE) — backtesting/scripts/2026-07-v1-acceleration =====
@@ -373,7 +379,9 @@ class DetermineBasalBoostV5 @Inject constructor() {
             confirmDoseAdequate = confirmDoseAdequate,
             scoreReadyStreak = scoreReadyStreak,   // 2026-07-03 sustained-score early confirm (hoisted above)
             aggressiveEarlyConfirm = inputs.aggressiveEarlyConfirmEnabled,   // 2026-07-17 opt-in age −2
+            mealAnnounced = inputs.mealAnnounced,
         )
+        val mealSessionStarted = sessionCommittedThisCycle(resetState, newHypothesisState)
 
         // ===== 2026-07-20 V1-acceleration early primer (LIVE) — see PRIMER_* + REINTEGRATION_SPEC =====
         // Compute the primer amount here (state known); APPLY it after finalDose is finalised below.
@@ -395,7 +403,10 @@ class DetermineBasalBoostV5 @Inject constructor() {
         if (inputs.primerCapU > 0.0 && primerActiveState == MealHypothesis.OBSERVING && primerAppliedU <= 0.0 &&
             inputs.delta >= PRIMER_DELTA_MIN && inputs.deltaAccl > PRIMER_ACCEL_THRESHOLD &&
             inputs.recentLowBg >= PRIMER_MIN_RECENT_LOW_MGDL && !inputs.asleep &&
-            !inputs.exerciseActive && !inputs.postRescueWindow
+            !inputs.exerciseActive && !inputs.postRescueWindow &&
+            // 2026-10-05: no primer on an announced meal. It reclaims early insulin for a meal nobody
+            // dosed for, and after a pre-bolus that insulin has already been given.
+            !inputs.mealAnnounced
         ) {
             // State-aware sizing. primerCapU is a TRUE CEILING; three factors in [0,1] scale it down.
             // fRise DISCRIMINATES (magnitude of the actual rise); fBg and fIob are SUPPRESSORS — they
@@ -429,7 +440,7 @@ class DetermineBasalBoostV5 @Inject constructor() {
         // credited against the commit-shot). The credited excess is then consumed from the accumulator
         // so a second meal doesn't re-credit it. Spent down against CONFIRMED then COMMITTED below.
         var primerNettingResidualU = if (primerActiveState == MealHypothesis.IDLE) 0.0 else persisted.primerNettingResidualU
-        if (primerActiveState == MealHypothesis.CONFIRMED) {
+        if (mealSessionStarted) {
             primerNettingResidualU = kotlin.math.max(0.0, primerIobU - inputs.primerCapU)
             primerIobU = kotlin.math.min(primerIobU, inputs.primerCapU)
         }
@@ -611,9 +622,21 @@ class DetermineBasalBoostV5 @Inject constructor() {
             primerBolusU = primerBolusU,
             primerUseTempBasal = inputs.primerUseTempBasal,
             primerScaleDebug = primerScaleDebug,
+            mealSessionStarted = mealSessionStarted,
         )
     }
 }
+
+/**
+ * True when this cycle's step began a meal session's commitment: entry into CONFIRMED, or into
+ * COMMITTED from IDLE or OBSERVING (the announced-meal route, 2026-10-05). CONFIRMED to COMMITTED and
+ * RECOVERING re-engaging COMMITTED continue a session and are excluded. Kept out of decide() so the
+ * dose path's own function gains no locals beyond the one result.
+ */
+internal fun sessionCommittedThisCycle(prior: MealHypothesisState, next: MealHypothesisState): Boolean =
+    next.state == MealHypothesis.CONFIRMED && prior.state != MealHypothesis.CONFIRMED ||
+        next.state == MealHypothesis.COMMITTED &&
+        (prior.state == MealHypothesis.IDLE || prior.state == MealHypothesis.OBSERVING)
 
 // ===== Fix 6 dose calibration (2026-05-26) =====
 

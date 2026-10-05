@@ -2213,10 +2213,10 @@ open class OpenAPSBoostPlugin @Inject constructor(
             v6PreMealReason?.let { r -> it.reason.append(r) }
             // V6 meal-time learner: record a FRESH CONFIRMED commit (the event V5 treats as a meal)
             // so the pre-meal window learns this user's habitual meal times. Persist only on change.
-            if (v5decision != null && v5decision.mealHypothesis == MealHypothesis.CONFIRMED && v5decision.mealHypothesisAge == 0) {
+            if (v5decision != null && v5decision.mealSessionStarted) {
                 mealTimeHistoryCached = MealTimeLearner.record(mealTimeHistoryCached, now)
                 preferences.put(StringKey.ApsBoostMealTimeHistory, mealTimeHistoryCached.serialize())
-                aapsLogger.debug(LTag.APS, "V6 meal-time learner: recorded CONFIRMED @ ${dateUtil.dateAndTimeString(now)} (${mealTimeHistoryCached.events.size} events)")
+                aapsLogger.debug(LTag.APS, "V6 meal-time learner: recorded meal commit @ ${dateUtil.dateAndTimeString(now)} (${mealTimeHistoryCached.events.size} events)")
             }
 
             // Step-feed availability telemetry (F1, 2026-07-07) — written EVERY cycle so a dark

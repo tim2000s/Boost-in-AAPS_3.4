@@ -11,8 +11,10 @@ package app.aaps.plugins.aps.openAPSBoostV5
  * "given that hypothesis, dose this much relative to baseline budget."
  *
  * V4 → V5 mapping:
- * - Tiers 1, 2 (COB): COB > 0 → mealHypothesis goes straight to COMMITTED; baseInsulinReq
- *   already accounts for COB.
+ * - Tiers 1, 2 (COB): an announced meal (carbs on board, or a manual or wizard bolus within
+ *   MEAL_ANNOUNCED_BOLUS_WINDOW_MS) confirms into COMMITTED instead of CONFIRMED, so it never takes
+ *   the 1.8x catch-up; baseInsulinReq already accounts for the carbs and the bolus. The meal still
+ *   has to be recognised by the score first: COB alone does not move IDLE. See step(mealAnnounced).
  * - Tiers 3, 4 (UAM_BOOST / UAM_HIGH_BOOST): mealHypothesis CONFIRMED → COMMITTED.
  * - Tiers 5, 6 (PERCENT_SCALE / ACCELERATION): score components drive IDLE → OBSERVING →
  *   CONFIRMED transitions; OBSERVING tests, CONFIRMED commits.
