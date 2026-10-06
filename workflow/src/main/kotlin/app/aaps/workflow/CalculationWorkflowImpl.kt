@@ -89,11 +89,6 @@ class CalculationWorkflowImpl @Inject constructor(
                     .build()
             )
             .then(
-                OneTimeWorkRequest.Builder(PrepareBasalDataWorker::class.java)
-                    .setInputData(dataWorkerStorage.storeInputData(PrepareBasalDataWorker.PrepareBasalData(iobCobCalculator, overviewData)))
-                    .build()
-            )
-            .then(
                 OneTimeWorkRequest.Builder(PrepareTemporaryTargetDataWorker::class.java)
                     .setInputData(dataWorkerStorage.storeInputData(PrepareTemporaryTargetDataWorker.PrepareTemporaryTargetData(overviewData)))
                     .build()
@@ -144,6 +139,15 @@ class CalculationWorkflowImpl @Inject constructor(
             .then(
                 runIf = job == MAIN_CALCULATION,
                 OneTimeWorkRequest.Builder(UpdateWidgetWorker::class.java).build()
+            )
+            // The basal chart series follows the loop for the same reason (2026-10-06). It only builds
+            // plotted lines, and on a Dash handset it measured 6.6 s at the median and 30 s at worst
+            // ahead of the insulin calculation. Its getBasalData calls fill a cache the IOB step fills
+            // anyway, so the work moves rather than disappears.
+            .then(
+                OneTimeWorkRequest.Builder(PrepareBasalDataWorker::class.java)
+                    .setInputData(dataWorkerStorage.storeInputData(PrepareBasalDataWorker.PrepareBasalData(iobCobCalculator, overviewData)))
+                    .build()
             )
             .then(
                 OneTimeWorkRequest.Builder(PrepareIobAutosensGraphDataWorker::class.java)
