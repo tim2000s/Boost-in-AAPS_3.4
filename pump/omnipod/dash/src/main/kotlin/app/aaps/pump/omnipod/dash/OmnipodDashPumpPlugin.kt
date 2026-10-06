@@ -334,6 +334,10 @@ class OmnipodDashPumpPlugin @Inject constructor(
                 .ignoreElements(),
             history.updateFromState(podStateManager),
             podStateManager.updateActiveCommand()
+                // Off Room's executor: the history update before this completes on arch_disk_io, and
+                // handleCommandConfirmation makes blocking database writes. Upstream moved it to
+                // Dispatchers.IO in its May 2026 suspend migration (d6b7b3fcf8). (2026-10-06)
+                .observeOn(aapsSchedulers.io)
                 .map { handleCommandConfirmation(it) }
                 .ignoreElement(),
             verifyPumpState(),
@@ -1306,6 +1310,7 @@ class OmnipodDashPumpPlugin @Inject constructor(
                 }.onErrorComplete(),
                 history.updateFromState(podStateManager),
                 podStateManager.updateActiveCommand()
+                    .observeOn(aapsSchedulers.io)   // off Room's executor; see getPodStatus
                     .map { handleCommandConfirmation(it) }
                     .ignoreElement(),
                 verifyPumpState(),
@@ -1514,6 +1519,7 @@ class OmnipodDashPumpPlugin @Inject constructor(
             return@defer observeNoActiveTempBasal()
                 .concatWith(
                     podStateManager.updateActiveCommand()
+                        .observeOn(aapsSchedulers.io)   // off Room's executor; see getPodStatus
                         .map { handleCommandConfirmation(it) }
                         .ignoreElement())
         }
