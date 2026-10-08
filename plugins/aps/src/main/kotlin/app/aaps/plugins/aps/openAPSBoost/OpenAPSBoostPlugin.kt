@@ -2797,10 +2797,13 @@ open class OpenAPSBoostPlugin @Inject constructor(
         return value
     }
 
+    // boostVersion rides in apsConfiguration, which every devicestatus upload carries, so each row in
+    // Nightscout names the Boost build that produced it. Read-only: applyConfiguration ignores it.
     override fun configuration(): JSONObject =
         JSONObject()
             .put(BooleanKey.ApsBoostEnablePercentScale, preferences)
             .put(BooleanKey.ApsBoostEnableCircadianIsf, preferences)
+            .put("boostVersion", app.aaps.plugins.aps.BuildConfig.BOOST_VERSION)
 
     override fun applyConfiguration(configuration: JSONObject) {
         configuration
