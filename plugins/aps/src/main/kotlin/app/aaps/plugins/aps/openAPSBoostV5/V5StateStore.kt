@@ -41,6 +41,14 @@ import kotlin.math.round
  * recent save wrote, regardless of whether SharedPreferences has flushed yet.
  *
  * See `boost_v5_multi_confirmed_investigation.md` for the full diagnosis and trace.
+ *
+ * ## 2026-10-08 age of a restored state (dose-path audit item 17)
+ *
+ * [load] returns whatever was last saved, however old. The age check sits in
+ * DetermineBasalBoostV5.decide, which treats a state whose wall-clock anchor (`lastAgeMs`, restamped
+ * at least every four minutes while the loop runs) is more than TIME_JUMP_RESET_MINUTES old as a time
+ * jump and resets it to IDLE. Doing it there covers the in-memory cache across a loop gap as well as
+ * a restore after a restart, and keeps this class free of a clock.
  */
 class V5StateStore(private val preferences: Preferences, private val aapsLogger: AAPSLogger? = null) {
 
@@ -83,6 +91,13 @@ class V5StateStore(private val preferences: Preferences, private val aapsLogger:
                 // 2026-05-26 Fix 6: single-CONFIRMED-per-session guard. Missing in pre-Fix-6
                 // state → default false (next session entry will reset it explicitly).
                 committedInSession = json.optBoolean("committedInSession", false),
+                // 2026-10-08: session-lock clock and peak timestamps. Absent in older states → 0:
+                // the lock clock then starts on the next cycle and the peaks re-seed from the
+                // current values (see releaseEndedSessionLock and windowedPeak).
+                lastCommitMs = json.optLong("lastCommitMs", 0L),
+                nonPositiveRunStartMs = json.optLong("nonPositiveRunStartMs", 0L),
+                maxScoreAtMs = json.optLong("maxScoreAtMs", 0L),
+                maxOffsetAtMs = json.optLong("maxOffsetAtMs", 0L),
             )
             V5PersistedState(
                 mealHypothesis = state,
@@ -122,6 +137,10 @@ class V5StateStore(private val preferences: Preferences, private val aapsLogger:
             .put("maxScoreInObserving", state.mealHypothesis.maxScoreInObserving)
             .put("maxEventualBgOffsetInObserving", state.mealHypothesis.maxEventualBgOffsetInObserving)
             .put("committedInSession", state.mealHypothesis.committedInSession)
+            .put("lastCommitMs", state.mealHypothesis.lastCommitMs)                   // 2026-10-08
+            .put("nonPositiveRunStartMs", state.mealHypothesis.nonPositiveRunStartMs)
+            .put("maxScoreAtMs", state.mealHypothesis.maxScoreAtMs)
+            .put("maxOffsetAtMs", state.mealHypothesis.maxOffsetAtMs)
             .put("mlMealLikelyNullStreak", state.mlMealLikelyNullStreak)
             .put("primerAppliedU", state.primerAppliedU)                     // 2026-07-20 primer session state
             .put("primerNettingResidualU", state.primerNettingResidualU)

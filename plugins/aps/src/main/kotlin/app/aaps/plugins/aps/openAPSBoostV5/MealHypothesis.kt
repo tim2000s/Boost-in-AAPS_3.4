@@ -62,11 +62,23 @@ import kotlin.math.max
  * OBSERVING after CONFIRMING and re-CONFIRM in the same meal.
  *
  * Fix: persist a `committedInSession` flag through CONFIRMED / COMMITTED / RECOVERING. The
- * OBSERVING → CONFIRMED transition predicate now requires `!committedInSession`. Reset to false
- * only on the RECOVERING → IDLE exit (session complete) or fresh OBSERVING entry from IDLE.
+ * OBSERVING → CONFIRMED transition predicate now requires `!committedInSession`. When and how the
+ * lock is released is described in the 2026-10-08 section below.
  *
  * Defense in depth: even if the state-persistence race resurfaces, the cached state's
  * committedInSession flag blocks a second commit-shot for the same meal.
+ *
+ * ## 2026-10-08 session lock outlives RECOVERING (dose-path audit item 7)
+ *
+ * The RECOVERING to IDLE exit fires on a single negative delta, which is also the trough between two
+ * phases of one meal, and clearing the lock there let the fast path CONFIRM a second time from IDLE
+ * without the eventualBG-offset or dose-adequacy gates. When the clock is known the lock is now
+ * carried through IDLE and into any new OBSERVING run, and released only by [releaseEndedSessionLock]:
+ * [SESSION_LOCK_MIN_MS] after the last CONFIRMED or COMMITTED cycle, or after
+ * [SESSION_END_NON_POSITIVE_MS] of unbroken non-positive deltas. While it is held the fast path is
+ * closed and a rise that passes the slow path's gates re-engages COMMITTED, as Fix 7 does from
+ * RECOVERING. With no clock (nowMs <= 0, tests and legacy callers) the lock is cleared on leaving
+ * RECOVERING and on a new OBSERVING run, as before.
  */
 
 enum class MealHypothesis { IDLE, OBSERVING, CONFIRMED, COMMITTED, RECOVERING }
@@ -82,9 +94,9 @@ enum class MealHypothesis { IDLE, OBSERVING, CONFIRMED, COMMITTED, RECOVERING }
  *   current OBSERVING run, mg/dL. Reset to 0.0 on state transitions out of OBSERVING. Fix 5
  *   (2026-05-22) — same shape as maxScoreInObserving, applied to the eventualBG offset that the
  *   CONFIRMED predicate also requires.
- * @property committedInSession true once V5 has CONFIRMED in the current meal session. Reset to
- *   false on entry to OBSERVING from IDLE (fresh session) and on entry to IDLE from RECOVERING
- *   (session complete). Blocks OBSERVING → CONFIRMED re-firing within the same session — Fix 6
+ * @property committedInSession true once V5 has CONFIRMED in the current meal session. Released by
+ *   [releaseEndedSessionLock] (2026-10-08; see the class notes). Blocks OBSERVING → CONFIRMED
+ *   re-firing within the same session — Fix 6
  *   (2026-05-26), defense-in-depth alongside the V5StateStore in-memory cache. Even if state
  *   appeared to reset mid-meal due to a persistence race, this flag in the cached state prevents
  *   a second commit-shot in the same meal.
@@ -108,6 +120,19 @@ data class MealHypothesisState(
      * POSITIONALLY, so inserting a field mid-list silently rebinds their arguments.
      */
     val lastAgeMs: Long = 0L,
+    /**
+     * 2026-10-08: epoch-ms of the last cycle spent in CONFIRMED or COMMITTED (0 = none, or a state
+     * written before this field existed). Starts the [SESSION_LOCK_MIN_MS] clock on the session lock,
+     * which since this date survives the RECOVERING to IDLE exit. Added after [lastAgeMs] for the same
+     * positional-construction reason.
+     */
+    val lastCommitMs: Long = 0L,
+    /** 2026-10-08: epoch-ms at which the current unbroken run of non-positive deltas began (0 = no run). */
+    val nonPositiveRunStartMs: Long = 0L,
+    /** 2026-10-08: epoch-ms at which [maxScoreInObserving] was set; peaks older than [CONFIRM_PEAK_WINDOW_MS] expire. */
+    val maxScoreAtMs: Long = 0L,
+    /** 2026-10-08: epoch-ms at which [maxEventualBgOffsetInObserving] was set; same expiry. */
+    val maxOffsetAtMs: Long = 0L,
 )
 
 // Calibrated transition thresholds (HARDCODED).
@@ -249,8 +274,92 @@ internal const val FAST_CONFIRM_MIN_RECENT_LOW_MGDL = 80.0
 fun fastConfirmAllowed(fastCarbConfirmEnabled: Boolean, recentLowBg: Double): Boolean =
     fastCarbConfirmEnabled && recentLowBg >= FAST_CONFIRM_MIN_RECENT_LOW_MGDL
 
-/** Time-jump threshold (minutes) for forcing IDLE on clock changes (e.g. timezone switch). */
+/**
+ * Time-jump threshold (minutes) for forcing IDLE on clock changes. Since 2026-10-08 it is also the
+ * staleness bound on the persisted meal state: decide() treats a state whose wall-clock anchor
+ * ([MealHypothesisState.lastAgeMs]) is more than this far from now as a time jump (see
+ * [staleStateMinutes]). Thirty minutes is six missed five-minute cycles; the score and eventualBG
+ * evidence a state carries describes the last few readings, and after a gap that long it no longer
+ * describes the glucose the loop is about to act on.
+ */
 internal const val TIME_JUMP_RESET_MINUTES = 30.0
+
+/**
+ * 2026-10-08: minutes since the state's wall-clock anchor, as an absolute value so that a clock set
+ * backwards counts as a jump as well. The anchor is restamped on every age tick (at most
+ * [AGE_TICK_MS] apart while the loop runs) and on every state change, so a live loop never reads
+ * more than about four minutes here; a larger value means the loop did not run, or the state was
+ * restored from storage after a gap. 0 when either clock is unknown.
+ */
+internal fun staleStateMinutes(state: MealHypothesisState, nowMs: Long): Double =
+    if (nowMs <= 0L || state.lastAgeMs <= 0L) 0.0
+    else kotlin.math.abs(nowMs - state.lastAgeMs) / 60000.0
+
+/**
+ * 2026-10-08 (audit item 7): minimum time the single-confirm session lock is held after the last
+ * CONFIRMED or COMMITTED cycle, even once the state machine has fallen back to IDLE.
+ *
+ * Before this the lock was cleared on the first RECOVERING to IDLE exit, and that exit fires on a
+ * single negative delta: the trough between two phases of one meal. The fast path then re-confirmed
+ * from IDLE with neither the eventualBG-offset gate nor the dose-adequacy gate, so one meal could
+ * receive two catch-up shots. Over the 60 days to 8 October 2026, 772 of 2,569 confirms that
+ * followed an earlier commit came within 90 minutes of it.
+ *
+ * 90 minutes is a modelling choice: it is the time to peak action of rapid-acting analogues
+ * (about 60 to 90 minutes), so a second shot inside it lands on top of the first one's peak, and it
+ * sits at the lower end of the 90 to 120 minute range considered so that a genuinely separate meal
+ * is held for no longer than it has to be. While the lock is held the second phase of a meal is
+ * still covered: a rise that would have confirmed re-engages COMMITTED (Fix 7's 1.0x hold, never
+ * the 1.8x shot), and only through the slow path's gates.
+ */
+internal const val SESSION_LOCK_MIN_MS = 90L * 60 * 1000
+
+/**
+ * 2026-10-08: an unbroken run of non-positive deltas this long ends the session early and releases
+ * the lock (a sustained return towards baseline rather than a trough). 30 minutes is six five-minute
+ * readings; the same 60-day data put the median longest non-positive run between two close confirms
+ * at 15 minutes, so a trough is normally shorter than this and a finished meal normally longer.
+ */
+internal const val SESSION_END_NON_POSITIVE_MS = 30L * 60 * 1000
+
+/**
+ * 2026-10-08 (audit item 17): the OBSERVING peak score and peak eventualBG offset count towards the
+ * confirm test for this long after they were set, then fall back to the current value. Fix 1 and
+ * Fix 5 introduced the peaks because a peak led the age gate by one or two cycles (about 10
+ * minutes); 30 minutes keeps that with margin and stops a peak from an earlier part of a long
+ * OBSERVING run, or one restored from storage, from confirming a rise that is no longer there.
+ */
+internal const val CONFIRM_PEAK_WINDOW_MS = 30L * 60 * 1000
+
+/**
+ * Running maximum that expires: returns the new (peak, setAtMs). With no clock (nowMs <= 0) it is
+ * the plain running maximum, which is the behaviour before 2026-10-08.
+ */
+internal fun windowedPeak(peak: Double, peakAtMs: Long, value: Double, nowMs: Long): Pair<Double, Long> = when {
+    nowMs <= 0L                                                   -> Pair(max(peak, value), peakAtMs)
+    value >= peak || peakAtMs <= 0L || nowMs - peakAtMs > CONFIRM_PEAK_WINDOW_MS -> Pair(value, nowMs)
+    else                                                          -> Pair(peak, peakAtMs)
+}
+
+/**
+ * 2026-10-08: the session lock after the release rules. In CONFIRMED and COMMITTED the lock is
+ * always held. Elsewhere it is released when [SESSION_LOCK_MIN_MS] has passed since the last
+ * CONFIRMED or COMMITTED cycle, or when the deltas have been non-positive without a break for
+ * [SESSION_END_NON_POSITIVE_MS] including this cycle. A lock with no commit time (state written by
+ * an older build) has its clock started now. With no clock the state is returned unchanged.
+ * Idempotent, so decide()'s telemetry and [step] can both apply it.
+ */
+internal fun releaseEndedSessionLock(s: MealHypothesisState, nowMs: Long, delta: Double): MealHypothesisState {
+    if (nowMs <= 0L || !s.committedInSession) return s
+    if (s.state == MealHypothesis.CONFIRMED || s.state == MealHypothesis.COMMITTED) return s
+    if (s.lastCommitMs <= 0L) return s.copy(lastCommitMs = nowMs)
+    val expired = nowMs - s.lastCommitMs >= SESSION_LOCK_MIN_MS
+    // The run counts from the later of its own start and the last commit cycle, so only the part of
+    // it after the commit shot can end the session.
+    val sustainedFall = delta <= 0.0 && s.nonPositiveRunStartMs > 0L &&
+        nowMs - max(s.nonPositiveRunStartMs, s.lastCommitMs) >= SESSION_END_NON_POSITIVE_MS
+    return if (expired || sustainedFall) s.copy(committedInSession = false) else s
+}
 
 /**
  * 2026-10-05: how far back a manual or wizard bolus marks the next confirm as an announced meal.
@@ -279,10 +388,15 @@ fun confirmEligibleExceptDoseGate(
     // 2026-07-17: when true, the sustained-score early path opens ONE cycle earlier again (age −2
     // instead of −1). Opt-in + auto-config managed — see CONFIRM_MIN_OBSERVING_AGE_SCORE_READY_AGGRESSIVE.
     aggressiveEarlyConfirm: Boolean = false,
+    // 2026-10-08: wall clock for the peak expiry (CONFIRM_PEAK_WINDOW_MS). 0 = plain running max.
+    nowMs: Long = 0L,
 ): Boolean {
     if (current.state != MealHypothesis.OBSERVING || current.committedInSession) return false
-    val newMaxScore = max(current.maxScoreInObserving, score)
-    val newMaxOffset = max(current.maxEventualBgOffsetInObserving, eventualBg - targetBg)
+    // 2026-10-08 (audit item 17): a score that has fallen to the fall-back level ends the run before
+    // any peak can confirm it, matching the order step() applies.
+    if (observingFallsBack(current, score)) return false
+    val newMaxScore = windowedPeak(current.maxScoreInObserving, current.maxScoreAtMs, score, nowMs).first
+    val newMaxOffset = windowedPeak(current.maxEventualBgOffsetInObserving, current.maxOffsetAtMs, eventualBg - targetBg, nowMs).first
     val age = current.ageCycles
     // 2026-07-03: age gate opens one cycle early when the score has been ≥ CONFIRM_SCORE on BOTH
     // this cycle and the previous one (see CONFIRM_MIN_OBSERVING_AGE_SCORE_READY). The early path
@@ -295,6 +409,10 @@ fun confirmEligibleExceptDoseGate(
         (age >= scoreReadyFloor && score >= CONFIRM_SCORE && scoreReadyStreak)
     return ageEligible && newMaxScore >= CONFIRM_SCORE && newMaxOffset >= CONFIRM_EVENTUAL_BG_OFFSET_MGDL
 }
+
+/** OBSERVING falls back to IDLE: total age past the hysteresis and the CURRENT score below the bar. */
+internal fun observingFallsBack(current: MealHypothesisState, score: Double): Boolean =
+    score < FALL_BACK_TO_IDLE_SCORE && current.ageCycles >= FALL_BACK_TO_IDLE_AGE
 
 /**
  * Single-step transition. Pure function; no side effects. Caller threads state across cycles.
@@ -352,24 +470,30 @@ fun step(
      */
     mealAnnounced: Boolean = false,
 ): MealHypothesisState {
+    // 2026-10-08 (audit item 7): apply the session-lock release rules before anything reads the lock.
+    // With no clock (nowMs <= 0) this is a no-op and the pre-2026-10-08 lock handling below applies.
+    val cur = releaseEndedSessionLock(current, nowMs, delta)
+    val timed = nowMs > 0L
     // 2026-07-30 wall-clock age tick. Ages are cycle counts tuned on a ~5-min loop; gate them on
     // elapsed time so a 1-min loop does not advance them 5x too fast. nowMs<=0 (tests, legacy
     // callers) or a never-stamped state ticks immediately, preserving existing behaviour exactly.
-    val ageTick = nowMs <= 0L || current.lastAgeMs <= 0L || (nowMs - current.lastAgeMs) >= AGE_TICK_MS
+    val ageTick = nowMs <= 0L || cur.lastAgeMs <= 0L || (nowMs - cur.lastAgeMs) >= AGE_TICK_MS
     val bumped = if (ageTick) 1 else 0
-    val tickMs = if (ageTick && nowMs > 0L) nowMs else current.lastAgeMs
+    val tickMs = if (ageTick && nowMs > 0L) nowMs else cur.lastAgeMs
     // A state CHANGE always re-stamps the anchor: the new state's clock starts now.
-    val enterMs = if (nowMs > 0L) nowMs else current.lastAgeMs
-    val state = current.state
-    val age = current.ageCycles
-    val maxScore = current.maxScoreInObserving
-    val maxOffset = current.maxEventualBgOffsetInObserving
-    val committedInSession = current.committedInSession
+    val enterMs = if (nowMs > 0L) nowMs else cur.lastAgeMs
+    val state = cur.state
+    val age = cur.ageCycles
+    val committedInSession = cur.committedInSession
+    // The lock carried out of RECOVERING and into a new OBSERVING run. With a clock it is whatever
+    // the release rules left; without one it is cleared there, as it was before 2026-10-08.
+    val carriedLock = timed && committedInSession
     val currentOffset = eventualBg - targetBg
 
     // 2026-06-16 fast-carb fast-path (corroborated; replay-validated). Single-cycle promotion to
     // CONFIRMED on a sharp, accelerating, score-corroborated rise while awake and not exercising.
-    val fastConfirm = fastConfirmEnabled && !asleep && !exerciseActive &&
+    // 2026-10-08: never while the session lock is held, from any state.
+    val fastConfirm = fastConfirmEnabled && !asleep && !exerciseActive && !committedInSession &&
         delta >= FAST_CONFIRM_DELTA && deltaAccl >= FAST_CONFIRM_ACCL && score >= FAST_CONFIRM_SCORE
     // The state a confirm transition enters: CONFIRMED, or COMMITTED for an announced meal. Either way
     // the session lock is set, so an announced meal cannot CONFIRM later in the same session.
@@ -377,47 +501,50 @@ fun step(
         if (mealAnnounced) MealHypothesis.COMMITTED else MealHypothesis.CONFIRMED, 0, 0.0, 0.0, true, lastAgeMs = enterMs
     )
 
-    return when (state) {
+    val next = when (state) {
         MealHypothesis.IDLE ->
             if (fastConfirm)
                 // Fast carb caught from IDLE — go straight to CONFIRMED (committedInSession=true).
                 commitEntry
             else if (score >= ENTER_OBSERVING_SCORE)
-                // Fresh session: seed both peaks with entry-cycle values; committedInSession=false
-                // explicitly (new meal session begins here — Fix 6).
-                MealHypothesisState(MealHypothesis.OBSERVING, 0, score, currentOffset, false, lastAgeMs = enterMs)
-            else MealHypothesisState(state, age + bumped, 0.0, 0.0, false, lastAgeMs = tickMs)
+                // New OBSERVING run: seed both peaks with entry-cycle values. The session lock is
+                // carried (2026-10-08): a rise inside SESSION_LOCK_MIN_MS of the last commit is the
+                // same meal and may re-engage COMMITTED but not CONFIRM again.
+                MealHypothesisState(MealHypothesis.OBSERVING, 0, score, currentOffset, carriedLock, lastAgeMs = enterMs,
+                    maxScoreAtMs = if (timed) nowMs else 0L, maxOffsetAtMs = if (timed) nowMs else 0L)
+            else MealHypothesisState(state, age + bumped, 0.0, 0.0, committedInSession, lastAgeMs = tickMs)
 
         MealHypothesis.OBSERVING -> {
-            // 2026-05-15 Fix 1: track running max-score in this OBSERVING run, use it for the
-            // CONFIRMED eligibility check (not the instantaneous score). Score is volatile;
-            // peaks 1–2 cycles before the age gate opens. Tracking the max lets a brief
-            // high-score cycle drive the transition once age conditions are met.
+            // 2026-05-15 Fix 1 and 2026-05-22 Fix 5: track the peak score and the peak
+            // (eventualBg - targetBg) in this OBSERVING run and use them for the CONFIRMED
+            // eligibility check, because both lead the age gate by a cycle or two. 2026-10-08 (audit
+            // item 17): the peaks expire after CONFIRM_PEAK_WINDOW_MS, and the fall-back test runs
+            // before the confirm test, so a peak cannot confirm a rise the current score has left.
             //
-            // 2026-05-22 Fix 5: same treatment for (eventualBg - targetBg). The eventualBG
-            // forecast also moves cycle-to-cycle and can be high during the meal-rise window
-            // but retreat by the time score + age conditions align. Peak-track it too.
-            //
-            // 2026-05-26 Fix 6: single-CONFIRMED-per-session guard. If this OBSERVING run is a
-            // re-entry within the same meal session (committedInSession=true — meaning V5 already
-            // CONFIRMED in this meal but state appeared to reset mid-stream), block re-CONFIRMING.
-            // The 5/25 evening meal showed V5 CONFIRMED 4 times in 20 min producing 8U total
-            // shadow dose; this guard caps it to a single commit-shot per meal session.
-            val newMaxScore = max(maxScore, score)
-            val newMaxOffset = max(maxOffset, currentOffset)
+            // 2026-05-26 Fix 6: single-CONFIRMED-per-session guard. If this OBSERVING run is inside a
+            // session that already committed (committedInSession=true), it may not CONFIRM again.
+            val (newMaxScore, newMaxScoreMs) = windowedPeak(cur.maxScoreInObserving, cur.maxScoreAtMs, score, nowMs)
+            val (newMaxOffset, newMaxOffsetMs) =
+                windowedPeak(cur.maxEventualBgOffsetInObserving, cur.maxOffsetAtMs, currentOffset, nowMs)
             // Eligibility sub-conditions (age gate incl. the 2026-07-03 sustained-score early path,
             // peak score, peak offset, session lock) live in confirmEligibleExceptDoseGate — shared
             // with decide()'s boostV5_confirmGate telemetry so the two can never diverge (2026-07-03).
-            val confirmEligible = confirmEligibleExceptDoseGate(current, score, eventualBg, targetBg, scoreReadyStreak, aggressiveEarlyConfirm) &&
+            val confirmEligible = confirmEligibleExceptDoseGate(cur, score, eventualBg, targetBg, scoreReadyStreak, aggressiveEarlyConfirm, nowMs) &&
                 confirmDoseAdequate   // 2026-07-02: don't spend the token on a shot < one COMMITTED hold
+            // 2026-10-08: inside a locked session the same slow-path test (age, peaks, dose adequacy)
+            // re-engages COMMITTED, Fix 7's 1.0x hold. The fast path has no route here.
+            val reEngage = committedInSession && confirmDoseAdequate &&
+                confirmEligibleExceptDoseGate(cur.copy(committedInSession = false), score, eventualBg, targetBg, scoreReadyStreak, aggressiveEarlyConfirm, nowMs)
             when {
+                observingFallsBack(cur, score) ->
+                    MealHypothesisState(MealHypothesis.IDLE, 0, 0.0, 0.0, carriedLock, lastAgeMs = enterMs)
                 // Fast-carb fast-path: confirm in a single OBSERVING cycle, bypassing the age +
                 // eventualBg-offset gates, but still honouring the Fix-6 single-confirm guard.
-                fastConfirm && !committedInSession -> commitEntry
+                fastConfirm -> commitEntry
                 confirmEligible -> commitEntry
-                score < FALL_BACK_TO_IDLE_SCORE && age >= FALL_BACK_TO_IDLE_AGE ->
-                    MealHypothesisState(MealHypothesis.IDLE, 0, 0.0, 0.0, false, lastAgeMs = enterMs)
-                else -> MealHypothesisState(state, age + bumped, newMaxScore, newMaxOffset, committedInSession, lastAgeMs = tickMs)
+                reEngage -> MealHypothesisState(MealHypothesis.COMMITTED, 0, 0.0, 0.0, true, lastAgeMs = enterMs)
+                else -> MealHypothesisState(state, age + bumped, newMaxScore, newMaxOffset, committedInSession, lastAgeMs = tickMs,
+                    maxScoreAtMs = newMaxScoreMs, maxOffsetAtMs = newMaxOffsetMs)
             }
         }
 
@@ -448,14 +575,22 @@ fun step(
             when {
                 reEngage -> MealHypothesisState(MealHypothesis.COMMITTED, 0, 0.0, 0.0, true, lastAgeMs = enterMs)
                 // EITHER condition exits to IDLE (more permissive than entry — easier to leave RECOVERING).
-                // On exit to IDLE the session is complete — reset committedInSession=false so the next
-                // meal can CONFIRM normally.
+                // 2026-10-08 (audit item 7): leaving RECOVERING no longer ends the session. A single
+                // negative delta is also what the trough between two phases of one meal looks like,
+                // so the lock is carried into IDLE and released by releaseEndedSessionLock.
                 delta < 0 || score < RECOVERING_TO_IDLE_SCORE ->
-                    MealHypothesisState(MealHypothesis.IDLE, 0, 0.0, 0.0, false, lastAgeMs = enterMs)
+                    MealHypothesisState(MealHypothesis.IDLE, 0, 0.0, 0.0, carriedLock, lastAgeMs = enterMs)
                 else -> MealHypothesisState(state, age + bumped, 0.0, 0.0, true, lastAgeMs = tickMs)
             }
         }
     }
+    if (!timed) return next.copy(lastCommitMs = cur.lastCommitMs, nonPositiveRunStartMs = cur.nonPositiveRunStartMs)
+    // Session clock and the non-positive-delta run, maintained every cycle whatever the state.
+    val inCommit = next.state == MealHypothesis.CONFIRMED || next.state == MealHypothesis.COMMITTED
+    return next.copy(
+        lastCommitMs = if (inCommit) nowMs else cur.lastCommitMs,
+        nonPositiveRunStartMs = if (delta > 0.0) 0L else if (cur.nonPositiveRunStartMs > 0L) cur.nonPositiveRunStartMs else nowMs,
+    )
 }
 
 /**
@@ -481,7 +616,14 @@ fun resetIfNeeded(
     if (profileSwitched || pumpDisconnected || loopSuspended || timeJumpMinutes > TIME_JUMP_RESET_MINUTES) {
         // Hard reset: zero the wall-clock anchor as well, so the next step() ticks immediately
         // (a reset is a fresh start, not a continuation of the old meal's clock).
-        return Pair(MealHypothesisState(MealHypothesis.IDLE, 0, 0.0, 0.0, false, lastAgeMs = 0L), true)
+        // 2026-10-08: the session lock and its commit time survive the reset. A reset discards the
+        // evidence a state carried, but the commit shot it records has still been delivered, so a
+        // restart or gap 40 minutes after a confirm must not open the way to a second one.
+        return Pair(
+            MealHypothesisState(MealHypothesis.IDLE, 0, 0.0, 0.0, current.committedInSession, lastAgeMs = 0L,
+                lastCommitMs = current.lastCommitMs),
+            true,
+        )
     }
     return Pair(current, false)
 }

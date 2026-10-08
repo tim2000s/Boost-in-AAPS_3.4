@@ -56,11 +56,27 @@ class MealHypothesisFix7Test {
 
     // ─── No-regression: existing RECOVERING exits unchanged ───
 
-    @Test fun `declining BG still exits RECOVERING to IDLE and clears session`() {
+    // This test used to pin that the RECOVERING to IDLE exit also cleared the session lock. That was
+    // the defect in dose-path audit item 7 (2026-10-08): the exit fires on one negative delta, the
+    // trough between two phases of a meal, and clearing the lock there let the fast path CONFIRM a
+    // second time. With a clock the lock now outlives the exit (see MealSessionLockTest); only a
+    // caller with no clock keeps the old clearing.
+    @Test fun `declining BG still exits RECOVERING to IDLE and keeps the session lock`() {
         val next = step(
             current = recovering(age = 2),
             score = 0.5, eventualBg = 170.0, targetBg = 99.0,
             delta = -2.0, deltaAccl = 15.0, deltaDeclining = false,  // delta<0 wins
+            nowMs = 1_800_000_000_000L,
+        )
+        assertThat(next.state).isEqualTo(MealHypothesis.IDLE)
+        assertThat(next.committedInSession).isTrue()
+    }
+
+    @Test fun `with no clock the exit clears the lock as before`() {
+        val next = step(
+            current = recovering(age = 2),
+            score = 0.5, eventualBg = 170.0, targetBg = 99.0,
+            delta = -2.0, deltaAccl = 15.0, deltaDeclining = false,
         )
         assertThat(next.state).isEqualTo(MealHypothesis.IDLE)
         assertThat(next.committedInSession).isFalse()

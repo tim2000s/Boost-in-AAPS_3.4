@@ -160,7 +160,16 @@ data class V5PersistedState(
      * class is constructed positionally in several places and inserting mid-list silently
      * rebinds arguments, which has bitten twice before. (2026-08-01)
      */
-    val mlNullStreakLastMs: Long = 0L
+    val mlNullStreakLastMs: Long = 0L,
+    /**
+     * 2026-10-08 (V6 review: "two consecutive cycles" counted per invocation): epoch-ms at which the
+     * current unbroken run of confirm-strength scores (>= [CONFIRM_SCORE]) began, 0 when the last
+     * score was below it. The sustained-score early confirm needs the run to have lasted
+     * [AGE_TICK_MS], so a one-minute loop or a re-invoke seconds later cannot satisfy it. In-memory
+     * only, like [lastCycleScore]; a restart loses it and the early path waits one more tick. LAST in
+     * the list for the positional-construction reason above.
+     */
+    val scoreReadySinceMs: Long = 0L,
 )
 
 /** Full per-cycle V5 output. Every field is reconstructable into the ~6 NS RT fields. */
@@ -277,14 +286,20 @@ internal const val PRIMER_IOB_TAU_MIN = 90.0
 class DetermineBasalBoostV5 @Inject constructor() {
     /** Run one full V5 cycle. Pure function over inputs + prior state. */
     fun decide(inputs: V5Inputs, persisted: V5PersistedState): V5Decision {
-        // Reset state machine if any reset condition fired (reboot equivalents)
+        // Reset state machine if any reset condition fired (reboot equivalents). 2026-10-08 (audit
+        // item 17): a state whose wall-clock anchor is more than TIME_JUMP_RESET_MINUTES from now,
+        // whether restored from storage after a restart or held in memory across a loop gap, is
+        // treated as a time jump and reset to IDLE. The session lock survives the reset.
         val (resetState, didReset) = resetIfNeeded(
             current = persisted.mealHypothesis,
             profileSwitched = inputs.profileSwitched,
             pumpDisconnected = inputs.pumpDisconnected,
             loopSuspended = inputs.loopSuspended,
-            timeJumpMinutes = inputs.timeJumpMinutes,
+            timeJumpMinutes = kotlin.math.max(inputs.timeJumpMinutes, staleStateMinutes(persisted.mealHypothesis, inputs.nowMs)),
         )
+        // The session lock after its release rules, as step() will see it (step applies the same
+        // idempotent function), for the confirm-gate telemetry and the session-start test.
+        val lockState = releaseEndedSessionLock(resetState, inputs.nowMs, inputs.delta)
 
         // Phase 1.a — meal_signal_score
         val nextNullStreak =
@@ -345,7 +360,10 @@ class DetermineBasalBoostV5 @Inject constructor() {
         // 2026-07-03 sustained-score early confirm input: was LAST cycle's score already
         // confirm-ready? Sourced from the in-memory persisted state (null on cold start → false →
         // legacy timing). Used by step() AND the confirmGate telemetry below.
-        val scoreReadyStreak = (persisted.lastCycleScore ?: 0.0) >= CONFIRM_SCORE
+        // 2026-10-08: with a clock, "the previous cycle" means a confirm-strength run that began at
+        // least AGE_TICK_MS ago, not the previous invocation (see scoreReadySinceMs).
+        val scoreReadyStreak = confirmScoreReadyStreak(persisted, inputs.nowMs, didReset)
+        val scoreReadySinceMs = nextScoreReadySinceMs(persisted, inputs.nowMs, didReset, scoreResult.score)
 
         // 2026-07-03 gate telemetry (boostV5_confirmGate) — read-only, ZERO dosing-path effect.
         // Labels this cycle's OBSERVING→CONFIRMED adequacy-gate outcome so a gate block is
@@ -356,7 +374,7 @@ class DetermineBasalBoostV5 @Inject constructor() {
         // Uses the SAME predicate step() doses with (confirmEligibleExceptDoseGate), so the two
         // can never diverge.
         val confirmGate = when {
-            !confirmEligibleExceptDoseGate(resetState, scoreResult.score, inputs.eventualBg, inputs.targetBg, scoreReadyStreak, inputs.aggressiveEarlyConfirmEnabled) -> "n/a"
+            !confirmEligibleExceptDoseGate(lockState, scoreResult.score, inputs.eventualBg, inputs.targetBg, scoreReadyStreak, inputs.aggressiveEarlyConfirmEnabled, inputs.nowMs) -> "n/a"
             confirmDoseAdequate                                                                                                -> "pass"
             else                                                                                                               -> "blocked"
         }
@@ -381,12 +399,11 @@ class DetermineBasalBoostV5 @Inject constructor() {
             aggressiveEarlyConfirm = inputs.aggressiveEarlyConfirmEnabled,   // 2026-07-17 opt-in age −2
             mealAnnounced = inputs.mealAnnounced,
         )
-        val mealSessionStarted = sessionCommittedThisCycle(resetState, newHypothesisState)
+        val mealSessionStarted = sessionCommittedThisCycle(lockState, newHypothesisState)
 
         // ===== 2026-07-20 V1-acceleration early primer (LIVE) — see PRIMER_* + REINTEGRATION_SPEC =====
-        // Compute the primer amount here (state known); APPLY it after finalDose is finalised below.
-        // Once per OBSERVING session, on an accelerating rise (V1's delta_accl>10 gate), with EVERY
-        // floor clear (recentLow≥80, awake, not-exercising, not post-rescue) and maxIOB headroom.
+        // The session accumulators are carried here; the primer itself is sized after Phase 3 (see
+        // primerSizing), where the hard gates are known.
         // primerAppliedU (once-per-session guard) resets on IDLE; the primer-IOB accumulator does NOT.
         val primerActiveState = newHypothesisState.state
         var primerAppliedU = if (primerActiveState == MealHypothesis.IDLE) 0.0 else persisted.primerAppliedU
@@ -397,42 +414,6 @@ class DetermineBasalBoostV5 @Inject constructor() {
         if (inputs.nowMs > 0L && persisted.primerIobUpdatedMs > 0L && inputs.nowMs > persisted.primerIobUpdatedMs) {
             val dtMin = (inputs.nowMs - persisted.primerIobUpdatedMs) / 60000.0
             primerIobU *= kotlin.math.exp(-dtMin / PRIMER_IOB_TAU_MIN)
-        }
-        var primerBolusU = 0.0
-        var primerScaleDebug = ""
-        if (inputs.primerCapU > 0.0 && primerActiveState == MealHypothesis.OBSERVING && primerAppliedU <= 0.0 &&
-            inputs.delta >= PRIMER_DELTA_MIN && inputs.deltaAccl > PRIMER_ACCEL_THRESHOLD &&
-            inputs.recentLowBg >= PRIMER_MIN_RECENT_LOW_MGDL && !inputs.asleep &&
-            !inputs.exerciseActive && !inputs.postRescueWindow &&
-            // 2026-10-05: no primer on an announced meal. It reclaims early insulin for a meal nobody
-            // dosed for, and after a pre-bolus that insulin has already been given.
-            !inputs.mealAnnounced
-        ) {
-            // State-aware sizing. primerCapU is a TRUE CEILING; three factors in [0,1] scale it down.
-            // fRise DISCRIMINATES (magnitude of the actual rise); fBg and fIob are SUPPRESSORS — they
-            // cannot tell a real onset from jitter (at onset both look flat and benign) and exist only
-            // to bound the cost of being wrong. deltaAccl deliberately does NOT scale: it peaks on flat
-            // traces, so any monotonic function of it re-imports the inversion this fix removes.
-            val fRise = ((inputs.delta - PRIMER_DELTA_RAMP_LO) / (PRIMER_DELTA_FULL - PRIMER_DELTA_RAMP_LO))
-                .coerceIn(0.0, 1.0)
-            val fBg = ((inputs.bg - PRIMER_BG_LO) / PRIMER_BG_LO_SPAN).coerceIn(0.0, 1.0) *
-                ((PRIMER_BG_CEIL - inputs.bg) / PRIMER_BG_FADE).coerceIn(0.0, 1.0)
-            val fIob = if (inputs.maxIob > 0.0) (1.0 - inputs.iob / inputs.maxIob).coerceIn(0.0, 1.0) else 0.0
-            val target = inputs.primerCapU * fRise * fBg * fIob
-            var amt = minOf(target, kotlin.math.max(0.0, inputs.maxIob - inputs.iob))
-            if (inputs.roundSmbTo > 0.0) amt = kotlin.math.floor(amt / inputs.roundSmbTo + 1e-9) * inputs.roundSmbTo
-            // Re-clamp after rounding: floor(x/step)*step can land a hair ABOVE the target in binary
-            // floating point (0.3/0.05 -> 6.0000000002 -> 0.30000000000000004), which would break the
-            // "primerCapU is a hard ceiling" invariant. Rounding must only ever go down.
-            amt = minOf(amt, target)
-            // Telemetry for the shadow: which factor bound the dose. Emitted even when amt rounds to 0.
-            primerScaleDebug = "d=${rnd(inputs.delta, 1)},fR=${rnd(fRise, 2)},fB=${rnd(fBg, 2)}," +
-                "fI=${rnd(fIob, 2)},tgt=${rnd(target, 3)}"
-            if (amt > 0.0) {
-                primerBolusU = amt
-                primerAppliedU = amt
-                primerIobU += amt
-            }
         }
         val primerIobUpdatedMs = if (inputs.nowMs > 0L) inputs.nowMs else persisted.primerIobUpdatedMs
         // Netting residual: reset on IDLE; SET at the CONFIRMED transition to the accumulated primer IOB
@@ -576,12 +557,23 @@ class DetermineBasalBoostV5 @Inject constructor() {
             velocityBudgetWouldAdd = vbTarget?.let { finalDose - phase3.finalDose }
         }
 
-        // ===== Primer application (2026-07-20) — see the computation block above =====
+        // ===== Primer sizing and application (2026-07-20; moved after Phase 3 on 2026-10-08) =====
+        // Sized here rather than before Phase 2 so that it can see the Phase-3 hard gates, which it
+        // must respect exactly as both floors do (audit item 10). See primerSizing for the rules.
+        val primer = primerSizing(inputs, primerActiveState, primerAppliedU, budget.mlHypoRiskScale, phase3.reductions.hardGateFired)
+        val primerBolusU = primer.bolusU
+        if (primerBolusU > 0.0) {
+            primerAppliedU = primerBolusU
+            primerIobU += primerBolusU
+        }
         // Bolus mode: fold the primer into finalDose (the seam exempts a primer-bolus cycle from the
         // non-meal v1-cap). Temp-basal mode: leave finalDose; the seam delivers the primer as a
         // retractable temp basal. Either way the total this cycle stays within maxIOB headroom.
+        // 2026-10-08: the seam's exemption covers the whole finalDose, so the non-primer part is
+        // bounded at V1's would-dose here, leaving only the primer itself free of the V1 bound.
         if (primerBolusU > 0.0 && !inputs.primerUseTempBasal) {
-            finalDose = minOf(finalDose + primerBolusU, kotlin.math.max(0.0, inputs.maxIob - inputs.iob))
+            val nonPrimer = primerNonMealBound(finalDose, newHypothesisState.state, velocityBudgetExempt, inputs.v1WouldDoseU)
+            finalDose = minOf(nonPrimer + primerBolusU, kotlin.math.max(0.0, inputs.maxIob - inputs.iob))
         }
         // Net the accumulated primer IOB (beyond one base) off the commit-shot (CONFIRMED) then COMMITTED
         // holds until exhausted — "move, don't add", now spanning prior fizzle sessions (Tim's rule).
@@ -613,6 +605,7 @@ class DetermineBasalBoostV5 @Inject constructor() {
                 primerNettingResidualU = primerNettingResidualU,
                 primerIobU = primerIobU,
                 primerIobUpdatedMs = primerIobUpdatedMs,
+                scoreReadySinceMs = scoreReadySinceMs,
             ),
             confirmGate = confirmGate,
             prospectiveConfirmShot = prospectiveConfirmShot,
@@ -621,7 +614,7 @@ class DetermineBasalBoostV5 @Inject constructor() {
             velocityBudgetExempt = velocityBudgetExempt,
             primerBolusU = primerBolusU,
             primerUseTempBasal = inputs.primerUseTempBasal,
-            primerScaleDebug = primerScaleDebug,
+            primerScaleDebug = primer.debug,
             mealSessionStarted = mealSessionStarted,
         )
     }
@@ -635,8 +628,101 @@ class DetermineBasalBoostV5 @Inject constructor() {
  */
 internal fun sessionCommittedThisCycle(prior: MealHypothesisState, next: MealHypothesisState): Boolean =
     next.state == MealHypothesis.CONFIRMED && prior.state != MealHypothesis.CONFIRMED ||
-        next.state == MealHypothesis.COMMITTED &&
+        next.state == MealHypothesis.COMMITTED && !prior.committedInSession &&
         (prior.state == MealHypothesis.IDLE || prior.state == MealHypothesis.OBSERVING)
+
+/**
+ * 2026-10-08 sustained-score early-confirm input (V6 review: the streak was counted per invocation, so
+ * a one-minute loop, or a re-invoke seconds after the last one, satisfied "two consecutive cycles"
+ * almost at once). With a clock the streak needs a confirm-strength run that began at least
+ * [AGE_TICK_MS] ago: on a five-minute loop that is the previous cycle, as before, and on a one-minute
+ * loop it is four minutes of readings. Four minutes is the tick the meal-state ages already use,
+ * chosen there to clear the five-minute users' observed spacing. A reset this cycle (stale state,
+ * pump or loop suspension) breaks the run. With no clock the previous invocation's score decides, as
+ * before.
+ */
+internal fun confirmScoreReadyStreak(persisted: V5PersistedState, nowMs: Long, didReset: Boolean): Boolean =
+    if (nowMs <= 0L) (persisted.lastCycleScore ?: 0.0) >= CONFIRM_SCORE
+    else !didReset && persisted.scoreReadySinceMs > 0L && nowMs - persisted.scoreReadySinceMs >= AGE_TICK_MS
+
+/** The run start carried to the next cycle: kept while the score stays confirm-strength, 0 otherwise. */
+internal fun nextScoreReadySinceMs(persisted: V5PersistedState, nowMs: Long, didReset: Boolean, score: Double): Long = when {
+    nowMs <= 0L || score < CONFIRM_SCORE          -> 0L
+    !didReset && persisted.scoreReadySinceMs > 0L -> persisted.scoreReadySinceMs
+    else                                          -> nowMs
+}
+
+/** Primer amount for this cycle and its sizing telemetry (empty when the gate did not open). */
+internal data class PrimerSizing(val bolusU: Double, val debug: String)
+
+/**
+ * The V1-acceleration early primer (2026-07-20; sizing reworked 2026-07-30). Once per OBSERVING
+ * session, on an accelerating rise, with every floor clear (recent low >= 80, awake, not exercising,
+ * not post-rescue, not an announced meal) and maxIOB headroom.
+ *
+ * 2026-10-08 (dose-path audit item 10), two further conditions:
+ *  - no primer when a Phase-3 hard gate fired ([hardGateFired] non-null: SMB pre-checks, minGuardBG
+ *    below the threshold, maxDelta). Both floors return 0 on those cycles and the pipeline dose is
+ *    already 0; the primer was the one route past them. Temp-basal routing is blocked as well, since a
+ *    gate that says no insulin should be added applies to a raised temp as much as to a bolus.
+ *  - the ceiling is scaled by [mlScale], the same mlHypoRisk damper the aggression budget applies
+ *    ([mlHypoRiskScale], with the user's Hypo Caution knob). Scaling rather than blocking keeps the
+ *    primer proportional to the meal response the budget would give at the same risk; the damper
+ *    floors at 0.50 (0.25 at maximum Hypo Caution), so at high risk the primer is halved or quartered
+ *    before pump rounding.
+ */
+internal fun primerSizing(
+    inputs: V5Inputs,
+    state: MealHypothesis,
+    alreadyPrimedU: Double,
+    mlScale: Double,
+    hardGateFired: String?,
+): PrimerSizing {
+    val open = inputs.primerCapU > 0.0 && state == MealHypothesis.OBSERVING && alreadyPrimedU <= 0.0 &&
+        inputs.delta >= PRIMER_DELTA_MIN && inputs.deltaAccl > PRIMER_ACCEL_THRESHOLD &&
+        inputs.recentLowBg >= PRIMER_MIN_RECENT_LOW_MGDL && !inputs.asleep &&
+        !inputs.exerciseActive && !inputs.postRescueWindow &&
+        // 2026-10-05: no primer on an announced meal. It reclaims early insulin for a meal nobody
+        // dosed for, and after a pre-bolus that insulin has already been given.
+        !inputs.mealAnnounced &&
+        hardGateFired == null
+    if (!open) return PrimerSizing(0.0, "")
+    // State-aware sizing. primerCapU is a TRUE CEILING; the factors in [0,1] scale it down.
+    // fRise DISCRIMINATES (magnitude of the actual rise); fBg and fIob are SUPPRESSORS — they
+    // cannot tell a real onset from jitter (at onset both look flat and benign) and exist only
+    // to bound the cost of being wrong. deltaAccl deliberately does NOT scale: it peaks on flat
+    // traces, so any monotonic function of it re-imports the inversion the 2026-07-30 rework removed.
+    val fRise = ((inputs.delta - PRIMER_DELTA_RAMP_LO) / (PRIMER_DELTA_FULL - PRIMER_DELTA_RAMP_LO))
+        .coerceIn(0.0, 1.0)
+    val fBg = ((inputs.bg - PRIMER_BG_LO) / PRIMER_BG_LO_SPAN).coerceIn(0.0, 1.0) *
+        ((PRIMER_BG_CEIL - inputs.bg) / PRIMER_BG_FADE).coerceIn(0.0, 1.0)
+    val fIob = if (inputs.maxIob > 0.0) (1.0 - inputs.iob / inputs.maxIob).coerceIn(0.0, 1.0) else 0.0
+    val fMl = mlScale.coerceIn(0.0, 1.0)
+    val target = inputs.primerCapU * fRise * fBg * fIob * fMl
+    var amt = minOf(target, kotlin.math.max(0.0, inputs.maxIob - inputs.iob))
+    if (inputs.roundSmbTo > 0.0) amt = kotlin.math.floor(amt / inputs.roundSmbTo + 1e-9) * inputs.roundSmbTo
+    // Re-clamp after rounding: floor(x/step)*step can land a hair ABOVE the target in binary
+    // floating point (0.3/0.05 -> 6.0000000002 -> 0.30000000000000004), which would break the
+    // "primerCapU is a hard ceiling" invariant. Rounding must only ever go down.
+    amt = minOf(amt, target)
+    // Telemetry for the shadow: which factor bound the dose. Emitted even when amt rounds to 0.
+    // fM is appended after tgt so that parsers keyed on the earlier fields are unaffected.
+    val debug = "d=${rnd(inputs.delta, 1)},fR=${rnd(fRise, 2)},fB=${rnd(fBg, 2)}," +
+        "fI=${rnd(fIob, 2)},tgt=${rnd(target, 3)},fM=${rnd(fMl, 2)}"
+    return PrimerSizing(if (amt > 0.0) amt else 0.0, debug)
+}
+
+/**
+ * 2026-10-08 (dose-path audit item 10): the non-primer part of a bolus-mode primer cycle, bounded at
+ * V1's would-dose. The override seam treats any cycle with a bolus primer as a meal state and lets the
+ * whole finalDose past its non-meal V1 bound; the primer is meant to out-dose V1, but the OBSERVING
+ * dose it was folded into is not. Bounding that part here leaves the seam's exemption covering the
+ * primer alone. Meal states and a velocity-budget lift keep their own exemption and are left alone,
+ * as is a cycle with no V1 dose to bound against.
+ */
+internal fun primerNonMealBound(dose: Double, state: MealHypothesis, velocityBudgetExempt: Boolean, v1WouldDoseU: Double?): Double =
+    if (state == MealHypothesis.CONFIRMED || state == MealHypothesis.COMMITTED || velocityBudgetExempt || v1WouldDoseU == null) dose
+    else minOf(dose, kotlin.math.max(0.0, v1WouldDoseU))
 
 // ===== Fix 6 dose calibration (2026-05-26) =====
 
