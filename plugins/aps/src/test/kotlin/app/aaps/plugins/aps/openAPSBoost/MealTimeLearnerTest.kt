@@ -130,4 +130,37 @@ class MealTimeLearnerTest {
         h = MealTimeLearner.record(h, now)
         assertThat(h.events).containsExactly(recent, now).inOrder()   // old pruned, new kept
     }
+
+    // ─── night filter (2026-10-08, audit #8) ─────────────────────────────────────
+
+    @Test fun `night window wrapping midnight - both sides are inside, the end is not`() {
+        // 22:00 to 07:00
+        assertThat(MealTimeLearner.inNightMinutes(23 * 60 + 30, 1320, 420)).isTrue()
+        assertThat(MealTimeLearner.inNightMinutes(3 * 60, 1320, 420)).isTrue()
+        assertThat(MealTimeLearner.inNightMinutes(0, 1320, 420)).isTrue()
+        assertThat(MealTimeLearner.inNightMinutes(420, 1320, 420)).isFalse()
+        assertThat(MealTimeLearner.inNightMinutes(12 * 60, 1320, 420)).isFalse()
+    }
+
+    @Test fun `night window inside one day and equal times`() {
+        // 01:00 to 06:00, no wrap
+        assertThat(MealTimeLearner.inNightMinutes(3 * 60, 60, 360)).isTrue()
+        assertThat(MealTimeLearner.inNightMinutes(23 * 60, 60, 360)).isFalse()
+        // equal times are an empty window, as NightWindow.contains has it
+        assertThat(MealTimeLearner.inNightMinutes(3 * 60, 360, 360)).isFalse()
+    }
+
+    @Test fun `learned overnight sessions are dropped and daytime sessions kept`() {
+        // Six 04:30 sessions on six days form a trusted mode; filtered, they cannot.
+        val night = (1L..6L).map { ev(it, 4 * 60 + 30) }
+        val day = (1L..6L).map { ev(it, 8 * 60) }
+        val h = MealTimeLearner.History((night + day).toMutableList())
+        assertThat(MealTimeLearner.preMealWindow(h, 3 * 60 + 40, offset, 60)).isNotNull()
+        val f = MealTimeLearner.withoutNightEvents(h, nightStartMin = 22 * 60, nightEndMin = 7 * 60, localOffsetMs = offset)
+        assertThat(f.events).containsExactlyElementsIn(day)
+        // the lowered target can no longer open at 03:40 for the 04:30 mode
+        assertThat(MealTimeLearner.preMealWindow(f, 3 * 60 + 40, offset, 60)).isNull()
+        // the breakfast mode survives
+        assertThat(MealTimeLearner.preMealWindow(f, 7 * 60 + 5, offset, 60)).isNotNull()
+    }
 }

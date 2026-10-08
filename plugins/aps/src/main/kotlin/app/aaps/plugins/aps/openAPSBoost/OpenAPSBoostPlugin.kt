@@ -376,6 +376,134 @@ open class OpenAPSBoostPlugin @Inject constructor(
          */
         internal fun boostGateOpen(nightSleepPeriod: Boolean, inNightWindow: Boolean, v6Active: Boolean, detectorSleeping: Boolean): Boolean =
             !nightSleepPeriod && !inNightWindow && !(v6Active && detectorSleeping)
+
+        /** The sleep signals [calculateBoostActivity] uses, after the boundary-exit hold. */
+        internal data class SleepSignals(
+            val detectorSleeping: Boolean,
+            val detectorAsleep: Boolean,
+            val nightSleepPeriod: Boolean,
+            val boundaryHold: Boolean
+        )
+
+        /** Minutes the sleep exclusions are held after a boundary exit: the detector's sleep hysteresis
+         *  plus one five-minute cycle, the shortest time in which it can re-enter SLEEPING. */
+        internal fun boundaryExitHoldMin(sleepHysteresisMin: Int): Int = sleepHysteresisMin.coerceAtLeast(0) + 5
+
+        /**
+         * Sleep signals with the boundary-exit hold (2026-10-08, audit #18). The detector can enter
+         * SLEEPING up to 90 min before the night window opens but holds it only from the window start,
+         * so a pre-window sleep is ended by the boundary rule on the next cycle and re-entered after the
+         * hysteresis. Each such exit left one cycle reading AWAKE, which opened the INACTIVE raise and,
+         * for V1 users with sleep-driven night mode, the Boost gate. The same rule ends the lie-in in
+         * the morning; holding there delays the gate by one hysteresis period, which is the
+         * conservative direction. For [holdMin] minutes after a boundary exit the user is treated as
+         * SLEEPING for the gate and the INACTIVE exclusion, and the night/sleep period is held where it
+         * was sleep-driven (night mode and auto-by-sleep both on). Genuine wakes (steps, HR, resume)
+         * are not held. The detector itself is unchanged.
+         */
+        internal fun sleepSignals(
+            state: SleepStateDetector.SleepState,
+            nightSleepPeriodRaw: Boolean,
+            nightModeEnabled: Boolean,
+            autoBySleep: Boolean,
+            nowMs: Long,
+            lastBoundaryExitMs: Long?,
+            holdMin: Int
+        ): SleepSignals {
+            val sleeping = state == SleepStateDetector.SleepState.SLEEPING
+            val hold = !sleeping && lastBoundaryExitMs != null &&
+                nowMs >= lastBoundaryExitMs && nowMs - lastBoundaryExitMs < holdMin * 60_000L
+            return SleepSignals(
+                detectorSleeping = sleeping || hold,
+                detectorAsleep = sleeping || state == SleepStateDetector.SleepState.PRE_SLEEP || hold,
+                nightSleepPeriod = nightSleepPeriodRaw || (hold && nightModeEnabled && autoBySleep),
+                boundaryHold = hold
+            )
+        }
+
+        /**
+         * Why the learned pre-meal target must not apply this cycle, or null when it may (2026-10-08,
+         * audit #8). The target lowers to 72 mg/dL in the hour before a learned meal time; it was
+         * applying while asleep and under a user's own temp target. It applies only outside the
+         * configured night window, with the detector neither SLEEPING nor PRE_SLEEP, with no temp
+         * target active and outside the post-rescue window.
+         */
+        internal fun preMealTargetBlock(
+            inNightWindow: Boolean,
+            sleepState: SleepStateDetector.SleepState,
+            tempTargetActive: Boolean,
+            postRescueWindow: Boolean
+        ): String? = when {
+            inNightWindow -> "night window"
+            sleepState == SleepStateDetector.SleepState.SLEEPING ||
+                sleepState == SleepStateDetector.SleepState.PRE_SLEEP -> "asleep"
+            tempTargetActive -> "temp target"
+            postRescueWindow -> "post-rescue"
+            else -> null
+        }
+
+        /** The meal-time learner records a session only when it starts outside the configured night
+         *  window with the detector AWAKE (2026-10-08). Overnight sessions in the field were rises
+         *  without logged carbs, mostly while the detector read SLEEPING or PRE_SLEEP. */
+        internal fun mealSessionRecordable(inNightWindow: Boolean, sleepState: SleepStateDetector.SleepState): Boolean =
+            !inNightWindow && sleepState == SleepStateDetector.SleepState.AWAKE
+
+        /** What the V6 primer's temp-basal route does with the base engine's temp. */
+        internal enum class PrimerTbrAction { SKIP_PROTECTIVE, SUBSUMED, APPLY }
+
+        /**
+         * The temp the base engine leaves running this cycle: its own [baseRate] when it set one, else
+         * the temp already running when it said "no temp required" (rate null), else null for
+         * scheduled basal. (2026-10-08, audit #10: reading only the returned rate missed a protective
+         * zero temp V1 was keeping, and the primer replaced it.)
+         */
+        internal fun effectiveBaseTempRate(baseRate: Double?, currentTempRate: Double, currentTempDurationMin: Int): Double? =
+            baseRate ?: if (currentTempDurationMin > 0) currentTempRate else null
+
+        /** A protective low or zero temp always wins; a base temp at or above the primer subsumes it. */
+        internal fun primerTbrAction(effectiveBaseRate: Double?, curBasal: Double, primerRate: Double): PrimerTbrAction = when {
+            effectiveBaseRate != null && effectiveBaseRate < curBasal    -> PrimerTbrAction.SKIP_PROTECTIVE
+            effectiveBaseRate != null && effectiveBaseRate >= primerRate -> PrimerTbrAction.SUBSUMED
+            else                                                         -> PrimerTbrAction.APPLY
+        }
+
+        /**
+         * The SMB Tier 8 (regular oref1) would size from the same inputs, rebuilt at the seam because
+         * determine_basal returns only the tier that fired and has no register room for another field.
+         * Mirrors DetermineBasalBoost: maxBolus from basal x the UAM minutes when IOB > -0.2 (else the
+         * SMB minutes), rounded to 0.1 U; the dose is insulinReq / (100 / Boost_InsulinReq), floored to
+         * the bolus increment. It omits Tier 8's own gates (G3 hold, post-rescue scaling, cumulative
+         * cap), so callers take the lower of this and V1's would-dose, which carries them.
+         */
+        internal fun baseOrefSmb(
+            insulinReq: Double,
+            iob: Double,
+            currentBasal: Double,
+            maxUamSmbBasalMinutes: Int,
+            maxSmbBasalMinutes: Int,
+            boostInsulinReqPct: Double,
+            bolusIncrement: Double
+        ): Double {
+            if (insulinReq <= 0.0 || boostInsulinReqPct <= 0.0 || bolusIncrement <= 0.0) return 0.0
+            val minutes = if (iob > -0.2) maxUamSmbBasalMinutes else maxSmbBasalMinutes
+            val maxBolus = Math.round(currentBasal * minutes / 60.0 * 10.0) / 10.0
+            val roundSmbTo = 1.0 / bolusIncrement
+            return Math.floor(minOf(insulinReq / (100.0 / boostInsulinReqPct), maxBolus) * roundSmbTo) / roundSmbTo
+        }
+
+        /** The SMB to deliver when V6 is active but returned no decision (2026-10-08, audit #9): V1's
+         *  dose, capped at base oref, so a V6 failure cannot hand the pump a Boost tier dose. */
+        internal fun v6UnavailableSmb(v1Units: Double?, orefSmb: Double): Double? =
+            if (v1Units != null && v1Units > orefSmb) orefSmb else v1Units
+
+        /**
+         * The most a confirm-tranche release may add on this cycle (2026-10-08, audit #1): what is left
+         * of the maxIOB headroom and of the CONFIRMED per-cycle cap after the cycle's own dose. Both
+         * bounds are what the confirm shot itself was held to, so the held remainder can never take a
+         * cycle above a dose the engine would have been allowed to give in one go. Never negative.
+         */
+        internal fun trancheReleaseCeiling(cycleDoseU: Double, maxIobU: Double, iobU: Double, confirmedCapU: Double): Double =
+            maxOf(0.0, minOf(maxIobU - iobU - cycleDoseU, confirmedCapU - cycleDoseU))
     }
 
     // last values
@@ -535,6 +663,11 @@ open class OpenAPSBoostPlugin @Inject constructor(
     @Volatile private var boostRecoveryTtStartMs: Long? = null
     @Volatile private var activeRecoveryScale: Double = 0.5
     @Volatile private var activeRecoveryTargetOffset: Double = 0.0
+
+    // When the sleep detector last left SLEEPING by its clock boundary (wakeReason "boundary"). Read
+    // by [sleepSignals] to hold the sleep exclusions for one hysteresis period. In memory only: after
+    // a restart there is no hold, which is the behaviour before 2026-10-08.
+    @Volatile private var lastSleepBoundaryExitMs: Long? = null
 
     // ---- Lifecycle ----
 
@@ -837,7 +970,10 @@ open class OpenAPSBoostPlugin @Inject constructor(
         val sleepInActive: Boolean = false,
         // Which step feeds are live this cycle (F1, 2026-07-07): "phone+wear" | "phone" | "wear" |
         // "none" — written to RT.boostSteps_feed every cycle so a dark feed is visible in NS.
-        val stepsFeed: String = "none"
+        val stepsFeed: String = "none",
+        // The configured night window as a clock fact this cycle (read whatever the night-mode toggle
+        // says). The pre-meal target and the meal-time learner key on it. (2026-10-08)
+        val inNightWindow: Boolean = false
     )
 
     private fun calculateBoostActivity(
@@ -865,8 +1001,20 @@ open class OpenAPSBoostPlugin @Inject constructor(
         // Needs no HR, no steps and no detector.
         val nightStartMs = midnight + parseTimeToMillisOrDefault(preferences.getBoostDosing(StringKey.ApsBoostNightModeStart), "22:00")
         val inNightWindow = NightWindow.contains(now, nightStartMs, nightEndMs)
-        val detectorSleeping = sleepStateCached.state == SleepStateDetector.SleepState.SLEEPING
-        val nightSleepPeriod = isInNightSleepPeriod()
+        // Sleep signals with the boundary-exit hold (2026-10-08, audit #18): for one hysteresis period
+        // after the detector leaves SLEEPING by its clock boundary, the plugin keeps treating the user
+        // as asleep. See [sleepSignals].
+        val sleepSig = sleepSignals(
+            state = sleepStateCached.state,
+            nightSleepPeriodRaw = isInNightSleepPeriod(),
+            nightModeEnabled = preferences.getBoostDosing(BooleanKey.ApsBoostNightModeEnabled),
+            autoBySleep = preferences.getBoostDosing(BooleanKey.ApsBoostNightModeAutoBySleep),
+            nowMs = now,
+            lastBoundaryExitMs = lastSleepBoundaryExitMs,
+            holdMin = boundaryExitHoldMin(preferences.getBoostDosing(IntKey.ApsBoostSleepHysteresisMin))
+        )
+        val detectorSleeping = sleepSig.detectorSleeping
+        val nightSleepPeriod = sleepSig.nightSleepPeriod
 
         var boostActive = boostGateOpen(nightSleepPeriod, inNightWindow, v6Active, detectorSleeping)
         var disableReason = ""
@@ -878,6 +1026,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
 
         val nowTime = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
         debug.append("Boost gate: night/sleep=${!boostActive} (window=$inNightWindow period=$nightSleepPeriod v6Sleeping=${v6Active && detectorSleeping}) | Now: ${nowTime.format(DateTimeFormatter.ofPattern("HH:mm"))}")
+        if (sleepSig.boundaryHold) debug.append(" | sleep boundary-exit hold")
 
         // Disable boost if high temp target and not allowed
         if (boostActive && tempTargetSet && !allowBoostWithHighTt && targetBg > dynIsfNormalTarget) {
@@ -943,8 +1092,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
         // wind-down before it, and the user is in bed for both. This covers the CORE NIGHT, which
         // sleepInActive cannot reach — that window opens AT night end, so at 06:09 with a 07:00 end
         // it is false by construction, which is why the original report fired before dawn.
-        val detectorAsleep = sleepStateCached.state == SleepStateDetector.SleepState.SLEEPING ||
-            sleepStateCached.state == SleepStateDetector.SleepState.PRE_SLEEP
+        val detectorAsleep = sleepSig.detectorAsleep
         // inNightWindow (computed above) is what makes "INACTIVE never fires overnight" hold by default
         // instead of depending on the user having enabled night mode.
         // Audit trail for the 2026-07-31 fix: record when the step test alone WOULD have raised the
@@ -961,211 +1109,84 @@ open class OpenAPSBoostPlugin @Inject constructor(
             aapsLogger.debug(LTag.APS, "Boost disabled due to lie-in (failsafe; auto-by-sleep=$autoBySleepActive detector=${sleepStateCached.state})")
         }
 
-        var activityMinBg = minBg
-        var activityMaxBg = maxBg
-        var activityTargetBg = targetBg
-        var currentProfileSwitch = profilePercent
-        var activityState = "none"
+        // ---- HR-augmented classification (opt-in, additive only) ----
+        val hrClassification: HrActivityCalculator.HrClassificationResult? =
+            if (hrIntegrationEnabled) {
+                val windowMs = hrWindowMinutes * 60_000L
+                val hrReadings = persistenceLayer.getHeartRatesFromTime(now - windowMs)
+                HrActivityCalculator.classify(
+                    hrReadings = hrReadings,
+                    nowMillis = now,
+                    hrWindowMinutes = hrWindowMinutes,
+                    hrMax = hrMaxBpm,
+                    // Use learned daytime baseline if banked (≥7 nights); fallback to configured.
+                    // This gives a more accurate Karvonen HRR for exercise classification.
+                    hrResting = hrLearnedDaytimeBpmCached ?: hrRestingBpm,
+                    stepsLast15Min = recentSteps15Min,
+                    stressDetection = hrStressDetection,
+                    aapsLogger = aapsLogger,
+                ).takeIf { it.hrZone != HrActivityCalculator.HrZone.NONE } // null if no HR data
+            } else null
 
-        if (boostActive) {
-            val activityBgTarget = 150.0
-            val isActive = (activitySteps5  > 0 && recentSteps5Min  > activitySteps5)
-                || (activitySteps15 > 0 && recentSteps15Min > activitySteps15)
-                || (activitySteps30 > 0 && recentSteps30Min > activitySteps30)
-                || (activitySteps60 > 0 && recentSteps60Min > activitySteps60)
-
-            // ---- HR-augmented classification (opt-in, additive only) ----
-            val hrClassification: HrActivityCalculator.HrClassificationResult? =
-                if (hrIntegrationEnabled) {
-                    val windowMs = hrWindowMinutes * 60_000L
-                    val hrReadings = persistenceLayer.getHeartRatesFromTime(now - windowMs)
-                    HrActivityCalculator.classify(
-                        hrReadings = hrReadings,
-                        nowMillis = now,
-                        hrWindowMinutes = hrWindowMinutes,
-                        hrMax = hrMaxBpm,
-                        // Use learned daytime baseline if banked (≥7 nights); fallback to configured.
-                        // This gives a more accurate Karvonen HRR for exercise classification.
-                        hrResting = hrLearnedDaytimeBpmCached ?: hrRestingBpm,
-                        stepsLast15Min = recentSteps15Min,
-                        stressDetection = hrStressDetection,
-                        aapsLogger = aapsLogger,
-                    ).takeIf { it.hrZone != HrActivityCalculator.HrZone.NONE } // null if no HR data
-                } else null
-
-            if (hrClassification != null) {
-                debug.append("\nHR: ${hrClassification.debugInfo}")
-            }
-
-            if (isActive) {
-                // Step-only path detected activity; use HR to refine classification
-                when (hrClassification?.exerciseState) {
-                    HrActivityCalculator.ExerciseState.VIGOROUS_AEROBIC -> {
-                        // High intensity aerobic: reduce profile more aggressively, raise target
-                        activityState = "VIGOROUS_AEROBIC"
-                        if (currentProfileSwitch == 100) {
-                            // Use a more conservative profile reduction (cap at activityPct - 10, min 50%)
-                            currentProfileSwitch = (activityPct - 10.0).coerceAtLeast(50.0).toInt()
-                            aapsLogger.debug(LTag.APS, "Profile changed to $currentProfileSwitch% due to vigorous aerobic (HR z${hrClassification.hrZone.label})")
-                        }
-                        if (!tempTargetSet) {
-                            activityMinBg = activityBgTarget
-                            activityMaxBg = activityBgTarget
-                            activityTargetBg = activityBgTarget
-                        }
-                        debug.append("\nVigorous aerobic (HR ${String.format("%.0f", hrClassification.averageHrBpm)} bpm, ${hrClassification.hrZone.label}) → profile ${currentProfileSwitch}%, target $activityTargetBg")
-                    }
-                    HrActivityCalculator.ExerciseState.RESISTANCE -> {
-                        // Resistance exercise: raise target BG but do NOT reduce profile
-                        // (acute BG rise; delayed hypo risk — don't increase insulin aggressiveness now)
-                        activityState = "RESISTANCE"
-                        val resistanceBgTarget = 160.0
-                        if (!tempTargetSet) {
-                            activityMinBg = resistanceBgTarget
-                            activityMaxBg = resistanceBgTarget
-                            activityTargetBg = resistanceBgTarget
-                        }
-                        aapsLogger.debug(LTag.APS, "Resistance exercise detected via HR (${hrClassification.hrZone.label}): raising target, not reducing profile")
-                        debug.append("\nResistance exercise (HR ${String.format("%.0f", hrClassification.averageHrBpm)} bpm, ${hrClassification.hrZone.label}) → profile unchanged at ${currentProfileSwitch}%, target $activityTargetBg")
-                    }
-                    null, HrActivityCalculator.ExerciseState.MODERATE_AEROBIC,
-                    HrActivityCalculator.ExerciseState.LIGHT_AEROBIC -> {
-                        // Default step-only ACTIVE behaviour
-                        activityState = "ACTIVE"
-                        if (currentProfileSwitch == 100) {
-                            currentProfileSwitch = activityPct.toInt()
-                            aapsLogger.debug(LTag.APS, "Profile changed to $activityPct% due to activity")
-                        }
-                        if (!tempTargetSet) {
-                            activityMinBg = activityBgTarget
-                            activityMaxBg = activityBgTarget
-                            activityTargetBg = activityBgTarget
-                            aapsLogger.debug(LTag.APS, "TargetBG changed to $activityBgTarget due to activity")
-                        }
-                        debug.append("\nActivity detected → profile ${currentProfileSwitch}%, target ${activityTargetBg}")
-                    }
-                    else -> {
-                        // HR signal contradicts steps (LOW confidence) — fall back to step-only ACTIVE
-                        activityState = "ACTIVE"
-                        if (currentProfileSwitch == 100) {
-                            currentProfileSwitch = activityPct.toInt()
-                            aapsLogger.debug(LTag.APS, "Profile changed to $activityPct% due to activity (HR inconclusive)")
-                        }
-                        if (!tempTargetSet) {
-                            activityMinBg = activityBgTarget
-                            activityMaxBg = activityBgTarget
-                            activityTargetBg = activityBgTarget
-                        }
-                        debug.append("\nActivity detected (HR inconclusive: ${hrClassification.exerciseState}) → profile ${currentProfileSwitch}%, target $activityTargetBg")
-                    }
-                }
-            } else if (StepFeed.inactivityEligible(
-                    stepsAvailable, currentProfileSwitch, recentSteps60Min, inactivitySteps,
+        // Exercise and HR classification run whatever the Boost gate says (2026-10-08). They lower the
+        // profile or raise the target, so an exercise session inside the night window keeps its
+        // reduced profile and raised target, and an evening session crossing night start is not cut
+        // off (which also started post-exercise recovery early). Only the INACTIVE raise, which adds
+        // insulin, still needs the gate open.
+        val classification = classifyBoostActivity(
+            BoostActivityInputs(
+                raiseGateOpen = boostActive,
+                isActive = (activitySteps5 > 0 && recentSteps5Min > activitySteps5)
+                    || (activitySteps15 > 0 && recentSteps15Min > activitySteps15)
+                    || (activitySteps30 > 0 && recentSteps30Min > activitySteps30)
+                    || (activitySteps60 > 0 && recentSteps60Min > activitySteps60),
+                hr = hrClassification,
+                hrIntegrationEnabled = hrIntegrationEnabled,
+                hrStressDetection = hrStressDetection,
+                inactivityEligible = StepFeed.inactivityEligible(
+                    stepsAvailable, profilePercent, recentSteps60Min, inactivitySteps,
                     sleepInActive = sleepInActive, asleep = detectorAsleep,
                     inNightWindow = inNightWindow
-                )) {
-                // Inactivity confirmed on a LIVE feed — check HR for stress. (F1 2026-07-07: a dark
-                // feed can no longer reach this branch — "no steps" must not mean "sedentary".)
-                if (hrIntegrationEnabled && HrActivityCalculator.inactivitySuppressedByElevatedHr(hrClassification)) {
-                    // 2026-07-21 CRITICAL SAFETY: an elevated HR (zone ≥ 3) with a low step count is
-                    // probable NON-STEP exercise (cycling, rowing, resistance). The inactivity branch
-                    // adds insulin (profile → inactivityPct); a real incident raised profile 130% at
-                    // zone3 while BG fell 12 mg/dL per 5 min because 64 steps landed in the classifier
-                    // dead zone and came back RESTING. Keying on the HR ZONE directly (not the fused
-                    // state), suppress the profile-raise entirely and raise the target instead.
-                    activityState = "RESISTANCE"
-                    val elevatedHrTarget = 160.0
-                    if (!tempTargetSet) {
-                        activityMinBg = elevatedHrTarget
-                        activityMaxBg = elevatedHrTarget
-                        activityTargetBg = elevatedHrTarget
-                    }
-                    aapsLogger.debug(LTag.APS, "Inactivity SUPPRESSED — HR elevated (${hrClassification?.hrZone?.label}, ${String.format("%.0f", hrClassification?.averageHrBpm ?: 0.0)} bpm) with low steps → non-step exercise; raising target to $elevatedHrTarget, profile UNCHANGED (NOT adding insulin)")
-                    debug.append("\nInactivity SUPPRESSED (HR ${hrClassification?.hrZone?.label} elevated, 60m steps $recentSteps60Min) → target $activityTargetBg, profile unchanged")
-                } else if (hrStressDetection &&
-                    hrClassification?.exerciseState == HrActivityCalculator.ExerciseState.STRESS &&
-                    hrClassification.confidence != HrActivityCalculator.Confidence.LOW
-                ) {
-                    // Stress detected: raise target BG without changing profile
-                    activityState = "STRESS"
-                    val stressBgTarget = 160.0
-                    if (!tempTargetSet) {
-                        activityMinBg = stressBgTarget
-                        activityMaxBg = stressBgTarget
-                        activityTargetBg = stressBgTarget
-                    }
-                    aapsLogger.debug(LTag.APS, "Stress/illness detected (HR ${String.format("%.0f", hrClassification.averageHrBpm)} bpm, no steps): raising target to $stressBgTarget, profile unchanged")
-                    debug.append("\nStress/illness (HR ${String.format("%.0f", hrClassification.averageHrBpm)} bpm, ${hrClassification.hrZone.label}, no movement) → target $activityTargetBg, profile unchanged")
-                } else if (hrIntegrationEnabled && HrActivityCalculator.inactivityRaiseBlockedByHr(hrClassification)) {
-                    // 2026-09-28: HR in zone 2 with low steps (easy cycling, rowing) is not sedentary.
-                    // Withhold the inactivity raise; leave target and profile as they are.
-                    activityState = "HR_ELEVATED"
-                    debug.append("\nInactivity raise WITHHELD (HR ${hrClassification?.hrZone?.label}, 60m steps $recentSteps60Min) → profile unchanged")
-                } else {
-                    activityState = "INACTIVE"
-                    currentProfileSwitch = inactivityPct.toInt()
-                    debug.append("\nInactivity detected (60m steps $recentSteps60Min < $inactivitySteps) → profile ${currentProfileSwitch}%")
-                    aapsLogger.debug(LTag.APS, "Profile changed to $inactivityPct% due to inactivity")
-                }
-            } else if (!isActive &&
-                hrIntegrationEnabled &&
-                hrClassification?.exerciseState == HrActivityCalculator.ExerciseState.RESISTANCE &&
-                hrClassification.confidence != HrActivityCalculator.Confidence.LOW
-            ) {
-                // HR-only resistance detection (steps don't detect this)
-                activityState = "RESISTANCE"
-                val resistanceBgTarget = 160.0
-                if (!tempTargetSet) {
-                    activityMinBg = resistanceBgTarget
-                    activityMaxBg = resistanceBgTarget
-                    activityTargetBg = resistanceBgTarget
-                }
-                aapsLogger.debug(LTag.APS, "Resistance exercise detected via HR only (${hrClassification.hrZone.label}): raising target")
-                debug.append("\nResistance (HR-only, ${hrClassification.hrZone.label}) → target $activityTargetBg, profile unchanged")
-            } else if (!isActive &&
-                hrStressDetection &&
-                hrClassification?.exerciseState == HrActivityCalculator.ExerciseState.STRESS &&
-                hrClassification.confidence != HrActivityCalculator.Confidence.LOW
-            ) {
-                activityState = "STRESS"
-                val stressBgTarget = 160.0
-                if (!tempTargetSet) {
-                    activityMinBg = stressBgTarget
-                    activityMaxBg = stressBgTarget
-                    activityTargetBg = stressBgTarget
-                }
-                aapsLogger.debug(LTag.APS, "Stress detected via HR (${hrClassification.hrZone.label}): raising target")
-                debug.append("\nStress (HR-only, ${hrClassification.hrZone.label}) → target $activityTargetBg, profile unchanged")
-            } else if (!stepsAvailable) {
-                // F1 (2026-07-07): feed dark and no HR-only classification fired — profile stays
-                // 100%, no target change. isActive is necessarily false here (no step data), so
-                // this is exactly the cycle set that previously mis-read as INACTIVE.
-                activityState = "steps-unknown"
-                debug.append("\nActivity: steps-unknown (feed unavailable — no INACTIVE, profile unchanged)")
-            } else {
-                activityState = "normal"
-                debug.append("\nActivity: normal (no adjustment)")
-            }
+                ),
+                stepsAvailable = stepsAvailable,
+                tempTargetSet = tempTargetSet,
+                profilePercent = profilePercent,
+                activityPct = activityPct,
+                inactivityPct = inactivityPct,
+                minBg = minBg,
+                maxBg = maxBg,
+                targetBg = targetBg,
+                recentSteps60Min = recentSteps60Min,
+                inactivitySteps = inactivitySteps
+            )
+        )
+        debug.append(classification.debug)
+        aapsLogger.debug(LTag.APS, "Boost activity: ${classification.state} profile ${classification.profileSwitch}% target ${classification.targetBg}")
+        var activityMinBg = classification.minBg
+        var activityMaxBg = classification.maxBg
+        var activityTargetBg = classification.targetBg
+        var currentProfileSwitch = classification.profileSwitch
+        var activityState = classification.state
 
-            // Boost-endurance: hold sustained low-step aerobic work as one state, whatever this
-            // cycle's step and heart-rate classification said. Removes insulin only.
-            enduranceState = if (enduranceEnabled && hrIntegrationEnabled)
-                EnduranceDetector.step(enduranceState, now, hrClassification?.hrZone, recentSteps15Min)
-            else EnduranceDetector.State()
-            if (enduranceState.active) {
-                activityState = "ENDURANCE"
-                currentProfileSwitch = if (profilePercent == 100) endurancePct.toInt() else profilePercent
-                // Never lower a target this cycle's state already raised (resistance and stress set 160),
-                // so endurance can only remove insulin relative to it.
-                if (!tempTargetSet) {
-                    val enduranceTarget = maxOf(150.0, activityTargetBg)
-                    activityMinBg = enduranceTarget
-                    activityMaxBg = enduranceTarget
-                    activityTargetBg = enduranceTarget
-                }
-                val sinceMin = enduranceState.activeSinceMs?.let { (now - it) / 60_000L } ?: 0L
-                debug.append("\nEndurance: ${sinceMin} min (HR ${hrClassification?.hrZone?.label ?: "none"}, 15m steps $recentSteps15Min) → profile $currentProfileSwitch%, target $activityTargetBg")
+        // Boost-endurance: hold sustained low-step aerobic work as one state, whatever this cycle's
+        // step and heart-rate classification said. Removes insulin only, so like the classification
+        // above it runs whatever the Boost gate says.
+        enduranceState = if (enduranceEnabled && hrIntegrationEnabled)
+            EnduranceDetector.step(enduranceState, now, hrClassification?.hrZone, recentSteps15Min)
+        else EnduranceDetector.State()
+        if (enduranceState.active) {
+            activityState = "ENDURANCE"
+            currentProfileSwitch = if (profilePercent == 100) endurancePct.toInt() else profilePercent
+            // Never lower a target this cycle's state already raised (resistance and stress set 160),
+            // so endurance can only remove insulin relative to it.
+            if (!tempTargetSet) {
+                val enduranceTarget = maxOf(150.0, activityTargetBg)
+                activityMinBg = enduranceTarget
+                activityMaxBg = enduranceTarget
+                activityTargetBg = enduranceTarget
             }
+            val sinceMin = enduranceState.activeSinceMs?.let { (now - it) / 60_000L } ?: 0L
+            debug.append("\nEndurance: ${sinceMin} min (HR ${hrClassification?.hrZone?.label ?: "none"}, 15m steps $recentSteps15Min) → profile $currentProfileSwitch%, target $activityTargetBg")
         }
 
         if (boostActive) {
@@ -1183,7 +1204,8 @@ open class OpenAPSBoostPlugin @Inject constructor(
             activityState = activityState,
             debugReason = debug.toString(),
             sleepInActive = sleepInActive,
-            stepsFeed = stepFeed.label
+            stepsFeed = stepFeed.label,
+            inNightWindow = inNightWindow
         )
     }
 
@@ -1223,6 +1245,10 @@ open class OpenAPSBoostPlugin @Inject constructor(
     /** Returns minute-of-day [0..1439] for a "HH:mm" or "H:mm" string. Defaults to 0 on parse error. */
     private fun parseTimeToMinutesOfDay(timeStr: String): Int =
         (parseTimeToMillis(timeStr) / 60_000L).toInt()
+
+    /** [parseTimeToMinutesOfDay] falling back to [defaultStr] on a malformed value, as the gate does. */
+    private fun parseTimeToMinutesOfDayOrDefault(timeStr: String, defaultStr: String): Int =
+        (parseTimeToMillisOrDefault(timeStr, defaultStr) / 60_000L).toInt()
 
     /**
      * Clamp a learned minute-of-day to within ±[bandMin] of the configured minute-of-day, on the
@@ -1549,11 +1575,34 @@ open class OpenAPSBoostPlugin @Inject constructor(
             val nowMin = nowLocal.hour * 60 + nowLocal.minute
             val offsetMs = java.time.ZoneId.systemDefault().rules.getOffset(java.time.Instant.now()).totalSeconds * 1000L
             val leadMaxMin = preferences.getBoostDosing(DoubleKey.ApsBoostV6PreMealLeadMin).toInt()
+            // Drop learned meal sessions that fall inside the configured night window (2026-10-08,
+            // audit #8). Sessions recorded overnight before the learner was gated can otherwise form a
+            // mode and pull the lowered target into the night. Persisted only when something was dropped.
+            val filtered = MealTimeLearner.withoutNightEvents(
+                mealTimeHistoryCached,
+                parseTimeToMinutesOfDayOrDefault(preferences.getBoostDosing(StringKey.ApsBoostNightModeStart), "22:00"),
+                parseTimeToMinutesOfDayOrDefault(preferences.getBoostDosing(StringKey.ApsBoostNightModeEnd), "07:00"),
+                offsetMs
+            )
+            if (filtered.events.size != mealTimeHistoryCached.events.size) {
+                aapsLogger.info(LTag.APS, "V6 meal-time learner: dropped ${mealTimeHistoryCached.events.size - filtered.events.size} learned sessions inside the night window")
+                mealTimeHistoryCached = filtered
+                preferences.put(StringKey.ApsBoostMealTimeHistory, filtered.serialize())
+            }
             val hit = MealTimeLearner.preMealWindow(mealTimeHistoryCached, nowMin, offsetMs, leadMaxMin) ?: return@run
             val exerciseNow = activityResult.activityState in setOf("ACTIVE", "VIGOROUS_AEROBIC", "MODERATE_AEROBIC", "LIGHT_AEROBIC", "RESISTANCE", "STRESS")
             val inRecovery = inRecoveryWindow(now)
             if (exerciseNow || inRecovery) {
                 v6PreMealReason = "V6 pre-meal SUPPRESSED (${if (exerciseNow) "exercise" else "recovery"}); "
+                return@run
+            }
+            preMealTargetBlock(
+                inNightWindow = activityResult.inNightWindow,
+                sleepState = sleepStateCached.state,
+                tempTargetActive = isTempTarget,
+                postRescueWindow = recentLowBG45Min < DetermineBasalBoost.POST_RESCUE_LOW_THRESHOLD_MGDL
+            )?.let { why ->
+                v6PreMealReason = "V6 pre-meal SUPPRESSED ($why); "
                 return@run
             }
             val preMealTarget = preferences.getBoostDosing(DoubleKey.ApsBoostV6PreMealTargetMgdl)
@@ -1902,6 +1951,9 @@ open class OpenAPSBoostPlugin @Inject constructor(
             // returns — so re-check the SAME cap here (same prior-volume semantics as V1) or V5 could
             // deliver on a cycle V1 suspended for cumulative volume. (Review 2026-06-26, MEDIUM.)
             val cumulativeCapReached = cumulativeSmbCap60Min > 0.0 && recentSmbVolume60Min >= cumulativeSmbCap60Min
+            // Set when the confirm tranche ran inside the override block this cycle; a hold left over
+            // on any other cycle is dropped after the if-chain (2026-10-08).
+            var trancheRan = false
             // Boost-inactive gate (2026-07-02): the V6/V5 override may replace the SMB ONLY when Boost
             // is active this cycle. When boostActive is false — night/sleep period, high temp target, or
             // the step-based sleep-in has fired — fall back to V1's base oref1 SMB (which respects night
@@ -1944,28 +1996,46 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 // minutes later only if the rise continues. The confirm shot is currently the same
                 // size whether the excursion reaches 20 mg/dL or 100, and the trace separates those
                 // two ends at 0.730 at the confirming cycle against 0.893 ten minutes on, a paired
-                // gain of +0.162 [+0.066, +0.264]. Bounded: this can only deliver LESS than the
-                // engine would without it.
+                // gain of +0.162 [+0.066, +0.264].
                 //
-                // The release is evaluated inside this same block deliberately. Ten minutes after a
-                // confirm the block runs on 76.4% of cycles, and the 23.6% where it does not divide
-                // into exactly two causes, the rolling cumulative SMB cap and the sleep gate, both
-                // of which are states in which the engine has already decided against a micro bolus.
-                // A release that cannot land is that machinery agreeing with the withhold.
+                // The release is added after every cap above, so since 2026-10-08 (audit #1) it is held
+                // to the same bounds as the rest of the dose: released only in COMMITTED (a CONFIRMED
+                // cycle replaces the hold), never when a phase-3 hard gate fired or inside the
+                // post-rescue window, and clamped to the maxIOB headroom and the CONFIRMED cap left after
+                // this cycle's dose. A cycle on which this block does not run drops the hold (below the
+                // if-chain), so a hold never outlives a cycle on which the engine decided against V6.
                 if (preferences.getBoostDosing(BooleanKey.ApsBoostV5ConfirmTranche)) {
+                    trancheRan = true
                     confirmTranche.immediateFraction = preferences.getBoostDosing(DoubleKey.ApsBoostV5TrancheFraction)
                     confirmTranche.releaseThreshold = preferences.getBoostDosing(DoubleKey.ApsBoostV5TrancheThreshold)
                     val before = overrideDose
+                    var gateNote = ""
                     overrideDose = if (v5decision.mealHypothesis == MealHypothesis.CONFIRMED) {
                         confirmTranche.onConfirm(now, glucoseStatus.glucose, before)
                     } else {
-                        before + confirmTranche.onCycle(now, glucoseStatus.glucose)
+                        val release = confirmTranche.onCycleBounded(
+                            now, glucoseStatus.glucose,
+                            app.aaps.plugins.aps.openAPSBoostV5.ConfirmTrancheController.ReleaseBounds(
+                                inMealState = v5decision.mealHypothesis == MealHypothesis.COMMITTED,
+                                hardGateFired = v5decision.phase3.reductions.hardGateFired != null,
+                                postRescueWindow = inPostRescueWindow,
+                                ceilingU = trancheReleaseCeiling(
+                                    cycleDoseU = before,
+                                    maxIobU = minOf(oapsProfile.boost_maxIOB, oapsProfile.max_iob),
+                                    iobU = iobArray.firstOrNull()?.iob ?: 0.0,
+                                    confirmedCapU = preferences.getBoostDosing(DoubleKey.ApsBoostV5ConfirmedCapU)
+                                )
+                            )
+                        )
+                        gateNote = release.note
+                        before + release.units
                     }
                     it.reason.append("tranche=${Round.roundTo(before, 0.001)},"
                         + "${Round.roundTo(overrideDose, 0.001)},"
                         + "${Round.roundTo(confirmTranche.heldU(), 0.001)},"
                         + "${confirmTranche.probeProbability(glucoseStatus.glucose)?.let { p -> Round.roundTo(p, 0.001) } ?: "-"},"
                         + "${v5decision.mealHypothesis}; ")
+                    if (gateNote.isNotEmpty()) it.reason.append("trancheGate=$gateNote; ")
                 }
                 it.units = overrideDose
                 it.reason.append("V6-ACTIVE drove SMB ${Round.roundTo(overrideDose, 0.001)}U (base would=${Round.roundTo(v1WouldDose, 0.001)}U, state=${v5decision.mealHypothesis}${caps.capNote}); ")
@@ -2001,19 +2071,22 @@ open class OpenAPSBoostPlugin @Inject constructor(
                         // (max), and never shortens its duration. Expires (retracts) if the meal fades.
                         val primerTbrDurationMin = 30
                         val curBasal = oapsProfile.current_basal
-                        val baseRate = it.rate
+                        // 2026-10-08 (audit #10): when V1 says "no temp required" it returns no rate and
+                        // leaves the running temp in place, which can be a protective zero or low temp.
+                        // The decision reads that running temp, not only the returned rate.
+                        val baseRate = effectiveBaseTempRate(it.rate, currentTemp.rate, currentTemp.duration)
                         val extraRate = v5decision.primerBolusU * (60.0 / primerTbrDurationMin)
                         val primerRate = curBasal + extraRate
-                        when {
+                        when (primerTbrAction(baseRate, curBasal, primerRate)) {
                             // Base engine suspending/reducing — a protective low/zero temp always wins.
-                            baseRate != null && baseRate < curBasal ->
-                                it.reason.append("primer=tbr-skipped(base-temp ${Round.roundTo(baseRate, 0.001)}<basal ${Round.roundTo(curBasal, 0.001)}); ")
+                            PrimerTbrAction.SKIP_PROTECTIVE ->
+                                it.reason.append("primer=tbr-skipped(base-temp ${Round.roundTo(baseRate ?: 0.0, 0.001)}<basal ${Round.roundTo(curBasal, 0.001)}${if (it.rate == null) ",running" else ""}); ")
                             // Base engine already delivering ≥ the primer rate — primer adds nothing; do
                             // NOT touch its rate/duration (extending a high base temp would over-deliver).
-                            baseRate != null && baseRate >= primerRate ->
-                                it.reason.append("primer=tbr-subsumed(base ${Round.roundTo(baseRate, 0.001)}≥primer ${Round.roundTo(primerRate, 0.001)}U/h); ")
+                            PrimerTbrAction.SUBSUMED ->
+                                it.reason.append("primer=tbr-subsumed(base ${Round.roundTo(baseRate ?: 0.0, 0.001)}≥primer ${Round.roundTo(primerRate, 0.001)}U/h${if (it.rate == null) ",running" else ""}); ")
                             // Primer genuinely raises above the base plan → apply the retractable temp.
-                            else -> {
+                            PrimerTbrAction.APPLY -> {
                                 it.rate = primerRate
                                 it.duration = kotlin.math.max(it.duration ?: 0, primerTbrDurationMin)
                                 it.reason.append("primer=tbr,${Round.roundTo(v5decision.primerBolusU, 0.001)}U→${Round.roundTo(primerRate, 0.001)}U/h×${it.duration}m; ")
@@ -2054,13 +2127,44 @@ open class OpenAPSBoostPlugin @Inject constructor(
             } else if (v5Active && v5decision != null && !activityResult.boostActive) {
                 it.reason.append("V6 override skipped (Boost inactive) — base SMB ${Round.roundTo(it.units ?: 0.0, 0.001)}U; ")
                 aapsLogger.info(LTag.APS, "V6-ACTIVE override skipped — Boost inactive; base oref1 SMB ${it.units ?: 0.0}U retained")
+            } else if (v5Active && v5decision == null) {
+                // V6 threw (runShadow returned null). Its fallback was V1's dose from whichever tier fired;
+                // cap it at base oref so a V6 failure cannot hand the pump a Boost tier dose. (2026-10-08)
+                val orefSmb = baseOrefSmb(
+                    insulinReq = it.insulinReq ?: 0.0,
+                    iob = iobArray.firstOrNull()?.iob ?: 0.0,
+                    currentBasal = oapsProfile.current_basal,
+                    maxUamSmbBasalMinutes = oapsProfile.maxUAMSMBBasalMinutes,
+                    maxSmbBasalMinutes = oapsProfile.maxSMBBasalMinutes,
+                    boostInsulinReqPct = oapsProfile.Boost_InsulinReq,
+                    bolusIncrement = oapsProfile.bolus_increment
+                )
+                val capped = v6UnavailableSmb(it.units, orefSmb)
+                if (capped != it.units) {
+                    it.reason.append("V6 unavailable: base SMB capped from ${Round.roundTo(it.units ?: 0.0, 0.001)}U to oref ${Round.roundTo(orefSmb, 0.001)}U; ")
+                    aapsLogger.warn(LTag.APS, "V6 unavailable: V1 SMB ${it.units}U capped to base oref ${orefSmb}U")
+                    it.units = capped
+                }
+            }
+            // A tranche hold survives only on cycles where V6 drove the SMB with the tranche on. Any
+            // other cycle (V6 skipped for sleep, the cumulative cap, a closed gate, no SMB allowed, an
+            // error, or the tranche switched off) is the engine deciding against V6's dose, so the hold
+            // goes with it rather than being released later on stale evidence. (2026-10-08, audit #1)
+            if (!trancheRan && confirmTranche.heldU() > 0.0) {
+                it.reason.append("trancheGate=dropped:seam-skipped,${Round.roundTo(confirmTranche.heldU(), 0.001)}; ")
+                confirmTranche.reset()
             }
 
             // V6: surface the anticipatory pre-meal target decision computed earlier this cycle.
             v6PreMealReason?.let { r -> it.reason.append(r) }
             // V6 meal-time learner: record a FRESH CONFIRMED commit (the event V5 treats as a meal)
             // so the pre-meal window learns this user's habitual meal times. Persist only on change.
-            if (v5decision != null && v5decision.mealSessionStarted) {
+            // Since 2026-10-08 only sessions that start outside the night window with the detector AWAKE.
+            if (v5decision != null && v5decision.mealSessionStarted &&
+                !mealSessionRecordable(activityResult.inNightWindow, sleepStateCached.state)
+            ) {
+                aapsLogger.debug(LTag.APS, "V6 meal-time learner: session not recorded (night window=${activityResult.inNightWindow}, sleep=${sleepStateCached.state})")
+            } else if (v5decision != null && v5decision.mealSessionStarted) {
                 mealTimeHistoryCached = MealTimeLearner.record(mealTimeHistoryCached, now)
                 preferences.put(StringKey.ApsBoostMealTimeHistory, mealTimeHistoryCached.serialize())
                 aapsLogger.debug(LTag.APS, "V6 meal-time learner: recorded meal commit @ ${dateUtil.dateAndTimeString(now)} (${mealTimeHistoryCached.events.size} events)")
@@ -2145,6 +2249,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 )
                 val prevSleepState = sleepStateCached.state
                 sleepStateCached = sleepResult.newState
+                if (sleepResult.wakeReason == "boundary") lastSleepBoundaryExitMs = now
                 if (sleepResult.transitioned) {
                     preferences.put(StringKey.ApsBoostSleepState, sleepResult.newState.serialize())
                     aapsLogger.debug(LTag.APS, "Sleep state transitioned → ${sleepResult.newState.state} (${sleepResult.debug})")
@@ -2887,3 +2992,154 @@ internal fun v5ExerciseActive(activityState: String): Boolean = activityState in
  */
 internal fun v5InPostExerciseWindow(postExerciseRecoveryEnabled: Boolean, nowMs: Long, recoveryWindowEndMs: Long): Boolean =
     postExerciseRecoveryEnabled && nowMs < recoveryWindowEndMs
+
+// ── Activity classification (2026-10-08) ─────────────────────────────────────────────────────────
+// Pure so the gate's reach can be tested: before this date the whole block ran only while the Boost
+// gate was open, so closing the gate at night also removed the exercise profile reduction and the
+// raised activity target (audit #11, a regression from the overnight gate fix).
+
+/** Everything [classifyBoostActivity] reads. Step and HR inputs are this cycle's. */
+internal data class BoostActivityInputs(
+    /** The Boost gate. Gates only the INACTIVE raise, the one outcome here that adds insulin. */
+    val raiseGateOpen: Boolean,
+    /** Steps above any of the configured activity thresholds. */
+    val isActive: Boolean,
+    /** HR classification, or null when HR integration is off or no usable HR was found (none, or stuck). */
+    val hr: HrActivityCalculator.HrClassificationResult?,
+    val hrIntegrationEnabled: Boolean,
+    val hrStressDetection: Boolean,
+    /** [StepFeed.inactivityEligible]: live feed, few steps, profile at 100%, and not asleep or overnight. */
+    val inactivityEligible: Boolean,
+    val stepsAvailable: Boolean,
+    val tempTargetSet: Boolean,
+    val profilePercent: Int,
+    val activityPct: Double,
+    val inactivityPct: Double,
+    val minBg: Double,
+    val maxBg: Double,
+    val targetBg: Double,
+    val recentSteps60Min: Int,
+    val inactivitySteps: Int,
+)
+
+/** Result of [classifyBoostActivity]: the activity state, the profile percentage and the targets. */
+internal data class BoostActivityClassification(
+    val state: String,
+    val profileSwitch: Int,
+    val minBg: Double,
+    val maxBg: Double,
+    val targetBg: Double,
+    val debug: String,
+)
+
+private const val ACTIVITY_BG_TARGET = 150.0
+private const val RAISED_BG_TARGET = 160.0
+
+/**
+ * Classifies the cycle's activity from steps and, when integrated, heart rate. Exercise, resistance,
+ * stress and elevated-HR handling lower the profile or raise the target and run whatever the gate
+ * says. The INACTIVE raise (profile to inactivityPct) adds insulin, so it needs all of: the gate open,
+ * [BoostActivityInputs.inactivityEligible], and, with HR integration on, positive HR evidence of rest
+ * (see [HrActivityCalculator.inactivityRaiseBlockedByHr]).
+ */
+internal fun classifyBoostActivity(i: BoostActivityInputs): BoostActivityClassification {
+    val debug = StringBuilder()
+    var minBg = i.minBg
+    var maxBg = i.maxBg
+    var targetBg = i.targetBg
+    var profile = i.profilePercent
+    val state: String
+    val hr = i.hr
+
+    fun raiseTarget(t: Double) {
+        if (!i.tempTargetSet) {
+            minBg = t
+            maxBg = t
+            targetBg = t
+        }
+    }
+
+    if (hr != null) debug.append("\nHR: ${hr.debugInfo}")
+
+    if (i.isActive) {
+        when (hr?.exerciseState) {
+            HrActivityCalculator.ExerciseState.VIGOROUS_AEROBIC -> {
+                // High intensity aerobic: reduce profile more (activityPct - 10, min 50%), raise target
+                state = "VIGOROUS_AEROBIC"
+                if (profile == 100) profile = (i.activityPct - 10.0).coerceAtLeast(50.0).toInt()
+                raiseTarget(ACTIVITY_BG_TARGET)
+                debug.append("\nVigorous aerobic (HR ${String.format("%.0f", hr.averageHrBpm)} bpm, ${hr.hrZone.label}) → profile ${profile}%, target $targetBg")
+            }
+            HrActivityCalculator.ExerciseState.RESISTANCE -> {
+                // Resistance exercise: raise target BG but do NOT reduce profile (acute BG rise, delayed hypo risk)
+                state = "RESISTANCE"
+                raiseTarget(RAISED_BG_TARGET)
+                debug.append("\nResistance exercise (HR ${String.format("%.0f", hr.averageHrBpm)} bpm, ${hr.hrZone.label}) → profile unchanged at ${profile}%, target $targetBg")
+            }
+            null, HrActivityCalculator.ExerciseState.MODERATE_AEROBIC,
+            HrActivityCalculator.ExerciseState.LIGHT_AEROBIC -> {
+                state = "ACTIVE"
+                if (profile == 100) profile = i.activityPct.toInt()
+                raiseTarget(ACTIVITY_BG_TARGET)
+                debug.append("\nActivity detected → profile ${profile}%, target $targetBg")
+            }
+            else -> {
+                // HR signal contradicts steps (LOW confidence): fall back to step-only ACTIVE
+                state = "ACTIVE"
+                if (profile == 100) profile = i.activityPct.toInt()
+                raiseTarget(ACTIVITY_BG_TARGET)
+                debug.append("\nActivity detected (HR inconclusive: ${hr.exerciseState}) → profile ${profile}%, target $targetBg")
+            }
+        }
+    } else if (i.inactivityEligible) {
+        if (i.hrIntegrationEnabled && HrActivityCalculator.inactivitySuppressedByElevatedHr(hr)) {
+            // 2026-07-21: zone >= 3 with low steps is probable non-step exercise (cycling, rowing,
+            // resistance). Suppress the raise and raise the target instead.
+            state = "RESISTANCE"
+            raiseTarget(RAISED_BG_TARGET)
+            debug.append("\nInactivity SUPPRESSED (HR ${hr?.hrZone?.label} elevated, 60m steps ${i.recentSteps60Min}) → target $targetBg, profile unchanged")
+        } else if (i.hrStressDetection && hr?.exerciseState == HrActivityCalculator.ExerciseState.STRESS &&
+            hr.confidence != HrActivityCalculator.Confidence.LOW
+        ) {
+            state = "STRESS"
+            raiseTarget(RAISED_BG_TARGET)
+            debug.append("\nStress/illness (HR ${String.format("%.0f", hr.averageHrBpm)} bpm, ${hr.hrZone.label}, no movement) → target $targetBg, profile unchanged")
+        } else if (i.hrIntegrationEnabled && HrActivityCalculator.inactivityRaiseBlockedByHr(hr)) {
+            // Zone 2 (easy cycling, rowing) is not sedentary, and with HR integration on, no usable HR
+            // is not evidence of rest either. Withhold the raise; leave target and profile as they are.
+            state = if (hr == null) "HR_UNAVAILABLE" else "HR_ELEVATED"
+            debug.append(
+                if (hr == null) "\nInactivity raise WITHHELD (HR integration on, no usable HR, 60m steps ${i.recentSteps60Min}) → profile unchanged"
+                else "\nInactivity raise WITHHELD (HR ${hr.hrZone.label}, 60m steps ${i.recentSteps60Min}) → profile unchanged"
+            )
+        } else if (!i.raiseGateOpen) {
+            state = "normal"
+            debug.append("\nInactivity raise WITHHELD (Boost gate closed) → profile unchanged")
+        } else {
+            state = "INACTIVE"
+            profile = i.inactivityPct.toInt()
+            debug.append("\nInactivity detected (60m steps ${i.recentSteps60Min} < ${i.inactivitySteps}) → profile ${profile}%")
+        }
+    } else if (i.hrIntegrationEnabled && hr?.exerciseState == HrActivityCalculator.ExerciseState.RESISTANCE &&
+        hr.confidence != HrActivityCalculator.Confidence.LOW
+    ) {
+        // HR-only resistance detection (steps don't detect this)
+        state = "RESISTANCE"
+        raiseTarget(RAISED_BG_TARGET)
+        debug.append("\nResistance (HR-only, ${hr.hrZone.label}) → target $targetBg, profile unchanged")
+    } else if (i.hrStressDetection && hr?.exerciseState == HrActivityCalculator.ExerciseState.STRESS &&
+        hr.confidence != HrActivityCalculator.Confidence.LOW
+    ) {
+        state = "STRESS"
+        raiseTarget(RAISED_BG_TARGET)
+        debug.append("\nStress (HR-only, ${hr.hrZone.label}) → target $targetBg, profile unchanged")
+    } else if (!i.stepsAvailable) {
+        // F1 (2026-07-07): feed dark and no HR-only classification fired. Profile stays 100%.
+        state = "steps-unknown"
+        debug.append("\nActivity: steps-unknown (feed unavailable — no INACTIVE, profile unchanged)")
+    } else {
+        state = "normal"
+        debug.append("\nActivity: normal (no adjustment)")
+    }
+    return BoostActivityClassification(state, profile, minBg, maxBg, targetBg, debug.toString())
+}

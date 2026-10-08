@@ -364,7 +364,7 @@ class HrActivityCalculatorTest {
         assertThat(result.exerciseState).isEqualTo(HrActivityCalculator.ExerciseState.RESISTANCE)
     }
 
-    @Test fun `inactivityRaiseBlockedByHr - true from zone 2, false for zone 1 and null`() {
+    @Test fun `inactivityRaiseBlockedByHr - true from zone 2 and for no usable HR, false for zone 1`() {
         fun classForBpm(bpm: Double) = HrActivityCalculator.classify(
             hrReadings = makeReadings(bpm), nowMillis = NOW, hrWindowMinutes = WINDOW_MIN,
             hrMax = 180, hrResting = 60, stepsLast15Min = 5, stressDetection = false
@@ -374,7 +374,18 @@ class HrActivityCalculatorTest {
         assertThat(HrActivityCalculator.inactivityRaiseBlockedByHr(classForBpm(110.0))).isTrue()
         assertThat(HrActivityCalculator.inactivityRaiseBlockedByHr(classForBpm(160.0))).isTrue()
         assertThat(HrActivityCalculator.inactivityRaiseBlockedByHr(classForBpm(65.0))).isFalse()
-        assertThat(HrActivityCalculator.inactivityRaiseBlockedByHr(null)).isFalse()
+    }
+
+    @Test fun `inactivityRaiseBlockedByHr - missing or stuck HR fails closed (2026-10-08, audit 12)`() {
+        // The plugin passes null when HR integration is on and classify() found no usable HR. Field
+        // record: B had 3,997 of 4,146 raised cycles with no HR zone.
+        assertThat(HrActivityCalculator.inactivityRaiseBlockedByHr(null)).isTrue()
+        val stuck = HrActivityCalculator.classify(
+            hrReadings = List(10) { i -> HR(timestamp = NOW - i * 60_000L, duration = 60_000L, beatsPerMinute = 64.0, device = "test") },
+            nowMillis = NOW, hrWindowMinutes = WINDOW_MIN, hrMax = 180, hrResting = 60, stepsLast15Min = 5, stressDetection = false
+        )
+        assertThat(stuck.hrZone).isEqualTo(HrActivityCalculator.HrZone.NONE)
+        assertThat(HrActivityCalculator.inactivityRaiseBlockedByHr(stuck)).isTrue()
     }
 
     @Test fun `inactivitySuppressedByElevatedHr - true for zone 3+, false for zone 1-2 and null`() {

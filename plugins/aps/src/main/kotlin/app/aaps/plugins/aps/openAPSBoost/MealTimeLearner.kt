@@ -103,6 +103,32 @@ object MealTimeLearner {
         return History(newEvents)
     }
 
+    /**
+     * True when local [minOfDay] lies in the night window `[startMin, endMin)`. A window that wraps
+     * midnight (start later than end, e.g. 22:00 to 07:00) is the union of `[start, 1440)` and
+     * `[0, end)`, so 23:30 and 03:00 are both inside and 07:00 is not. Equal times are an empty window,
+     * the same convention as [NightWindow.contains], so a misconfigured window drops nothing.
+     */
+    fun inNightMinutes(minOfDay: Int, startMin: Int, endMin: Int): Boolean = when {
+        startMin == endMin -> false
+        startMin < endMin  -> minOfDay in startMin until endMin
+        else               -> minOfDay >= startMin || minOfDay < endMin
+    }
+
+    /**
+     * [h] without the events whose local time falls inside the configured night window (2026-10-08).
+     * Before the learner was gated on the night window and the sleep detector it recorded overnight
+     * sessions, which in the field were rises with no logged carbs, mostly while the detector read
+     * SLEEPING or PRE_SLEEP; enough of them form a mode and move the lowered pre-meal target into the
+     * night. Local time uses [localOffsetMs] as [modes] does. Returns [h] itself when nothing is dropped.
+     */
+    fun withoutNightEvents(h: History, nightStartMin: Int, nightEndMin: Int, localOffsetMs: Long): History {
+        val kept = h.events.filterNot {
+            inNightMinutes(SleepHistoryTracker.msToMinOfDay(it, localOffsetMs), nightStartMin, nightEndMin)
+        }
+        return if (kept.size == h.events.size) h else History(kept.toMutableList())
+    }
+
     /** Smaller of clockwise / anticlockwise distance between two minute-of-day values. */
     private fun circularDistance(a: Int, b: Int): Int {
         val d = abs(a - b)

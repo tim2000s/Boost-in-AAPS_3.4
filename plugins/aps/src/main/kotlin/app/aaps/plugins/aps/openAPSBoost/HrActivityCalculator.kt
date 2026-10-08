@@ -191,8 +191,10 @@ object HrActivityCalculator {
         // Frozen/stuck-value guard: a run of bit-identical readings is a sensor artifact (e.g. the
         // wear HR listener repeating its last value), not a heartbeat. Trusting a stuck ELEVATED
         // value mis-fires RESISTANCE/STRESS on every cycle (observed: a value pinned at 124 bpm all
-        // night). Treat it as unavailable and fall back to step-only. Suppression is safe-side — the
-        // fallback (RESTING) only ever withholds an activity/target modifier, never adds insulin.
+        // night). Treat it as unavailable: zone NONE, which the plugin reads as "no usable HR". That
+        // withholds every HR-driven activity and target modifier. It must not be read as rest: with HR
+        // integration on, the INACTIVE raise requires positive HR evidence of rest and is withheld when
+        // the classification is unavailable (see [inactivityRaiseBlockedByHr]).
         if (isHrWindowFrozen(hrReadings, nowMillis, hrWindowMinutes)) {
             debug.append("HR: frozen value ${String.format("%.1f", avgBpm)} bpm across ${hrWindowMinutes}m window (stuck sensor?) — treating as unavailable")
             aapsLogger?.debug(LTag.APS, "HrActivityCalculator: $debug")
@@ -288,7 +290,16 @@ object HrActivityCalculator {
      * as long as the rider stayed easy. At zone 2 only the raise is withheld: the target and the
      * activity state are left alone, because ordinary daily HR (stress, caffeine, digestion) also
      * reaches zone 2 and should not start exercise handling. Zone 3 and above keep the full guard.
+     *
+     * A null [result] also blocks (2026-10-08). The caller passes null when HR integration is on but
+     * there is no usable HR: no reading in the window, or a stuck value. The raise adds insulin on the
+     * claim that the user is sedentary, and a user who has switched HR integration on has chosen HR as
+     * part of the evidence for that claim, so a missing heart rate is unknown rather than resting. This
+     * is the same reasoning the step feed applies to a dark pedometer (F1, 2026-07-07). It fails closed
+     * rather than open because the field record showed the open direction carrying almost all of the
+     * raise for one participant (B: 3,997 of 4,146 raised cycles had no HR zone). Callers only consult
+     * this with HR integration on; with it off the raise stays step-only, as it always was.
      */
     fun inactivityRaiseBlockedByHr(result: HrClassificationResult?): Boolean =
-        result != null && result.hrZone >= HrZone.ZONE_2_LIGHT
+        result == null || result.hrZone == HrZone.NONE || result.hrZone >= HrZone.ZONE_2_LIGHT
 }

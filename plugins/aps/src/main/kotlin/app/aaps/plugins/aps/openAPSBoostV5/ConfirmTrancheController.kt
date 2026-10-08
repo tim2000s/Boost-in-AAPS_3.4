@@ -31,9 +31,15 @@ import kotlin.math.min
  * per-user knob for auto-config to derive. Raising it withholds more, which is a tightening, so the
  * existing raise-guard semantics already point the right way without modification.
  *
- * This can only deliver less than the engine would without it, never more. A withheld remainder that
- * is never released is insulin not given; the committed cycles that follow are unaffected and remain
- * the size-responsive part of the response.
+ * This can only deliver less than the engine would without it, never more. Over an episode the
+ * immediate part plus any release is at most the confirm shot the engine sized, and a withheld
+ * remainder that is never released is insulin not given; the committed cycles that follow are
+ * unaffected and remain the size-responsive part of the response. On the cycle itself the release is
+ * held to the bounds the rest of the V6 dose meets, through [onCycleBounded]: it is dropped unless the
+ * engine is still in a meal state (CONFIRMED or COMMITTED), when a phase-3 hard gate fired, and inside
+ * the post-rescue window, and what survives is clamped to the maxIOB headroom and the per-cycle cap the
+ * confirm shot was held to. The release rule itself reads glucose shape only, which is why these
+ * bounds sit outside it.
  */
 class ConfirmTrancheController(
     // Settable rather than constructed, so changing the preference takes effect on the next cycle
@@ -131,6 +137,52 @@ class ConfirmTrancheController(
                 SLOPE_NOW * slope + BG_NOW * bg
         )
     }
+
+    /**
+     * The bounds that apply to a release on this cycle, from outside the controller.
+     * @param inMealState     V6's state is CONFIRMED or COMMITTED this cycle
+     * @param hardGateFired   a V6 phase-3 hard gate zeroed the dose this cycle
+     * @param postRescueWindow inside the post-rescue window (45-min low below the shared threshold)
+     * @param ceilingU        the most the release may add this cycle (maxIOB headroom and state cap
+     *                        left after the cycle's own dose)
+     */
+    data class ReleaseBounds(
+        val inMealState: Boolean,
+        val hardGateFired: Boolean,
+        val postRescueWindow: Boolean,
+        val ceilingU: Double,
+    )
+
+    /** A bounded release: the units to add and a short note for the reason line ("" when unbounded). */
+    data class Release(val units: Double, val note: String)
+
+    /**
+     * [onCycle] under [bounds]. The hold is dropped, not deferred, when the state has left the meal
+     * states, a hard gate fired or the post-rescue window is open: each is the engine deciding against
+     * more insulin, and a hold carried past it would be released on evidence that predates it. A
+     * release the rule grants is clamped to [ReleaseBounds.ceilingU].
+     */
+    fun onCycleBounded(nowMs: Long, bg: Double?, bounds: ReleaseBounds): Release {
+        if (pending == null) return Release(0.0, "")
+        val dropReason = when {
+            !bounds.inMealState   -> "state"
+            bounds.hardGateFired  -> "hard-gate"
+            bounds.postRescueWindow -> "post-rescue"
+            else                  -> null
+        }
+        if (dropReason != null) {
+            val held = heldU()
+            reset()
+            return Release(0.0, "dropped:$dropReason,${roundMilli(held)}")
+        }
+        val granted = onCycle(nowMs, bg)
+        if (granted <= 0.0) return Release(0.0, "")
+        val ceiling = max(0.0, bounds.ceilingU)
+        return if (granted > ceiling) Release(ceiling, "clamped:${roundMilli(granted)}->${roundMilli(ceiling)}")
+        else Release(granted, "")
+    }
+
+    private fun roundMilli(x: Double): Double = Math.round(x * 1000.0) / 1000.0
 
     /** Drops any hold. Used when the engine leaves a meal state entirely. */
     fun reset() {
