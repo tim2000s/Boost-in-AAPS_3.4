@@ -518,33 +518,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
         )
     }
 
-    // KAIROS Twin — physiological EnKF forecaster, held in memory across cycles (re-converges in
-    // ~30 min after a restart; fail-safe). READ-ONLY telemetry; never touches the dose path. Uses the
-    // validated default per-person parameters. (2026-07-18)
-    private val twinShadow by lazy { app.aaps.plugins.aps.openAPSBoostTwin.TwinShadow() }
-    // Anticipatory back-out controller SHADOW (2026-07-20): retractable-anticipation state machine, held
-    // in memory across cycles. READ-ONLY — logs antBackout=...; delivers nothing. See BACKOUT_CONTROLLER_SPEC.
-    private val backoutShadow by lazy { app.aaps.plugins.aps.openAPSBoostTwin.AnticipationBackoutShadow() }
-    private val consequenceShadow by lazy { app.aaps.plugins.aps.openAPSBoostV5.ConsequencePriorShadow() }
     private val confirmTranche by lazy { app.aaps.plugins.aps.openAPSBoostV5.ConfirmTrancheController() }
-    // Per-user ANTICIPATION shadow (2026-07-27): refits per-user exercise/meal onset-hazard models
-    // offline, predicts p(onset) at 45-min lead, runs the two retractable arms in shadow. READ-ONLY —
-    // logs anticip=...; delivers nothing. Onset history persists as a StringKey JSON blob (V7 idiom).
-    // See openAPSBoostTwin/ANTICIPATION_ARCHITECTURE_SPEC.md (Phase 1+2). Runs in the shared engine, so
-    // it covers plain Boost, V5/V6, and the V7-shadow line identically.
-    private val anticipShadow by lazy {
-        app.aaps.plugins.aps.openAPSBoostTwin.AnticipationShadow(
-            loadState = { preferences.get(StringKey.ApsBoostAnticipHistory) },
-            saveState = { preferences.put(StringKey.ApsBoostAnticipHistory, it) },
-            logError = { msg, t -> aapsLogger.error(LTag.APS, msg, t) },
-            weekMinuteOf = { ms ->
-                val z = java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault())
-                app.aaps.plugins.aps.openAPSBoostTwin.AnticipationHabitModel.weekMinute(
-                    z.dayOfWeek.value - 1, z.hour * 60 + z.minute
-                )
-            },
-        )
-    }
 
     // ---- Post-exercise recovery state ----
     @Volatile private var recoveryWindowEnd: Long = 0L
@@ -1902,62 +1876,6 @@ open class OpenAPSBoostPlugin @Inject constructor(
                     hour = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).hour,
                 )
             }.onFailure { t -> aapsLogger.error(LTag.APS, "V7 shadow invocation failed (swallowed)", t) }
-            // KAIROS Twin shadow (2026-07-18): assimilate this cycle's CGM + insulin into the
-            // physiological EnKF and log a calibrated 30/60-min forecast + the inferred glucose
-            // appearance. READ-ONLY — writes only boostTwin_* telemetry; the delivered dose is
-            // untouched. Insulin this cycle = boluses(last 5 min) + basal (temp-adjusted). Belt-and-
-            // braces runCatching on top of TwinShadow's own — the shadow can NEVER break a cycle.
-            runCatching {
-                val fiveMinAgo = now - 5L * 60 * 1000
-                val bolusU = persistenceLayer.getBolusesFromTimeToTime(fiveMinAgo, now, true).sumOf { b -> b.amount }
-                val tb = persistenceLayer.getTemporaryBasalActiveAt(now)
-                val basalRate = when {
-                    tb == null    -> oapsProfile.current_basal
-                    tb.isAbsolute -> tb.rate
-                    else          -> oapsProfile.current_basal * tb.rate / 100.0
-                }
-                val basalU = basalRate * 5.0 / 60.0
-                // Assimilate what WAS delivered this cycle (bolus + active basal), but forecast under
-                // the SCHEDULED (profile) basal, not the currently-active temp: a transient correction
-                // temp must not be projected forward for the whole 30–60 min horizon (that ran the
-                // open-loop forecast cold/warm and mis-fired the lo30 floor). Fidelity fix 2026-07-18;
-                // second-order in practice (basal dosed now barely acts within the horizon, and the
-                // off-policy test found the Twin's insulin gain is weak/unidentified — see
-                // backtesting/2026-07-kairos-twin/TWIN_OFFPOLICY.md).
-                val scheduledBasalU = oapsProfile.current_basal * 5.0 / 60.0
-                val fc = twinShadow.runCycle(glucoseStatus.glucose, bolusU + basalU, scheduledBasalU)
-                if (fc != null) {
-                    // Ride in the reason string, NOT a new RT field (see RT KDoc — the legacy V3MLG3
-                    // ART verifier limit). The extractor parses "twin=...;" back into DB columns.
-                    // idea-4 shadow (2026-07-18): lo30 (30-min forecast FLOOR) is the actionable hypo
-                    // signal — validated to catch real lows at ⅓–½ the false-alarm rate of oref's
-                    // minGuardBG/minPredBG (backtesting/2026-07-kairos-twin/TWIN_HYPO_LEAD.md). floorbreach
-                    // = the would-withhold-this-cycle trigger (lo30 < 70 mg/dL). LOGGED, NOT APPLIED —
-                    // pure telemetry; the withdrawal ACTION is the policy leg (shadow-first, auto-config-
-                    // managed when built). lo60 is NOT actionable (band too wide — cries wolf, FA 0.56).
-                    val floorBreach = if (fc.lo30 < 70.0) 1 else 0
-                    it.reason.append("twin=${fc.fc30},${fc.fc60},${fc.lo60},${fc.hi60},${fc.raMean},${fc.filteredGi}," +
-                        "${Round.roundTo(bolusU + basalU, 0.001)},${fc.lo30},$floorBreach; ")
-                    // Anticipatory back-out shadow: run the retractable-anticipation state machine off the
-                    // Twin's Ra + BG. ARM on the accelMeal onset detector (the best onset cue from signal
-                    // digging) with mlMealLikely retained as a secondary OR-trigger; armSrc is logged so the
-                    // two are compared on banked data (2026-07-20 ACCELMEAL_ARM_SPEC.md). READ-ONLY. The arm
-                    // computation duplicates the accelMeal block below by design, to keep the two shadows'
-                    // failure isolation independent — a fault here degrades to no-arm, never breaks a cycle.
-                    val accelArm = runCatching {
-                        val accel = glucoseStatus.shortAvgDelta - glucoseStatus.longAvgDelta
-                        val rising = glucoseStatus.delta > 0.0 || glucoseStatus.shortAvgDelta > 0.0
-                        val preConfirm = v5decision?.mealHypothesis == null ||
-                            v5decision.mealHypothesis == MealHypothesis.IDLE ||
-                            v5decision.mealHypothesis == MealHypothesis.OBSERVING
-                        accel > 2.0 && rising && preConfirm
-                    }.getOrDefault(false)
-                    runCatching {
-                        backoutShadow.runCycle(now, glucoseStatus.glucose, fc.raMean, fc.lo30, it.mlMealLikely, accelArm)
-                            ?.let { p -> it.reason.append("antBackout=$p; ") }
-                    }.onFailure { t -> aapsLogger.error(LTag.APS, "Back-out shadow failed (swallowed — dosing untouched)", t) }
-                }
-            }.onFailure { t -> aapsLogger.error(LTag.APS, "KAIROS Twin shadow failed (swallowed — dosing untouched)", t) }
             // Acceleration-based early-meal-detection SHADOW (2026-07-20). Signal digging over all Boost
             // data found BG ACCELERATION (curvature) is the one signal worth adding: it detects an
             // unannounced meal ~5 min before the delta-based confirm (and improves the forecaster). accel =
@@ -1975,16 +1893,6 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 it.reason.append("accelMeal=$trig,${Round.roundTo(accel, 0.1)},${Round.roundTo(glucoseStatus.shortAvgDelta, 0.1)}," +
                     "${Round.roundTo(glucoseStatus.longAvgDelta, 0.1)},${glucoseStatus.glucose.toInt()},${v5decision?.mealHypothesis ?: "?"}; ")
             }.onFailure { t -> aapsLogger.error(LTag.APS, "Accel-meal shadow failed (swallowed — dosing untouched)", t) }
-            // Consequence prior SHADOW (2026-08-26). Logs a probability that this rise ends
-            // somewhere that matters, from glucose at the onset and the local hour. READ-ONLY.
-            // Included because the engine's own projection is at chance on that question (0.527
-            // against a 0.398 base rate on 27,619 onsets) while these two numbers reach 0.763, and
-            // adding the whole engine record to them is worth +0.001. Delivers NOTHING; a dose
-            // sized on this is a dosing change and goes to the two-test bar.
-            runCatching {
-                consequenceShadow.runCycle(now, glucoseStatus.glucose)
-                    ?.let { p -> it.reason.append("conseq=$p; ") }
-            }.onFailure { t -> aapsLogger.error(LTag.APS, "Consequence-prior shadow failed (swallowed — dosing untouched)", t) }
             // Sleep gate (2026-06-14): do NOT let V5 drive the SMB while SLEEPING — fall back to V1's
             // (oref1/Boost) SMB, which already respects night mode. V5 still computes its shadow
             // telemetry above (runShadow ran), so the V5-vs-V1 comparison continues overnight; only
@@ -2147,90 +2055,6 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 it.reason.append("V6 override skipped (Boost inactive) — base SMB ${Round.roundTo(it.units ?: 0.0, 0.001)}U; ")
                 aapsLogger.info(LTag.APS, "V6-ACTIVE override skipped — Boost inactive; base oref1 SMB ${it.units ?: 0.0}U retained")
             }
-
-            // Post-meal PLATEAU-NUDGE shadow (2026-07-19) — READ-ONLY, delivers NOTHING.
-            // Finding: V6 under-recovers — it parks post-meal glucose at ~145-150 for hours
-            // (backtesting/2026-07-descent ff1). The per-cycle plateau low is UNFORECASTABLE (dr3:
-            // no signal — Twin forecast/floor/slope, oref minGuard/minPred, BG/IOB/trend — clears
-            // chance out-of-sample, best OOS AUC 0.55). So the lever is a base-rate + small-dose +
-            // hard-floor rule, per-user auto-config-gated in the active version (see
-            // backtesting/scripts/2026-07-v6-descent/PLATEAU_NUDGE_SPEC.md). This SHADOW logs the
-            // would-nudge + trigger/floor state via a `plateau=` reason tag so it can be banked +
-            // priced on-device before it ever doses. Belt-and-braces runCatching — never breaks a cycle.
-            runCatching {
-                val plateauNudgeU = 0.10
-                // Lower bound on "flat or falling". Set at -3 mg/dL/5min: the sticky-plateau
-                // episodes this targets ran -0.6 to -2.9 (live, 2026-08-02 14:36-15:31 at BG
-                // 226-249), while the descents to exclude ran -6 to -25. Provisional — the band
-                // should be re-derived from banked data once that data is trustworthy again.
-                val PLATEAU_MIN_TREND = -3.0
-                val bgMgdl = glucoseStatus.glucose
-                val trend = glucoseStatus.shortAvgDelta                       // mg/dL per 5 min
-                val iobNow = iobArray.firstOrNull()?.iob ?: 0.0
-                val committedCap = preferences.get(DoubleKey.ApsBoostV5CommittedCapU)
-                val maxIob = oapsProfile.max_iob
-                // oref1's forward-low guard. Read the TYPED value the engine already publishes
-                // (DetermineBasalBoost sets rT.minGuardBG in mg/dL) rather than scraping the
-                // formatted reason string.
-                //
-                // 2026-08-04 defect: the previous `Regex("minGuardBG ([0-9.]+)")` could not match a
-                // NEGATIVE value — the character class has no minus sign — so on a deep forward-low
-                // forecast the match failed, minGuardMgdl was null, and the veto below
-                // short-circuited to false. The floor whose entire job is "never nudge into a low"
-                // failed OPEN exactly when the forecast was worst. Verified on 4 live cycles
-                // (2026-08-02 16:26-16:41, minGuardBG -25.1..-18.6 mmol, the live path HARD-blocking
-                // on min_guard_bg while this shadow reported floor="ok"); that descent ended at
-                // 55 mg/dL. The magnitude-based mmol heuristic it used is gone with it: it would
-                // have multiplied a genuine sub-30 mg/dL value by 18.
-                val minGuardMgdl = it.minGuardBG
-                // trigger: post-meal plateau — above tight range, flat/falling, insulin on board.
-                // SHADOW band widened past the spec's 200 ceiling (2026-07-25): a live stuck-high at
-                // 219-247 with IOB ~2 showed insulinReq≈0 above 200 too (eventualBG≈target — the
-                // efficacy deficit is invisible to IOB), so bank those episodes as well. The tag
-                // records BG, so [145,200) vs [200,250) price separately; the ACTIVE nudge spec
-                // band stays [145,200) until the upper band earns its own verdict.
-                val inPlateau = bgMgdl in 145.0..249.9 && trend <= 1.7 && iobNow > 0.5
-                val nudgeRaw = minOf(plateauNudgeU, committedCap, maxOf(0.0, maxIob - iobNow))
-                // hard floors (can only tighten) — never nudge into a low
-                val floor = when {
-                    !inPlateau                                    -> "n/a"
-                    recentLowBG45Min < 75.0                       -> "recent-low"
-                    inPostRescueWindow                            -> "post-rescue"
-                    cumulativeCapReached                          -> "cum-cap"
-                    // FAIL CLOSED: an absent forecast vetoes. A floor that only vetoes when it can
-                    // read a value is not a floor.
-                    minGuardMgdl == null                          -> "minguard-unknown"
-                    minGuardMgdl < 85.0                           -> "minguard"
-                    // A steep descent is not a plateau. The trigger's `trend <= 1.7` is unbounded
-                    // below, so a -25 mg/dL/5min freefall satisfied it; 8 of 26 live triggers in a
-                    // 36-hour sample were on trends steeper than -5, five of them inside the descent
-                    // that ended at 55 mg/dL.
-                    trend < PLATEAU_MIN_TREND                     -> "falling"
-                    v5Asleep || !activityResult.boostActive       -> "not-active"
-                    nudgeRaw <= 0.0                               -> "no-headroom"
-                    else                                          -> "ok"
-                }
-                val wouldNudge = if (floor == "ok") nudgeRaw else 0.0
-                it.reason.append("plateau=${if (floor == "ok") 1 else 0},${Round.roundTo(wouldNudge, 0.001)}," +
-                    "${bgMgdl.toInt()},${Round.roundTo(trend, 0.1)},${Round.roundTo(iobNow, 0.01)}," +
-                    "${v5decision?.mealHypothesis ?: "?"},$floor; ")
-            }.onFailure { t -> aapsLogger.error(LTag.APS, "Plateau-nudge shadow failed (swallowed — dosing untouched)", t) }
-
-            // Per-user ANTICIPATION shadow (2026-07-27) — READ-ONLY, delivers NOTHING. Records this
-            // cycle's exercise/meal onset, refits the per-user habit models offline, predicts p(onset)
-            // at a 45-min lead, and runs the two retractable arms in shadow. Appends anticip=... .
-            // Belt-and-braces on top of the shadow's own try/catch — can never break a cycle.
-            runCatching {
-                anticipShadow.runCycle(
-                    reason = it.reason,
-                    nowMs = now,
-                    steps5Min = recentSteps5Min,
-                    mealStateName = v5decision?.mealHypothesis?.name,
-                    bg = glucoseStatus.glucose,
-                    delta = glucoseStatus.delta,
-                    inPostRescueWindow = inPostRescueWindow,
-                )
-            }.onFailure { t -> aapsLogger.error(LTag.APS, "Anticipation shadow invocation failed (swallowed)", t) }
 
             // V6: surface the anticipatory pre-meal target decision computed earlier this cycle.
             v6PreMealReason?.let { r -> it.reason.append(r) }

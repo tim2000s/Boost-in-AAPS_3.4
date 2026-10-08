@@ -13,7 +13,7 @@ object Versions {
     // <engine>.<minor>.<patch>, engine 6 on dev/master (which share a number), 6.x.x.E on
     // Boost-endurance, 7 on the V7-shadow vehicle. Raise minor for any change to dosing behaviour,
     // patch for fixes and telemetry that leave dosing unchanged. Set by hand on each branch.
-    const val boostVersion = "6.1.0.E"
+    const val boostVersion = "6.1.1.E"
 
     const val compileSdk = 36
     const val minSdk = 31

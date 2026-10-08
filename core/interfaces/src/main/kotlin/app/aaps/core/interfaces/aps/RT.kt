@@ -158,9 +158,10 @@ data class RT(
     var boostVwa_usedPrevDay: Boolean? = null,   // true where the previous day carried the seam
     var boostV7_innovSensFrozen: Double? = null, // rolling 30-min innovation SUM (mg/dL) with sens FROZEN at profile ISF — Backtest-2 follow-up (adapted variable_sens absorbed the signal, d=0.02). Log-only
 
-    // KAIROS Twin SHADOW telemetry (2026-07-18) — a physiological Ensemble-Kalman forecaster
-    // (plugins/aps/.../openAPSBoostTwin), READ-ONLY (doses nothing). NOTE: its forecast is emitted
-    // as a "twin=fc30,fc60,lo60,hi60,ra,gi,insU;" tag appended to [reason], NOT as its own RT field.
+    // SHADOW telemetry does NOT get RT fields. Every Boost shadow emits its output as a
+    // "tag=value; " appended to [reason] instead (the confirm tranche writes "tranche=...",
+    // the acceleration meal shadow "accelMeal=..."). The extractor parses them back into
+    // database columns.
     // WHY: adding ANY field to this huge @Serializable data class shifts the register allocation of
     // the legacy DetermineBasalBoostV3MLG3.determine_basal (which builds an RT and sits right at the
     // ART method-verifier limit) and trips a VerifyError → instant startup crash (reproduced on an
