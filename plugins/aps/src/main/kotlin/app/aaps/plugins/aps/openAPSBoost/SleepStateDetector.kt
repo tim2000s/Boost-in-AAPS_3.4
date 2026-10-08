@@ -39,6 +39,10 @@ import org.json.JSONObject
  *      stepsToday growth ≥ [WAKE_STEP_STRONG_THRESHOLD], sustained (reason "steps"). When HR is live,
  *      the gentle rule governs and steps-alone does NOT wake — preserves the both-required guard.
  *   3. clock-of-day exits nightEnd  (hard morning boundary — reason "boundary", excluded from learning).
+ *   4. Transmission resume: >= 3 fresh HR samples after a drought >= droughtThresholdMin (reason
+ *      "resume"). Before the scheduled-wake grace window, and outside the lie-in, it also needs
+ *      >= [RESUME_WAKE_MIN_STEPS] steps, because batched watch uploads produce the same burst all
+ *      night (2026-10-08).
  *
  * 2026-07-03 incident (why the step evidence is lump-tolerant): the wear step bridge delivers
  * steps in LUMPS, not smooth 15-min increments — the developer was demonstrably awake ~06:00
@@ -134,6 +138,17 @@ object SleepStateDetector {
      * only within this long of nightEnd (earlier genuine rising is caught by [WAKE_STEP_STRONG_THRESHOLD]).
      */
     const val SLEEP_SCHEDULE_TOLERANCE_MIN = 90
+
+    /**
+     * Steps (in the 15-min bucket, or cumulative growth over [WAKE_STEP_LOOKBACK_MIN]) that must
+     * accompany an HR transmission burst for it to count as a wake before the scheduled-wake grace
+     * window. Batched watch uploads produce a burst after a drought every 15 to 30 min overnight
+     * with nobody awake; replayed over 30 nights on six users this cut AWAKE between 02:00 and
+     * 05:00 by 7.2 min per night [4.7, 9.9], with no distinguishable delay to morning wakes
+     * (backtesting/scripts/2026-10-sleep-resume-wake/). A threshold of 1 gave the same
+     * result; 20 leaves room for counts registered by turning over in bed.
+     */
+    const val RESUME_WAKE_MIN_STEPS = 20
 
     /** One (timestamp, cumulative stepsToday) observation for the trailing wake-evidence window. */
     data class StepSample(val tMs: Long, val steps: Int)
@@ -396,8 +411,19 @@ object SleepStateDetector {
             ((inputs.nowMs - prev.lastFreshHrSampleMs) / 60_000L).toInt()
         else
             Int.MAX_VALUE
-        val transmissionResumeWake = freshSamplesInLast15Min >= 3 &&
+        val resumeBurst = freshSamplesInLast15Min >= 3 &&
             priorDroughtMinutes >= inputs.droughtThresholdMin
+        // 2026-10-08: a burst alone is not a wake. Watches that upload HR in batches (one sample
+        // every 15 to 30 min overnight, several samples per upload) produce a burst after a drought
+        // all night, and each one woke the detector. In the core night it now needs step evidence.
+        // From SLEEP_SCHEDULE_TOLERANCE_MIN before the scheduled wake and through the lie-in it still
+        // wakes on the burst alone: the burst that answers a morning wake often lands before the
+        // steps do, and it consumes the drought, so a later step lump would find no burst to confirm.
+        val resumeCorroborated = nearScheduledWake || inLieIn ||
+            inputs.stepsLast15Min >= RESUME_WAKE_MIN_STEPS || stepsInLookback >= RESUME_WAKE_MIN_STEPS
+        val transmissionResumeWake = resumeBurst && resumeCorroborated
+        if (resumeBurst && !resumeCorroborated && prev.state == SleepState.SLEEPING)
+            debug.append(" | resume-burst-ignored (no steps)")
 
         when (prev.state) {
             SleepState.AWAKE -> {
