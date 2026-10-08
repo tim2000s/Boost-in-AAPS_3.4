@@ -361,6 +361,21 @@ open class OpenAPSBoostPlugin @Inject constructor(
             }
             return V6OverrideCaps(dose, capNote)
         }
+
+        /**
+         * Whether Boost's tiers may run this cycle, before the temp-target and lie-in checks (2026-10-08).
+         *  - nightSleepPeriod: the night-mode period (toggle-dependent, as before).
+         *  - inNightWindow: the configured night window as a clock fact, whatever the night-mode toggle
+         *    says. With the toggle off the tiers previously ran all night: 1.95 U from Tier 5 at 05:30
+         *    on 2026-10-08 with the detector reading SLEEPING.
+         *  - v6Active && detectorSleeping: V6 stands down while SLEEPING, and the dose that replaced it
+         *    was V1's tiered SMB. Closing the gate makes it base oref instead. Covers sleep outside the
+         *    window (early nights, lie-ins).
+         * The detector can only close the gate. It cannot reopen it inside the window, because a
+         * batched heart-rate upload reads as a wake there (core-night AWAKE up to 48% of cycles by user).
+         */
+        internal fun boostGateOpen(nightSleepPeriod: Boolean, inNightWindow: Boolean, v6Active: Boolean, detectorSleeping: Boolean): Boolean =
+            !nightSleepPeriod && !inNightWindow && !(v6Active && detectorSleeping)
     }
 
     // last values
@@ -857,26 +872,38 @@ open class OpenAPSBoostPlugin @Inject constructor(
         targetBg: Double,
         minBg: Double,
         maxBg: Double,
-        profilePercent: Int
+        profilePercent: Int,
+        v6Active: Boolean
     ): BoostActivityResult {
         val debug = StringBuilder()
         val midnight = now - MidnightUtils.milliSecFromMidnight(now)
         val sleepInMillis = (3600000.0 * sleepInHours).toLong()
 
-        // Boost is active whenever the user is NOT in their night/sleep period. The night/sleep period
-        // is the HR/step-aware night-mode state — enabled && (night time window OR sleep detection) —
-        // EXCLUDING night mode's BG gate: a nocturnal high (incl. a sensor spike) must NOT re-enable
-        // Boost, or a full V6 meal-amplified SMB could fire while asleep (the 2026-07-01 incident).
-        // Replaces the old fixed Boost time window; the Boost window now tracks night mode, so
-        // "Boost active" == "not night". `ApsBoostStartTime`/`ApsBoostEndTime` are retired. (2026-07-02)
+        // Boost is active whenever the user is NOT in their night/sleep period, EXCLUDING night mode's
+        // BG gate: a nocturnal high (incl. a sensor spike) must NOT re-enable Boost, or a full V6
+        // meal-amplified SMB could fire while asleep (the 2026-07-01 incident). `ApsBoostStartTime`/
+        // `ApsBoostEndTime` are retired (2026-07-02). Since 2026-10-08 the configured night window
+        // closes the gate whatever the night-mode toggle says, and so does SLEEPING under V6; see
+        // [boostGateOpen]. Carbs on board do not reopen it: inside the window they only lift night
+        // mode's SMB suppression, so the SMB is base oref, as in PRE_SLEEP.
         val nightEndMs = midnight + parseTimeToMillisOrDefault(preferences.getBoostDosing(StringKey.ApsBoostNightModeEnd), "07:00")
+        // The configured night window as a clock fact, read WHATEVER ApsBoostNightModeEnabled says.
+        // Needs no HR, no steps and no detector.
+        val nightStartMs = midnight + parseTimeToMillisOrDefault(preferences.getBoostDosing(StringKey.ApsBoostNightModeStart), "22:00")
+        val inNightWindow = NightWindow.contains(now, nightStartMs, nightEndMs)
+        val detectorSleeping = sleepStateCached.state == SleepStateDetector.SleepState.SLEEPING
+        val nightSleepPeriod = isInNightSleepPeriod()
 
-        var boostActive = !isInNightSleepPeriod()
+        var boostActive = boostGateOpen(nightSleepPeriod, inNightWindow, v6Active, detectorSleeping)
         var disableReason = ""
-        if (!boostActive) disableReason = "Night/sleep period (night mode active by time or HR/steps)"
+        if (!boostActive) disableReason = when {
+            inNightWindow    -> "Night window (clock)"
+            nightSleepPeriod -> "Night/sleep period (night mode active by time or HR/steps)"
+            else             -> "Sleeping (V6 stands down; base oref SMB)"
+        }
 
         val nowTime = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
-        debug.append("Boost gate: night/sleep=${!boostActive} | Now: ${nowTime.format(DateTimeFormatter.ofPattern("HH:mm"))}")
+        debug.append("Boost gate: night/sleep=${!boostActive} (window=$inNightWindow period=$nightSleepPeriod v6Sleeping=${v6Active && detectorSleeping}) | Now: ${nowTime.format(DateTimeFormatter.ofPattern("HH:mm"))}")
 
         // Disable boost if high temp target and not allowed
         if (boostActive && tempTargetSet && !allowBoostWithHighTt && targetBg > dynIsfNormalTarget) {
@@ -938,18 +965,14 @@ open class OpenAPSBoostPlugin @Inject constructor(
         val sleepInActive = StepFeed.sleepInActive(stepsAvailable, now, nightEndMs, sleepInMillis, recentSteps60Min, sleepInSteps)
         val autoBySleepActive = preferences.get(BooleanKey.ApsBoostNightModeAutoBySleep)
         val nightModeEnabled = preferences.getBoostDosing(BooleanKey.ApsBoostNightModeEnabled)
-        val detectorSleeping = sleepStateCached.state == SleepStateDetector.SleepState.SLEEPING
         // Sleep as the INACTIVE branch must see it. SLEEPING is confirmed sleep; PRE_SLEEP is the
         // wind-down before it, and the user is in bed for both. This covers the CORE NIGHT, which
         // sleepInActive cannot reach — that window opens AT night end, so at 06:09 with a 07:00 end
         // it is false by construction, which is why the original report fired before dawn.
         val detectorAsleep = sleepStateCached.state == SleepStateDetector.SleepState.SLEEPING ||
             sleepStateCached.state == SleepStateDetector.SleepState.PRE_SLEEP
-        // The configured night window as a clock fact, read WHATEVER ApsBoostNightModeEnabled says.
-        // This is what makes "INACTIVE never fires overnight" hold by default instead of depending
-        // on the user having enabled night mode, and it needs no HR, no steps and no detector.
-        val nightStartMs = midnight + parseTimeToMillisOrDefault(preferences.getBoostDosing(StringKey.ApsBoostNightModeStart), "22:00")
-        val inNightWindow = NightWindow.contains(now, nightStartMs, nightEndMs)
+        // inNightWindow (computed above) is what makes "INACTIVE never fires overnight" hold by default
+        // instead of depending on the user having enabled night mode.
         // Audit trail for the 2026-07-31 fix: record when the step test alone WOULD have raised the
         // profile but sleep blocked it, so the suppression is visible in NS rather than silent.
         if (StepFeed.inactivityStepsMet(stepsAvailable, profilePercent, recentSteps60Min, inactivitySteps) &&
@@ -1360,7 +1383,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
         // ---- Boost-specific calculations ----
 
         // 1. Activity detection & boost time window
-        val activityResult = calculateBoostActivity(now, isTempTarget, targetBg, minBg, maxBg, profilePercent)
+        val activityResult = calculateBoostActivity(now, isTempTarget, targetBg, minBg, maxBg, profilePercent, v5Active)
         // Publish the step-based sleep-in state for next cycle's night-mode evaluation. (2026-07-02)
         sleepInActiveCached = activityResult.sleepInActive
 
