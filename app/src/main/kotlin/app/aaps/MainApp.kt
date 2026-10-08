@@ -488,12 +488,19 @@ class MainApp : DaggerApplication() {
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         aapsLogger.debug("RemoteConfig received successfully")
-                        @Suppress("UNCHECKED_CAST")
-                        (versionCheckersUtils::class.declaredMemberProperties.find { it.name == "definition" } as KMutableProperty<Any>?)
-                            ?.let {
-                                val merged = JsonHelper.merge(it.getter.call(versionCheckersUtils) as JSONObject, JSONObject(firebaseRemoteConfig.getString("defs")))
-                                it.setter.call(versionCheckersUtils, merged)
-                            }
+                        // An empty or malformed "defs" (seen 2026-10-08: a successful fetch, and the
+                        // activated cache with no network, both returned "") made JSONObject throw on the
+                        // main thread and the app died on every launch. Skip the merge instead.
+                        val defs = runCatching { JSONObject(firebaseRemoteConfig.getString("defs")) }.getOrNull()
+                        if (defs == null) aapsLogger.error("RemoteConfig defs empty or unreadable, version definitions not updated")
+                        else {
+                            @Suppress("UNCHECKED_CAST")
+                            (versionCheckersUtils::class.declaredMemberProperties.find { it.name == "definition" } as KMutableProperty<Any>?)
+                                ?.let {
+                                    val merged = JsonHelper.merge(it.getter.call(versionCheckersUtils) as JSONObject, defs)
+                                    it.setter.call(versionCheckersUtils, merged)
+                                }
+                        }
                     } else aapsLogger.error("RemoteConfig fetch failed")
                 }
         }
