@@ -1348,19 +1348,16 @@ class DetermineBasalBoost @Inject constructor(
             //
             // Hold-active conditions (all required):
             //   COB < 1.0                      — no logged carbs
-            //   recentLowBG ≥ 70               — not in hypo recovery
             //   delta ≥ 5 mg/dL                — BG rising (not drift/noise)
             //   shortAvgDelta ≥ 3 mg/dL        — sustained across ≥2 cycles
+            // A recent low keeps the hold rather than lifting it (audit item 19); see
+            // boostG3HoldConditionsMet.
             //
             // Release conditions — any one releases the hold:
             //   (1) delta_accl > 10 — deterministic acceleration signal
             //   (2) bg > 160 && delta > 5 — safety backstop (already high, still rising)
             //   (3) mlMealLikely > 0.50 — ML signal
-            val g3HoldConditionsMet =
-                meal_data.mealCOB < 1.0 &&
-                profile.recentLowBG >= 70.0 &&
-                glucose_status.delta >= 5.0 &&
-                glucose_status.shortAvgDelta >= 3.0
+            val g3HoldConditionsMet = boostG3HoldConditionsMet(meal_data, glucose_status)
             val mealModelReleases = mlMealLikely != null && mlMealLikely > 0.50
             val accelerationReleases = delta_accl > 10.0
             val bgThresholdReleases = bg > 160.0 && glucose_status.delta > 5.0
@@ -1419,7 +1416,7 @@ class DetermineBasalBoost @Inject constructor(
                     insulinDivisor = if (bg < 108) {
                         scale_pct
                     } else {
-                        insulinReqPCT - ((abs(bg - 180) / 72) * (insulinReqPCT - scale_pct))
+                        insulinReqPCT - boostPercentScaleReduction(bg, insulinReqPCT - scale_pct)
                     }
                 } else {
                     scale_pct = insulinReqPCT // fallback
@@ -1664,7 +1661,7 @@ class DetermineBasalBoost @Inject constructor(
                     if (boostInsulinReq > boostMaxIOB - iob_data.iob) {
                         boostInsulinReq = boostMaxIOB - iob_data.iob
                     }
-                    insulinDivisor = insulinReqPCT - ((abs(bg - 180) / 72) * (insulinReqPCT - (2 * scale_pct)))
+                    insulinDivisor = insulinReqPCT - boostPercentScaleReduction(bg, insulinReqPCT - (2 * scale_pct))
                     insulinReqPCT = insulinDivisor
                     microBolus = Math.floor(min(boostInsulinReq / insulinReqPCT, boost_max) * roundSMBTo) / roundSMBTo
                     // Apply graduated fast-carb scaling
@@ -1713,8 +1710,10 @@ class DetermineBasalBoost @Inject constructor(
                 // Conditions: BG > 180, still rising (delta > 5), insulinReq is at least
                 // 3× the basal-derived cap, and boost is active. This only affects Tier 8
                 // (the only tier capped by maxBolus); Tiers 1-7 already cap to boost_max.
+                // Never in the post-rescue window or under the ML tier downgrade (audit
+                // item 20); see boostSpikeOverrideAllowed.
                 // =====================================================================
-                if (boostActive && bg > 180 && glucose_status.delta > 5 && insulinReq > 3 * maxBolus
+                if (boostSpikeOverrideAllowed(boostActive, rT.boostTier, inPostRescueWindow, mlTierDowngrade) && bg > 180 && glucose_status.delta > 5 && insulinReq > 3 * maxBolus
                     && microBolus >= maxBolus - profile.bolus_increment && iob_data.iob < boostMaxIOB) {
                     val spikeOverrideCap = min(boost_max, boostMaxIOB - iob_data.iob)
                     val overrideBolus = Math.floor(min(insulinReq / insulinReqPCT, spikeOverrideCap) * roundSMBTo) / roundSMBTo
@@ -1784,6 +1783,8 @@ class DetermineBasalBoost @Inject constructor(
                     microBolus = 0.0
                     rT.boostTier = "CUMULATIVE_SMB_CAP"
                 }
+                // Final max_iob clamp (audit item 5); see boostSmbWithinMaxIob.
+                microBolus = boostSmbWithinMaxIob(microBolus, profile, iob_data)
 
                 // Zero temp calculation for SMB
                 val smbTarget = target_bg
