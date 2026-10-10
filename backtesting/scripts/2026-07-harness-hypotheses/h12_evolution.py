@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """H12 — did Boost get better across versions? Glycaemic scorecard per version-era, per user + cohort.
-Eras (telemetry-based, Tim's correction): BoostV1_415 (early v4.1.5, no explicit v1/v6 telemetry) →
+Eras (telemetry-based, developer's correction): BoostV1_415 (early v4.1.5, no explicit v1/v6 telemetry) →
 V44x_ML → V5V6. Descriptive, CGM-only. CAVEAT: eras are also different SEASONS (V1=spring, V6=summer) and
 partly different users → this is the honest scorecard WITH those confounds stated, not a clean A/B."""
 import os, glob, numpy as np

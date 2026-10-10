@@ -40,7 +40,7 @@ print(f"v1-bounded (cap as-is): total {add_v1.sum():.1f}U | basal30min-bounded: 
 print(f"per user-day: v1-bounded {add_v1.sum()/span.sum():.2f}U, basal-bounded {add_basal.sum()/span.sum():.2f}U")
 
 # C) stuck episodes: do they resolve by 4h? and what dose flows in the 2h AFTER episode end (IDLE parity)?
-ep = pd.read_csv("/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad/episodes.csv", parse_dates=["start","end"])
+ep = pd.read_csv("/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad/episodes.csv", parse_dates=["start","end"])
 ep["end_ts"] = ep.end.astype("int64")//10**9
 res4, post2h_v6, post2h_v1 = [], [], []
 for _,r in ep.iterrows():

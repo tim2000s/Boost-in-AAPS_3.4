@@ -2,10 +2,11 @@
 """KAIROS Twin — assemble one person's aligned physiological record on a 5-min grid.
 CGM + oref baselines from the DB; insulin delivered (SMB + integrated temp-basal) from Nightscout.
 Saves twin_data_tim.npz. Personal — scratchpad only."""
+import os
 import json, urllib.request, urllib.parse, ssl, time, datetime
 import numpy as np, psycopg2
 
-site=[s for s in json.load(open('/Users/timstreet/.config/boost_backtest/sites.json'))['sites'] if s['tag']=='self'][0]
+site=[s for s in json.load(open(os.path.expanduser('~/.config/boost_backtest/sites.json')))['sites'] if s['tag']=='self'][0]
 BASE,TOKEN=site['base'],site['token']
 CTX=ssl.create_default_context(); CTX.check_hostname=False; CTX.verify_mode=ssl.CERT_NONE
 DT=300  # 5-min grid (seconds)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fast-carb CONFIRMED-shot crash analysis (2026-07-10).
 
-Motivation: Tim's 48h review — 3 fast-carb events (07-09 12:13, 19:54; 07-10 14:00) where Boost
+Motivation: the developer's 48h review — 3 fast-carb events (07-09 12:13, 19:54; 07-10 14:00) where Boost
 fired a large single CONFIRMED shot (2.4–2.6U) LATE, near the peak of a modest, self-clearing fast
 carb, and the dose landed into the natural fall → crash (nadir 44/60/64). Hypothesis: on fast carbs
 that peak MODESTLY and are already DECELERATING at confirm time, the full velocity-scaled CONFIRMED
@@ -151,7 +151,7 @@ def write_report(rows, crash_ev, needed_ev, flagged, fl_crash, fl_needed, df):
     med = lambda evs, k: float(np.nanmedian([e[k] for e in evs])) if evs else float("nan")
     L = ["# Fast-carb CONFIRMED-shot crash analysis\n",
          f"_Data: oref.boost_decisions, V6, span {str(df.ts_utc.min())[:10]}→{str(df.ts_utc.max())[:10]}. "
-         "From Tim's 48h review (3 fast-carb rise-then-crash events). `fastcarb_confirm_crash.py`._\n",
+         "From the developer's 48h review (3 fast-carb rise-then-crash events). `fastcarb_confirm_crash.py`._\n",
          "## Confirmed: CONFIRMED shots crash a lot (per-user)\n",
          "| user | shots | crash% (nadir<70 in 3h) |\n|---|---|---|\n" +
          "".join(f"| {r['user']} | {r['n']} | {100*r['crash']/r['n']:.0f}% |\n" for r in rows) +
@@ -160,7 +160,7 @@ def write_report(rows, crash_ev, needed_ev, flagged, fl_crash, fl_needed, df):
          f"- CRASH events (n={len(crash_ev)}): only **{100*np.mean([dm(e) for e in crash_ev]):.0f}%** fired decelerating+modest.\n",
          f"- NEEDED events (n={len(needed_ev)}): {100*np.mean([dm(e) for e in needed_ev]):.0f}%.\n",
          f"- The trim guard flags {len(flagged)} shots, crash:needed = **{len(fl_crash)}:{len(fl_needed)}** — a poor "
-         "ratio and it catches only ~10% of crashes. **Do NOT build the decelerating guard** — Tim's 3 "
+         "ratio and it catches only ~10% of crashes. **Do NOT build the decelerating guard** — the developer's 3 "
          "events happened to be decelerating, but most crashes are not.\n",
          "## The real discriminator is confirm-context (BG + IOB), and it's actionable\n",
          f"- CRASH shots fire at a LOWER current BG (**{med(crash_ev,'confirm_bg'):.0f}** vs needed {med(needed_ev,'confirm_bg'):.0f}) "

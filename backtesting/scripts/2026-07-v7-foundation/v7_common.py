@@ -25,7 +25,7 @@ import psycopg2
 USERS = ["tim", "A", "B", "C", "D", "E", "F", "H"]   # G excluded: thin, no era map
 
 # Operative committedCap eras (detected from COMMITTED dose ceilings, 07-05 analysis;
-# H self-set 1.8 per Tim 07-06).
+# H self-set 1.8, reported 07-06).
 CAP_ERAS = {
     "tim": [("2026-06-01", .25), ("2026-06-12", .5), ("2026-06-14", .4), ("2026-07-02", .5)],
     "A":   [("2026-06-17", .25), ("2026-07-01", .5)],

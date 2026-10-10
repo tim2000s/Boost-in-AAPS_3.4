@@ -8,6 +8,7 @@ Items 4 & 5 of the promotion re-validation:
 
 Glycemia from boost_cgm (dense) to t=now. Deterministic. Numbers only.
 """
+import os
 import psycopg2, pandas as pd, numpy as np
 
 MANUAL = {"A":"GO","E":"GO","F":"GO","tim":"GO","B":"HOLD","C":"HOLD","D":"HOLD"}
@@ -44,5 +45,5 @@ print("\n=== item 4/5: per-user TBR + code-gate vs manual verdict ===")
 print(T[["user","n14","tbr70_14","tbr63_14","tbr54_14","tbr70_30","tbr54_30","code_gate","manual","agree"]].to_string(index=False))
 dis = T[(T.agree=="*** DISAGREE ***")]
 print(f"\nDISAGREEMENTS: {len(dis)}" + ("" if not len(dis) else " -> "+", ".join(dis.user)))
-T.to_csv("/Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-07-early-dosing-series/floor_activation_tbr_gate.csv", index=False)
+T.to_csv(os.path.expanduser("~/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-07-early-dosing-series/floor_activation_tbr_gate.csv"), index=False)
 print("[written] floor_activation_tbr_gate.csv")

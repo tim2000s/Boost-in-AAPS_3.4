@@ -2,7 +2,7 @@
 """
 Semi-closed-loop insulin-perturbation replay — shared library.
 
-Approach (Tim's design): keep each user's OBSERVED glucose trace (it already contains the real
+Approach (the developer's design): keep each user's OBSERVED glucose trace (it already contains the real
 unannounced meals). Replay a candidate dosing model; where its dose DIFFERS from what actually ran,
 perturb the trajectory by the insulin-action difference (oref exponential activity × DynISF-at-the-
 time), and let the model RE-DOSE on the perturbed trace (semi-closed-loop). No carb model → sidesteps

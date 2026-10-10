@@ -1,5 +1,5 @@
 """
-Question (Tim): after a CONFIRMED commit-shot, if deltas are STILL ACCELERATING,
+Question (developer): after a CONFIRMED commit-shot, if deltas are STILL ACCELERATING,
 is that a signal to dose MORE (a 'second confirm')?
 
 Clean PREDICTION test (identification-safe: we keep observed BG, just ask what follows):

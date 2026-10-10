@@ -17,7 +17,7 @@ time to act). FA = firing on a descending cycle with NO low in the next 60 min. 
 then pooled. Raw traces stay in scratchpad; only aggregates reported.
 """
 import numpy as np, psycopg2, json
-OUT="/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/fb7b1560-69f3-4fc6-a769-04e7236eda2f/scratchpad"
+OUT="/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/fb7b1560-69f3-4fc6-a769-04e7236eda2f/scratchpad"
 DT=300; SUB=5; M=120; DAYS=45
 USERS=['tim','F','H','B','E','A','C']
 PRIOR=dict(ka1=0.030,ka2=0.022,p2=0.028,SI=0.00055,SG=0.021,Gb=118.0,taui=12.0,kra=0.020)

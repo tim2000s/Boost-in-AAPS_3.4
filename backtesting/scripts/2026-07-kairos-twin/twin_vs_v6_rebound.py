@@ -18,7 +18,7 @@ Cross-user then pooled. Raw traces stay in scratchpad; only aggregates reported.
 import numpy as np, psycopg2, json
 from twin_vs_v6_detection import run_filter, pull, onsets, PRIOR, USERS
 
-OUT="/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/fb7b1560-69f3-4fc6-a769-04e7236eda2f/scratchpad"
+OUT="/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/fb7b1560-69f3-4fc6-a769-04e7236eda2f/scratchpad"
 WIN_PRE, WIN_POST = 3, 13
 JUMP = 0.8            # Twin threshold matched to V6 false-alarm rate (from twin_vs_v6_roc)
 FWD = 12             # 60-min forward window

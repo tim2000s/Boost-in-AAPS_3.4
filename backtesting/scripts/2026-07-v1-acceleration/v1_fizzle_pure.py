@@ -1,5 +1,5 @@
 """
-V1 fizzle-safety, ATTRIBUTED (Tim's correction): allocate a low to the fizzle bolus only
+V1 fizzle-safety, ATTRIBUTED (developer's correction): allocate a low to the fizzle bolus only
 if the bolus itself plausibly caused it — i.e. the insulin delivered AFTER the fizzle bolus
 and before the low is NOT the dominant cause. Otherwise the low is a downstream-dosing low.
 

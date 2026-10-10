@@ -2,7 +2,7 @@
 """Evidence-gated SLIDER controller — cohort policy replay (2026-07-09).
 
 Sibling to the cap-stepper (which was NO-GO because caps are binding constraints that engage
-on a tiny slice). Tim's follow-up: adjust the continuous SLIDERS instead —
+on a tiny slice). The developer's follow-up: adjust the continuous SLIDERS instead —
   * aggressiveness  (ApsBoostV5Aggression ∈ [0.7,1.3], default 1.0): multiplies the CONFIRMED dose;
   * hypoCaution     (ApsBoostV5HypoCaution ∈ [1.0,2.0], default 1.0): deepens the mlHypoRisk backoff.
 Sliders are multipliers on the whole distribution, not ceilings, so an evidence-gated nudge moves

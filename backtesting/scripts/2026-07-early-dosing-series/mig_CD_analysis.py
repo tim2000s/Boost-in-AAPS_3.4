@@ -10,7 +10,7 @@ Migration is PROSPECTIVE: applies when they upgrade to the V6 build.
 import json, csv, math, statistics
 from datetime import datetime, timedelta, timezone
 
-SP = "/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
+SP = "/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
 
 def pctl(vals, p):  # linear-interpolated percentile, mirrors BoostV5AutoConfig.percentile
     v = sorted(x for x in vals if x and x > 0 and math.isfinite(x))

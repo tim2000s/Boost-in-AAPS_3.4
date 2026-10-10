@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timedelta, timezone
 import psycopg2
 
-S = "/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
+S = "/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
 ERA = {"F": datetime(2026, 6, 29, 13, 47, 1, tzinfo=timezone.utc),
        "H": datetime(2026, 6, 30, 12, 28, 58, tzinfo=timezone.utc)}
 NEWCAP = {"F": 6.0, "H": 6.0}

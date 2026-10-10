@@ -7,7 +7,7 @@ import kotlin.math.abs
  * Pure helpers for applying a [BoostV5AutoConfig.V5Suggestion] to preferences while respecting any
  * value the user — or a preset (e.g. a pre-seeded keystore/import) — has ALREADY set.
  *
- * Separated from [OpenAPSBoostV5Plugin]'s preference I/O so the invariants Tim cares about are
+ * Separated from [OpenAPSBoostV5Plugin]'s preference I/O so the invariants that matter are
  * unit-testable: presetting ONE V6 knob must NOT block the others — the preset value is kept and
  * every other unset knob is still configured.
  *

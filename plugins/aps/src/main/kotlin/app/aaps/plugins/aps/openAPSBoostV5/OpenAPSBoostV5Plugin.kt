@@ -561,7 +561,7 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
         aapsLogger.info(LTag.APS, "BoostV5 auto-config applied [$applied]; rationale: ${suggestion.rationale}")
         // Only surface a banner if we ACTUALLY changed something or have a held-back suggestion to
         // show. If every knob was already tuned by the user, applyAutoConfig skips it — announcing
-        // "configured" then changing nothing was the confusing behaviour Tim hit. One concise,
+        // "configured" then changing nothing was the confusing behaviour seen in the field. One concise,
         // readable line per knob; TBR-held cap raises are surfaced as manual suggestions.
         val heldSuggestions = resolutions.filter { it.outcome == BoostV5AutoConfigApply.Outcome.SUGGESTED_NOT_APPLIED_TBR }
             .map {

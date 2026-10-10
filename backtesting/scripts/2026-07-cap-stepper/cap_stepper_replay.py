@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Evidence-gated cap-stepper — cohort policy replay (2026-07-08).
 
-QUESTION (the go/no-go Tim asked for): if we let committedCap step UP per-user on
+QUESTION (the go/no-go the developer asked for): if we let committedCap step UP per-user on
 accumulated evidence of *under-dosing* (cap-binding clip + sustained high followed +
 low-IOB safe slice + retrospective need), with an immediate revert on hypo — does it
 net TIR without moving TBR, and HOW OFTEN does the hypo-revert actually fire?
@@ -25,7 +25,7 @@ HONEST SCOPE — what this can and cannot do:
   Prior context this tests against: the blanket committedCap-raise lever was REJECTED
   (recovering-highs are high-IOB; adding there prices ~19% into lows). This asks the
   narrower question: is there a PER-USER, low-IOB, evidence-gated subset where the
-  raise is defensible — the space where Roman/Joost (cap-clipped) differ from B/D
+  raise is defensible — the space where H/A (cap-clipped) differ from B/D
   (TBR-heavy)?  Frozen entirely for users without absolute TBR headroom.
 
 Usage:  python3 cap_stepper_replay.py            # default params -> writes REPORT
