@@ -4,7 +4,7 @@ Sections: 1 IOB-harm map, 2 confirm latency anatomy, 3 early gap vs highs,
 4 early-confirm counterfactual, 5 fast-path sweep, 6 blocked-confirm audit, 7 meal-time regularity."""
 import psycopg2, pandas as pd, numpy as np
 
-SP = "/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
+SP = "/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
 conn = psycopg2.connect("dbname=oref host=127.0.0.1 port=5432")
 df = pd.read_sql("""
 SELECT DISTINCT ON (user_id, floor(ts_epoch/300.0))

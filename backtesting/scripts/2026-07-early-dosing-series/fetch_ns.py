@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch 14d of devicestatus + entries from Tim's NS, chunked <=7d, 15s backoff. Cache to scratchpad."""
+"""Fetch 14d of devicestatus + entries from the developer's NS, chunked <=7d, 15s backoff. Cache to scratchpad."""
 import json, os, time, urllib.parse, urllib.request
 from datetime import datetime, timezone
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Joost (user A): replay vs latest shipped stack + pull-forward levers. Last 14d, deduped."""
+"""User A: replay vs latest shipped stack + pull-forward levers. Last 14d, deduped."""
 import psycopg2, pandas as pd, numpy as np
 
 conn = psycopg2.connect("dbname=oref host=127.0.0.1 port=5432")

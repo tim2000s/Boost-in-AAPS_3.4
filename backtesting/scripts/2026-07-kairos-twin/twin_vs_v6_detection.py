@@ -19,7 +19,7 @@ baseline, robust to per-user SI/TDD bias. Raw traces stay in scratchpad; report 
 """
 import numpy as np, psycopg2, json, sys
 
-OUT = "/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/fb7b1560-69f3-4fc6-a769-04e7236eda2f/scratchpad"
+OUT = "/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/fb7b1560-69f3-4fc6-a769-04e7236eda2f/scratchpad"
 DT = 300; SUB = 5; M = 150
 USERS = ['tim','F','H','B','E','A','C']
 

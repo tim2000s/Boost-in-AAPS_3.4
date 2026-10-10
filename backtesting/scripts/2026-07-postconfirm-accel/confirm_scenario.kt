@@ -46,7 +46,7 @@ fun run(name: String, cycles: List<Cycle>, fastEnabled: Boolean = false) {
 
 fun main() {
     // Scenario A: a meal that CONFIRMS, then keeps ACCELERATING hard (delta & accl both rising)
-    // straight through — never decelerates. This is Tim's exact case.
+    // straight through — never decelerates. This is the developer's exact case.
     run("A: accelerate straight through the confirm (delta & accl keep climbing)", listOf(
         Cycle(105,  2.0,  1.0, 0.30, 120.0),  // IDLE->OBSERVING (score>0.44? no, 0.30 -> stays IDLE)
         Cycle(110,  5.0,  8.0, 0.50, 135.0),  // enter OBSERVING

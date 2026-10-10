@@ -151,7 +151,7 @@ data class V5PersistedState(
     /** 2026-07-21 primer: CROSS-SESSION on-board primer insulin estimate (U), wall-clock decayed
      *  (exp(-Δt/PRIMER_IOB_TAU_MIN)). Accumulates every primer (fizzle + seed) across sessions; NOT
      *  reset on IDLE (fades by decay). At CONFIRMED, the amount beyond one base is netted off the
-     *  commit-shot (Tim's rule) and the credited excess is consumed. */
+     *  commit-shot (the confirm-net rule) and the credited excess is consumed. */
     val primerIobU: Double = 0.0,
     /** 2026-07-21 primer: epoch-ms the accumulator was last updated (for the decay). 0 = never. */
     val primerIobUpdatedMs: Long = 0L,
@@ -407,7 +407,7 @@ class DetermineBasalBoostV5 @Inject constructor() {
         // primerAppliedU (once-per-session guard) resets on IDLE; the primer-IOB accumulator does NOT.
         val primerActiveState = newHypothesisState.state
         var primerAppliedU = if (primerActiveState == MealHypothesis.IDLE) 0.0 else persisted.primerAppliedU
-        // 2026-07-21 cross-session primer-IOB accumulator (Tim's confirm-net rule): decay the prior
+        // 2026-07-21 cross-session primer-IOB accumulator (the confirm-net rule): decay the prior
         // estimate by wall-clock elapsed, then add any primer this cycle. Spans fizzle sessions so the
         // commit-shot can credit ALL accumulated primer insulin beyond one base. NOT reset on IDLE.
         var primerIobU = persisted.primerIobU
@@ -576,7 +576,7 @@ class DetermineBasalBoostV5 @Inject constructor() {
             finalDose = minOf(nonPrimer + primerBolusU, kotlin.math.max(0.0, inputs.maxIob - inputs.iob))
         }
         // Net the accumulated primer IOB (beyond one base) off the commit-shot (CONFIRMED) then COMMITTED
-        // holds until exhausted — "move, don't add", now spanning prior fizzle sessions (Tim's rule).
+        // holds until exhausted — "move, don't add", now spanning prior fizzle sessions (the confirm-net rule).
         if ((primerActiveState == MealHypothesis.CONFIRMED || primerActiveState == MealHypothesis.COMMITTED) && primerNettingResidualU > 0.0) {
             val net = kotlin.math.min(primerNettingResidualU, finalDose)
             finalDose = kotlin.math.max(0.0, finalDose - net)
@@ -812,7 +812,7 @@ internal fun applyStateDoseCap(
  * decelerationBrake — has MEDIAN 0.037. That is the V4-era "multiplicative brake stack"
  * reassembled from individually-sane gates: each brake is calibrated alone, but their product
  * drives the dose below one pump step, so it floor-rounds to ZERO for 30+ minutes mid-meal.
- * Tim's Episode B: BG 268–277, six consecutive zero-dose cycles, ended 297 + a manual bolus.
+ * Field episode B: BG 268–277, six consecutive zero-dose cycles, ended 297 + a manual bolus.
  * This is a pipeline defect (independent brakes multiplying), not a calibration issue.
  *
  * F = 0.25 backtests at +0.76 U/user-day with 16.6% pre-low incidence — the base rate, i.e. no
@@ -852,7 +852,7 @@ internal const val COMPOSED_FLOOR_MIN_EVENTUAL_OFFSET_MGDL = 20.0
  */
 /**
  * Composed brake-floor hypo-gate thresholds (trailing 14 days). The floor is insulin-ADDING, so it
- * may only ever alter delivered dose for users with low hypo exposure (Tim, 2026-07-08). BOTH must
+ * may only ever alter delivered dose for users with low hypo exposure (design decision, 2026-07-08). BOTH must
  * hold — enforced, not advisory:
  *  - time-below-63 mg/dL (3.5 mmol, the TING lower bound) < [COMPOSED_FLOOR_MAX_TBR63_PCT], AND
  *  - time-below-70 mg/dL < [COMPOSED_FLOOR_MAX_TBR70_PCT] (the two-test-bar PRIMARY gate — added

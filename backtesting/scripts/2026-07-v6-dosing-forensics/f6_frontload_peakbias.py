@@ -1,4 +1,4 @@
-"""Does MORE early front-load (t0-30 after meal onset) => LOWER recovery plateau (Tim's hypothesis),
+"""Does MORE early front-load (t0-30 after meal onset) => LOWER recovery plateau (the developer's hypothesis),
 controlling for peak height? Or does it just add crashes / get braked? V6 meals, 6 users."""
 import numpy as np, psycopg2
 from collections import defaultdict
@@ -44,5 +44,5 @@ for lo,hi,lab in [(140,175,'peak 140-175'),(175,200,'peak 175-200'),(200,400,'pe
 peak=np.array([m['peak'] for m in meals]); early=np.array([m['early'] for m in meals]); plat=np.array([m['plat'] for m in meals])
 A=np.column_stack([np.ones_like(peak),peak]); 
 er=early-A@np.linalg.lstsq(A,early,rcond=None)[0]; pr=plat-A@np.linalg.lstsq(A,plat,rcond=None)[0]
-print(f"peak-residualised corr(early front-load, recovery plateau) = {np.corrcoef(er,pr)[0,1]:+.2f}  (negative = more front-load -> lower plateau = Tim's hypothesis)")
+print(f"peak-residualised corr(early front-load, recovery plateau) = {np.corrcoef(er,pr)[0,1]:+.2f}  (negative = more front-load -> lower plateau = the developer's hypothesis)")
 conn.close()

@@ -3,7 +3,7 @@
 import csv, math, statistics, bisect
 from datetime import datetime, timedelta, timezone
 
-SP = "/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
+SP = "/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
 def pts(s): return datetime.fromisoformat(s.replace('Z','+00:00'))
 
 rows=[r for r in csv.DictReader(open(f'{SP}/mig_CD_cycles.csv'))]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tim small-meal plateau analysis (DB, user tim, last ~30d + full state era)."""
+"""Developer (self) small-meal plateau analysis (DB, user tim, last ~30d + full state era)."""
 import psycopg2, pandas as pd, numpy as np
 
 conn = psycopg2.connect("dbname=oref host=127.0.0.1 port=5432")

@@ -1,5 +1,5 @@
 """
-Tim's idea: keep every primer firing, but at CONFIRM net the ACCUMULATED primer IOB (from the
+The developer's idea: keep every primer firing, but at CONFIRM net the ACCUMULATED primer IOB (from the
 preceding fizzles + this session's seed), beyond ONE base allowance, off the commit-shot. So the
 first primer's acceleration-bonus stays additive; subsequent fizzles are "pre-paid" against the
 confirmed shot → the meal's net-extra insulin is bounded to ~one base no matter how many fizzles.
@@ -8,7 +8,7 @@ This preserves seeds (unlike cap/taper) and bounds post-confirm over-delivery. I
 pure-fizzle clusters that never confirm (their intermediate dip is unaddressed) — flagged.
 
 Test = MAGNITUDE (clean, no counterfactual): of real (CONFIRMED) meals, how often is a confirm
-preceded by material accumulated primer IOB, and how much would Tim's rule net off the commit-shot?
+preceded by material accumulated primer IOB, and how much would the confirm-net rule net off the commit-shot?
 primer IOB uses the replayed once-per-session fires; IOBfrac(t)=(1+t/tp)e^{-t/tp}, tp=75, DIA=300.
 """
 import psycopg2, numpy as np, pandas as pd

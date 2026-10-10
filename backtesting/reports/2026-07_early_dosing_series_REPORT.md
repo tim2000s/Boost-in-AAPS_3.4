@@ -207,7 +207,7 @@ tests) → `131923247e` (versioned re-migration, AUTO_CONFIG_SCHEMA_VERSION=2, 3
 `69f4a928fc` (ML-outage renormalize 1.25→1.2299, found by the parallel Trio audit).
 
 **Scripts:** `mig_fetch_treatments.py`, `mig_common_fetch.py`, `mig_formula.py`, `mig_replay.py`,
-`mig_AB_analysis.py`, `mig_CD_analysis.py`, `mig_CD_followup.py`, `mig_tim_E_backtest.py`,
+`mig_AB_analysis.py`, `mig_CD_analysis.py`, `mig_CD_followup.py`, `mig_self_E_backtest.py`,
 `mig_stress.py`, `mig_unclip.py`, `mig_v1era_sim.py` · per-user reports `mig_C_report.txt`,
 `mig_CD_report.txt`, `mig_D_report.txt`.
 
@@ -235,7 +235,7 @@ measured cycle-by-cycle.
 the actionable was config hygiene + a telemetry gap — the cumulative cap was invisible to analysis.
 **Shipped as a result:** `boostV5_cumulativeCapU` + `boostV5_smbVol60Min` RT fields (`2554b7f963`).
 
-**Scripts:** `tim_plateau.py`.
+**Scripts:** `self_plateau.py`.
 
 ---
 
@@ -346,7 +346,7 @@ post-rescue cap + amended auto-config) do for him?
 
 **Verdict.** Install-the-update is the fix; no new code lever needed for him.
 
-**Scripts:** `joost_replay.py`.
+**Scripts:** `user_a_replay.py`.
 
 ---
 
