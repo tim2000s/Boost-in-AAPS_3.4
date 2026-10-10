@@ -2,7 +2,7 @@
 """H7 — can the Twin distinguish a COMPRESSION low from a real low? A compression low is a sudden overnight
 CGM drop the physiology can't explain (no insulin/meal cause), which recovers fast. The Twin's "surprise"
 = its 30-min-ago forecast minus the actual reading (a big unexpected drop). Test whether that surprise
-separates compression lows from real lows. Labels (Tim's def): overnight (23:30–07:00 local) dip <75 that
+separates compression lows from real lows. Labels (developer's definition): overnight (23:30–07:00 local) dip <75 that
 RECOVERS to ≥90 within 30 min = compression; a <75 dip that stays low / recovers slowly = real. Pooled
 (compression is rare); AUC of the surprise signal, bootstrap CI. Uses the cache (cgm, fc30)."""
 import os, glob, numpy as np

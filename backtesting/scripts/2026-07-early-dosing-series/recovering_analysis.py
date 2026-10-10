@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""RECOVERING-high episode analysis for Tim's 'standard SMB in RECOVERING' proposal.
+"""RECOVERING-high episode analysis for the developer's 'standard SMB in RECOVERING' proposal.
 
 Episode def: consecutive deduped cycles with state=RECOVERING, BG>160, delta>=0 (flat-or-rising),
 first qualifying cycle within <=90 min after a CONFIRMED cycle.
@@ -93,7 +93,7 @@ for uid, g in df.groupby("user_id", sort=True):
         i = j + 1
 
 ep = pd.DataFrame(episodes)
-ep.to_csv("/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad/episodes.csv", index=False)
+ep.to_csv("/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad/episodes.csv", index=False)
 
 pd.set_option("display.width", 250)
 print("\n===== 1. EPISODE COUNTS =====")

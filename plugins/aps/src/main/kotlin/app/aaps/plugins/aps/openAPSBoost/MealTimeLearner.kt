@@ -13,7 +13,7 @@ import kotlin.math.min
  * 45–60 min before a learned meal. Reuses [SleepHistoryTracker]'s `msToMinOfDay` / `circularMean`
  * so all time-of-day maths is midnight-wrap-safe and consistent with the sleep learner.
  *
- * **Why CONFIRMED events** (decided with Tim 2026-06-15): they are the real, already-computed
+ * **Why CONFIRMED events** (design decision, 2026-06-15): they are the real, already-computed
  * meal detector — no second detector to tune, and the histogram learns exactly what V5 treats
  * as a meal. The plugin records `decision.mealHypothesis == CONFIRMED && mealHypothesisAge == 0`.
  *
@@ -43,7 +43,7 @@ object MealTimeLearner {
     /** Circular half-width (min) for grouping events into one mode (~07:50 ± 45 → breakfast). */
     const val CLUSTER_HALF_WIDTH_MIN = 45
 
-    /** The pre-meal window always CLOSES this many minutes before the learned meal (Tim: 45–60 prior). */
+    /** The pre-meal window always CLOSES this many minutes before the learned meal (45–60 prior, by design). */
     const val PRE_MEAL_LEAD_MIN_FLOOR = 45
 
     /** Guaranteed minimum window span (min), so a low leadMax setting can't yield a zero-width window. */

@@ -25,7 +25,7 @@ package app.aaps.plugins.aps.openAPSBoostV5
  * Action multipliers per state. HARDCODED.
  *
  * - **IDLE** (1.0×): standard oref1 dose; no meal hypothesis.
- * - **OBSERVING** (0.3×): test-dose fraction. Encodes Tim's "test then commit" intent —
+ * - **OBSERVING** (0.3×): test-dose fraction. Encodes the "test then commit" design intent —
  *   small dose to validate the hypothesis without committing.
  * - **CONFIRMED** (1.8×): catch-up dose. Larger than baseline because we waited 2+ cycles
  *   in OBSERVING to confirm. This is the riskiest single decision V5 makes; mitigated by

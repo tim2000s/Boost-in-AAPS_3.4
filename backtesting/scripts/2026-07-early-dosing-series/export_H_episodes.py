@@ -9,6 +9,6 @@ def bw(r):
     m=re.search(r"base would=([\d.]+)U",r) or re.search(r"base SMB ([\d.]+)U",r)
     return float(m.group(1)) if m else np.nan
 dec["base_would"]=dec.reason_text.apply(bw)
-dec[["bucket","boostv5_state","boostv5_finaldose","v1_units","base_would","boostv5_budget"]].to_csv(f"{'/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad'}/H_v6era_cycles_deduped.csv",index=False)
+dec[["bucket","boostv5_state","boostv5_finaldose","v1_units","base_would","boostv5_budget"]].to_csv(f"{'/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad'}/H_v6era_cycles_deduped.csv",index=False)
 print("saved", len(dec), "deduped V6-era cycles")
 conn.close()

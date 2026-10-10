@@ -4,7 +4,7 @@ import json, sys, time
 import requests
 from datetime import datetime, timedelta, timezone
 
-SCRATCH = "/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
+SCRATCH = "/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
 SITES = {
     "F": ("https://<REDACTED>", "<REDACTED>"),  # NS base+token redacted for public repo
     "H": ("https://<REDACTED>", "<REDACTED>"),  # NS base+token redacted for public repo

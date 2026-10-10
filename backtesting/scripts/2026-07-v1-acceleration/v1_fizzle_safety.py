@@ -1,5 +1,5 @@
 """
-V1 early-tier FIZZLE-SAFETY (Tim's design thesis): V1's early tiers deliver a small
+V1 early-tier FIZZLE-SAFETY (the developer's design thesis): V1's early tiers deliver a small
 acceleration-triggered bolus SIZED so that if the meal doesn't continue, it's harmless.
 Test it on V1-era production data (V1 actually dosed these).
 

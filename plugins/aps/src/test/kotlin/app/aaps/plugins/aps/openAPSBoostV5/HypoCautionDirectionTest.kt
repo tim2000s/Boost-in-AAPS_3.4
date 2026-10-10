@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
  * 2026-06-15 fix — "Hypo Caution" was INVERTED: the old code raised the mlHypoRiskScale floor with
  * the knob, so a higher setting REMOVED hypo damping and dosed MORE. These tests pin the corrected
  * behaviour: higher knob ⇒ LOWER scale ⇒ LESS insulin at elevated ML hypo-risk, with knob 1.0 an
- * exact no-op vs the prior default calibration. (Tim runs HypoCaution live — see backtest memory.)
+ * exact no-op vs the prior default calibration. (HypoCaution runs live on the developer's device.)
  */
 class HypoCautionDirectionTest {
 

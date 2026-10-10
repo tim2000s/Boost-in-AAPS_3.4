@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Full-history validation of the Twin-forecast insulin WITHDRAWAL, driven by the REAL Kotlin engine.
 
-Framing (Tim, 2026-07-20): NOT "is it better than X". Run ALL the data we have from Boost users, across
+Framing (developer, 2026-07-20): NOT "is it better than X". Run ALL the data we have from Boost users, across
 whatever version was live, through the new withdrawal logic; COMPARE the insulin it would deliver to what
 ACTUALLY happened; and POSTULATE the glucose consequence of the different IOB.
 

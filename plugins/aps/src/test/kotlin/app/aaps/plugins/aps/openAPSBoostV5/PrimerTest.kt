@@ -156,7 +156,7 @@ class PrimerTest {
         assertThat(d.newPersistedState.primerIobU).isWithin(1e-9).of(0.3)              // accumulator carries (nowMs=0 → no decay)
     }
 
-    @Test fun `CONFIRM nets accumulated primer IOB beyond one base off the commit-shot (Tim's rule)`() {
+    @Test fun `CONFIRM nets accumulated primer IOB beyond one base off the commit-shot (confirm-net rule)`() {
         // Fast-path confirm from IDLE with 0.7U accumulated primer IOB (prior fizzles) on board.
         val ci = observingAccelInputs().copy(delta = 8.0, shortAvgDelta = 7.0, deltaAccl = 15.0,
             mlMealLikely = 0.9, fastCarbConfirmEnabled = true, eventualBg = 200.0, primerCapU = 0.3)

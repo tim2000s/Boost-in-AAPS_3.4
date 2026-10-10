@@ -21,7 +21,7 @@ import csv, json, math, sys, datetime as dt
 from bisect import bisect_left, bisect_right
 from collections import deque
 
-SCRATCH = "/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
+SCRATCH = "/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
 NOW = dt.datetime(2026, 7, 6, 11, 0, tzinfo=dt.timezone.utc)  # NS pull time
 ERA_START = dt.datetime(2026, 6, 17, tzinfo=dt.timezone.utc)   # caps operative
 

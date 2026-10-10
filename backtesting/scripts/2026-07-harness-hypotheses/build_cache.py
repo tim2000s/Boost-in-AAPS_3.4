@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Per-user cache for the harness-hypothesis batch: load the full CGM + delivered-insulin + context stream
 across ALL Boost versions, run the REAL Twin (harness) once, save an npz reused by H4/H7/H2. Era per cycle
-by TELEMETRY (Tim's correction): boostv5_state → V5V6; else ml_meal_likely → V44x_ML; else → BoostV1_4.1.5
+by TELEMETRY (developer's correction): boostv5_state → V5V6; else ml_meal_likely → V44x_ML; else → BoostV1_4.1.5
 (the early v4.1.5 Boost, no explicit v1/v6 telemetry). Run one user: python3 build_cache.py <user>
 """
 import sys, os, numpy as np, psycopg2, pandas as pd
-sys.path.insert(0, "/Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/kotlin-harness")
+sys.path.insert(0, os.path.expanduser("~/StudioProjects/Boost-AAPS-core/backtesting/scripts/kotlin-harness"))
 from kengine import run_engine
 
 VARPRIO = {"boost-other": 0, "trio-shadow": 1, "v1": 2, "v2": 3, "v3": 4, "v1-silent": 5}

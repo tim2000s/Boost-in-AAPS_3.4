@@ -8,7 +8,7 @@ import json
 from datetime import datetime, timedelta, timezone
 import psycopg2
 
-S = "/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
+S = "/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/db82de70-d40e-4e73-9c47-395352be1ee8/scratchpad"
 NOW = datetime(2026, 7, 6, 10, 15, tzinfo=timezone.utc)
 conn = psycopg2.connect(host="127.0.0.1", port=5432, dbname="oref")
 cur = conn.cursor()

@@ -13,7 +13,7 @@ V6 is a single fixed operating point (its shipped confirm gate). Cross-user then
 import numpy as np, psycopg2, json
 from twin_vs_v6_detection import run_filter, pull, onsets, PRIOR, USERS
 
-OUT="/private/tmp/claude-501/-Users-timstreet-StudioProjects-AndroidAPS/fb7b1560-69f3-4fc6-a769-04e7236eda2f/scratchpad"
+OUT="/private/tmp/claude-501/-Users-USER-StudioProjects-AndroidAPS/fb7b1560-69f3-4fc6-a769-04e7236eda2f/scratchpad"
 WIN_PRE, WIN_POST = 3, 13    # search -15..+60 min around onset
 
 def detect_lat(fire_bool, ons, n):

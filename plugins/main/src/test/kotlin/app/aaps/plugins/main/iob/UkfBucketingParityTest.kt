@@ -27,9 +27,9 @@ class UkfBucketingParityTest : TestBaseWithProfile() {
     private val silentLogger: AAPSLogger = mock(stubOnly = true)
 
     private val corpusPath = System.getenv("BUCKET_CORPUS")
-        ?: "/private/tmp/claude-501/-Users-timstreet-StudioProjects-Trio/5e20430b-530e-407c-8594-5683eb2070c4/scratchpad/corpus_full.flat"
+        ?: "/private/tmp/claude-501/-Users-USER-StudioProjects-Trio/5e20430b-530e-407c-8594-5683eb2070c4/scratchpad/corpus_full.flat"
     private val outPath = System.getenv("BUCKET_OUT")
-        ?: "/private/tmp/claude-501/-Users-timstreet-StudioProjects-Trio/5e20430b-530e-407c-8594-5683eb2070c4/scratchpad/kotlin_buckets_full.flat"
+        ?: "/private/tmp/claude-501/-Users-USER-StudioProjects-Trio/5e20430b-530e-407c-8594-5683eb2070c4/scratchpad/kotlin_buckets_full.flat"
 
     @Test fun `dump AAPS bucketed grid for every corpus trace`() {
         whenever(iobCobCalculator.ads).thenReturn(autosensDataStore)
