@@ -1,0 +1,25 @@
+{
+  "scenario": "18_dose_capped_between_steps",
+  "description": "maxSingleDoseMcg=140, carbsReq=40 → 200 mcg asked. The cap in whole 25 mcg steps is 125, so the dose is 125, not 150.",
+  "input": {
+    "glucose": 80.0,
+    "delta": -2.0,
+    "shortAvgDelta": -1.5,
+    "carbsRequired": true,
+    "carbsReq": 40,
+    "iob": 0.0,
+    "preferences": {
+      "minBgMgdl": 90,
+      "maxSingleDoseMcg": 140,
+      "minIntervalMinutes": 20,
+      "maxDailyMcg": 900,
+      "formulation": "GLUCAGEN",
+      "maxGobMcg": 75
+    },
+    "priorDoses": []
+  },
+  "expected": {
+    "doseMcg": 125.0,
+    "reason": "140 mcg cap floors to 125 mcg"
+  }
+}

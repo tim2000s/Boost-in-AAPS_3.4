@@ -1,6 +1,7 @@
 package app.aaps.plugins.aps.glucagon
 
 import app.aaps.core.data.model.BS
+import app.aaps.core.data.model.RM
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.aps.APSResult
@@ -195,7 +196,7 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
         whenever(mockGlucoseStatus.delta).thenReturn(s.delta)
         whenever(mockGlucoseStatus.shortAvgDelta).thenReturn(s.shortAvgDelta)
 
-        // Prior glucagon doses — returned for all time-range queries
+        // Prior glucagon doses, returned for all time-range queries
         val doses = s.priorDoses.map { d ->
             BS(
                 timestamp = dateUtil.now() - d.minutesAgo * 60_000L,
@@ -204,6 +205,8 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
                 isValid = true
             )
         }
+        whenever(mockPersistenceLayer.getRunningModeActiveAt(any()))
+            .thenReturn(RM(timestamp = nowTs, mode = RM.Mode.CLOSED_LOOP, duration = 0))
         whenever(mockPersistenceLayer.getBolusesFromTimeToTime(any(), any(), any()))
             .thenReturn(doses)
 

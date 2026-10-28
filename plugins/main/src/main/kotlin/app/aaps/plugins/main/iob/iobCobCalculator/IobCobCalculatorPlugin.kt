@@ -529,7 +529,7 @@ class IobCobCalculatorPlugin @Inject constructor(
                 val tIOB = t.iobCalc(activePlugin, toTime, dia)
                 total.iob += tIOB.iobContrib
                 total.activity += tIOB.activityContrib
-                if (t.amount > 0 && t.timestamp > total.lastBolusTime) total.lastBolusTime = t.timestamp
+                if (t.amount > 0 && t.type != BS.Type.GLUCAGON && t.timestamp > total.lastBolusTime) total.lastBolusTime = t.timestamp
                 if (t.type != BS.Type.SMB) {
                     // instead of dividing the DIA that only worked on the bilinear curves,
                     // multiply the time the treatment is seen active.

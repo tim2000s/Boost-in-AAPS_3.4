@@ -21,13 +21,13 @@ import javax.inject.Singleton
 /**
  * Virtual glucagon pump for testing the bihormonal closed-loop without physical hardware.
  *
- * Implements [GlucagonPump] — discovered by [GlucagonAlgorithmPlugin] via
+ * Implements [GlucagonPump], and is found by [GlucagonAlgorithmPlugin] through
  * `activePlugin.getSpecificPluginsListByInterface(GlucagonPump::class.java)`.
  *
- * Simulates a pump loaded with glucagon. Reservoir defaults to 1000 mcg (1 mg, ≈1 day supply).
- * Stores delivered doses as BS(type=GLUCAGON) records so GOB calculation and NS sync work correctly.
+ * Simulates a pump loaded with glucagon. Reservoir defaults to 1000 mcg (1 mg, about a day's supply).
+ * Stores delivered doses as BS(type=GLUCAGON) records so GOB can be calculated; they are not uploaded.
  *
- * **Amount encoding:** BS.amount is stored in mg (1.0 = 1 mg = 1000 mcg).
+ * Amount encoding: BS.amount is stored in mg (1.0 = 1 mg = 1000 mcg).
  */
 @Singleton
 class VirtualGlucagonPump @Inject constructor(
@@ -46,14 +46,14 @@ class VirtualGlucagonPump @Inject constructor(
     aapsLogger, rh
 ), GlucagonPump {
 
-    // Simulated reservoir — 1000 mcg default (configurable via direct field for tests)
+    // Simulated reservoir, 1000 mcg by default
     private var reservoirMcg: Double = DEFAULT_RESERVOIR_MCG
     private var lastDeliveryTs: Long = 0L
 
     override val glucagonReservoirMcg: Double get() = reservoirMcg
     override val lastGlucagonDeliveryTimestamp: Long get() = lastDeliveryTs
 
-    override fun isGlucagonPumpReady(): Boolean = isEnabled() && reservoirMcg > 0.0
+    override fun isGlucagonPumpReady(): Boolean = isEnabled() && reservoirMcg >= MIN_DOSE_MCG
 
     override fun deliverGlucagon(doseMcg: Double): Boolean {
         if (!isEnabled()) {
@@ -105,5 +105,6 @@ class VirtualGlucagonPump @Inject constructor(
 
     companion object {
         const val DEFAULT_RESERVOIR_MCG = 1000.0   // 1 mg glucagon
+        const val MIN_DOSE_MCG = 25.0
     }
 }

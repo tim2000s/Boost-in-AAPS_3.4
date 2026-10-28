@@ -1,6 +1,7 @@
 package app.aaps.plugins.aps.glucagon
 
 import app.aaps.core.data.model.BS
+import app.aaps.core.data.model.RM
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.aps.APSResult
@@ -60,7 +61,7 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
             lastDoseMcg = doseMcg
             return deliveryResult
         }
-        override val glucagonReservoirMcg: Double = 1000.0
+        override var glucagonReservoirMcg: Double = 1000.0
         override val lastGlucagonDeliveryTimestamp: Long = 0L
     }
 
@@ -105,6 +106,9 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
         whenever(mockGlucoseStatus.glucose).thenReturn(80.0)
         whenever(mockGlucoseStatus.delta).thenReturn(-2.0)
         whenever(mockGlucoseStatus.shortAvgDelta).thenReturn(-1.5)
+
+        whenever(mockPersistenceLayer.getRunningModeActiveAt(any()))
+            .thenReturn(RM(timestamp = setupNow, mode = RM.Mode.CLOSED_LOOP, duration = 0))
 
         // No prior glucagon doses
         whenever(mockPersistenceLayer.getBolusesFromTimeToTime(any(), any(), any()))
@@ -170,7 +174,7 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
     }
 
     // -------------------------------------------------------------------------
-    // Condition 4: BG falling (delta <= 0 OR shortAvgDelta <= 0)
+    // Condition 4: BG not rising (delta <= 0)
     // -------------------------------------------------------------------------
 
     @Test
@@ -184,9 +188,65 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
     }
 
     @Test
-    fun `dose allowed when delta is rising but short avg delta is zero`() {
-        whenever(mockGlucoseStatus.delta).thenReturn(1.0)
-        whenever(mockGlucoseStatus.shortAvgDelta).thenReturn(0.0)
+    fun `no dose when delta is rising though short avg delta is still falling`() {
+        whenever(mockGlucoseStatus.delta).thenReturn(4.0)
+        whenever(mockGlucoseStatus.shortAvgDelta).thenReturn(-0.3)
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(0.0)
+    }
+
+    @Test
+    fun `dose allowed when delta is flat`() {
+        whenever(mockGlucoseStatus.delta).thenReturn(0.0)
+        whenever(mockGlucoseStatus.shortAvgDelta).thenReturn(1.0)
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isGreaterThan(0.0)
+    }
+
+    // -------------------------------------------------------------------------
+    // Running mode
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `no dose in open loop`() {
+        val now = dateUtil.now()
+        whenever(mockPersistenceLayer.getRunningModeActiveAt(any()))
+            .thenReturn(RM(timestamp = now, mode = RM.Mode.OPEN_LOOP, duration = 0))
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(0.0)
+    }
+
+    @Test
+    fun `no dose while the insulin pump is suspended`() {
+        val now = dateUtil.now()
+        whenever(mockPersistenceLayer.getRunningModeActiveAt(any()))
+            .thenReturn(RM(timestamp = now, mode = RM.Mode.SUSPENDED_BY_USER, duration = 3_600_000))
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(0.0)
+    }
+
+    @Test
+    fun `no dose when running mode cannot be read`() {
+        whenever(mockPersistenceLayer.getRunningModeActiveAt(any())).thenThrow(IllegalStateException("db"))
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(0.0)
+    }
+
+    @Test
+    fun `dose allowed in low glucose suspend mode`() {
+        val now = dateUtil.now()
+        whenever(mockPersistenceLayer.getRunningModeActiveAt(any()))
+            .thenReturn(RM(timestamp = now, mode = RM.Mode.CLOSED_LOOP_LGS, duration = 0))
 
         plugin.evaluateAndDoseForTest()
 
@@ -222,7 +282,7 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
     fun `no dose when last dose was only 5 minutes ago (below 20 min interval)`() {
         val recentDose = BS(
             timestamp = dateUtil.now() - 5 * 60_000L,
-            amount = 0.025,   // 25 mcg — small enough not to exceed GOB
+            amount = 0.025,   // 25 mcg, small enough not to exceed GOB
             type = BS.Type.GLUCAGON,
             isValid = true
         )
@@ -308,6 +368,42 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
     // -------------------------------------------------------------------------
     // Dose calculation
     // -------------------------------------------------------------------------
+
+    @Test
+    fun `rounding never lifts the dose over a max single dose between steps`() {
+        val now = dateUtil.now()
+        whenever(preferences.get(IntKey.GlucagonMaxSingleDoseMcg)).thenReturn(140)
+        whenever(mockApsResult.carbsReq).thenReturn(40)   // 200 mcg asked; 140 would round up to 150
+        whenever(mockApsResult.iobData).thenReturn(arrayOf(IobTotal(now, iob = 0.0)))
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(125.0)
+    }
+
+    @Test
+    fun `IOB penalty applies before the cap`() {
+        // 300 mcg asked, halved to 150 by the penalty, then capped at 150; the old order gave 75
+        whenever(mockApsResult.carbsReq).thenReturn(60)
+        val now = dateUtil.now()
+        whenever(mockApsResult.iobData).thenReturn(arrayOf(IobTotal(now, iob = 2.0)))
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(150.0)
+    }
+
+    @Test
+    fun `dose is trimmed to the reservoir`() {
+        fakePump.glucagonReservoirMcg = 60.0
+        whenever(mockApsResult.carbsReq).thenReturn(20)   // 100 mcg asked, 50 deliverable in 25 mcg steps
+        val now = dateUtil.now()
+        whenever(mockApsResult.iobData).thenReturn(arrayOf(IobTotal(now, iob = 0.0)))
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(50.0)
+    }
 
     @Test
     fun `dose is multiple of 25 mcg`() {

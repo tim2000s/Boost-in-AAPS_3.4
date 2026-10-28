@@ -40,16 +40,15 @@ import javax.inject.Singleton
 /**
  * Glucagon dosing algorithm plugin.
  *
- * Listens for [EventAPSCalculationFinished] and, when all 8 trigger conditions are met,
+ * Listens for [EventAPSCalculationFinished] and, when every trigger condition is met,
  * delivers a glucagon microdose via the active [GlucagonPump] implementation.
  *
- * Fully independent of the insulin loop — no changes to LoopPlugin, CommandQueue, or activePump.
+ * Runs beside the insulin loop without changing LoopPlugin, CommandQueue or activePump, but
+ * doses only while the loop is closed (or LGS), since open loop asks the user to confirm.
  *
- * **Safety:**
- * - Disabled by default (GlucagonEnabled = false)
- * - GLUCAGON records are excluded from IOB calculations in BolusExtension.iobCalc
- * - All 8 conditions must pass simultaneously before any dose is issued
- * - Daily hard cap (GlucagonMaxDailyMcg) blocks further dosing when reached
+ * Safety: disabled by default (GlucagonEnabled = false); GLUCAGON records are excluded from IOB
+ * and the last-bolus time; every condition must pass before a dose is issued; the dose never
+ * exceeds the max single dose, the daily headroom or the reservoir.
  */
 @Singleton
 class GlucagonAlgorithmPlugin @Inject constructor(
@@ -84,7 +83,7 @@ class GlucagonAlgorithmPlugin @Inject constructor(
             .subscribe({ evaluateAndDose() }, { aapsLogger.error(LTag.APS, "Glucagon event error", it) })
     }
 
-    /** Exposed for unit tests — do not call from production code. */
+    /** Exposed for unit tests; not for production code. */
     internal fun evaluateAndDoseForTest() = evaluateAndDose()
 
     override fun onStop() {
@@ -93,12 +92,19 @@ class GlucagonAlgorithmPlugin @Inject constructor(
     }
 
     // -------------------------------------------------------------------------
-    // Main evaluation — called on every APS calculation
+    // Main evaluation, called on every APS calculation
     // -------------------------------------------------------------------------
 
     private fun evaluateAndDose() {
         // Condition 1: feature enabled
         if (!preferences.get(BooleanKey.GlucagonEnabled)) return
+
+        // Open loop needs the user to confirm each action; suspended and disabled modes stop the loop
+        val mode = runCatching { persistenceLayer.getRunningModeActiveAt(dateUtil.now()).mode }.getOrNull()
+        if (mode?.isClosedLoopOrLgs() != true) {
+            aapsLogger.debug(LTag.APS, "Glucagon blocked: running mode $mode")
+            return
+        }
 
         val aps: APS = activePlugin.activeAPS
         val apsResult = aps.lastAPSResult ?: return
@@ -113,9 +119,8 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         val minBg = preferences.get(IntKey.GlucagonMinBgMgdl)
         if (currentBgMgdl > minBg) return
 
-        // Condition 4: BG falling or short-average delta indicates downward trend
-        val trendDown = glucoseStatus.delta <= 0.0 || glucoseStatus.shortAvgDelta <= 0.0
-        if (!trendDown) return
+        // Condition 4: BG not rising now; a falling short average alone would dose into a recovery
+        if (glucoseStatus.delta > 0.0) return
 
         // Condition 5: current GOB < max
         val formulation = GlucagonFormulation.fromKey(preferences.get(StringKey.GlucagonFormulation))
@@ -165,17 +170,17 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         val carbsReq = apsResult.carbsReq
         val maxSingle = preferences.get(IntKey.GlucagonMaxSingleDoseMcg)
         val baseDose = carbsReq * 5.0 * formulation.doseFactor
-        val clampedBase = baseDose.coerceIn(25.0, maxSingle.toDouble())
-        val raw = clampedBase * iobPenalty
-        // Round to nearest 25 mcg step, minimum 25 mcg
-        val roundedDose = (Math.round(raw / 25.0) * 25.0).coerceAtLeast(25.0)
+        // Penalty before rounding, then the cap in whole 25 mcg steps, so rounding cannot lift the dose over it
+        val maxSingleStep = Math.floor(maxSingle / 25.0) * 25.0
+        val roundedDose = (Math.round(baseDose * iobPenalty / 25.0) * 25.0).coerceIn(25.0, maxSingleStep)
         // Trim to the daily headroom in whole 25 mcg steps so this dose cannot carry the total past the cap
         val dailyHeadroom = Math.floor((maxDaily - dailyTotal) / 25.0) * 25.0
         if (dailyHeadroom < 25.0) {
             aapsLogger.warn(LTag.APS, "Glucagon blocked: daily headroom ${"%.0f".format(maxDaily - dailyTotal)} mcg below the 25 mcg minimum dose")
             return
         }
-        val finalDoseMcg = minOf(roundedDose, dailyHeadroom)
+        val reservoirStep = Math.floor(glucagonPump.glucagonReservoirMcg / 25.0) * 25.0
+        val finalDoseMcg = minOf(roundedDose, dailyHeadroom, reservoirStep)
 
         // Warn if approaching daily cap
         if (dailyTotal + finalDoseMcg > 600) {

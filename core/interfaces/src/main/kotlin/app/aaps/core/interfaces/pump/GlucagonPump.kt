@@ -11,7 +11,7 @@ package app.aaps.core.interfaces.pump
  */
 interface GlucagonPump {
 
-    /** True if the pump is ready to deliver a dose (enabled, reservoir non-empty, no active delivery). */
+    /** True if the pump is ready to deliver a dose (enabled, reservoir holds at least the minimum dose, no active delivery). */
     fun isGlucagonPumpReady(): Boolean
 
     /**
