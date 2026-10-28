@@ -7,8 +7,24 @@ plugins {
     id("jacoco-module-dependencies")
 }
 
+fun gitOutput(vararg args: String): String = try {
+    val p = ProcessBuilder("git", *args).redirectErrorStream(true).start()
+    p.inputStream.bufferedReader().readText().trim().also { p.waitFor() }
+} catch (_: Exception) {
+    "nogit"
+}
+
 android {
     namespace = "app.aaps.plugins.aps"
+    buildFeatures { buildConfig = true }
+    defaultConfig {
+        // Boost version plus the branch and commit it was built from, so a build seen in Nightscout
+        // can be traced even when its hash is later rewritten (see Versions.boostVersion).
+        buildConfigField(
+            "String", "BOOST_VERSION",
+            "\"${Versions.boostVersion}+${gitOutput("rev-parse", "--abbrev-ref", "HEAD")}.${gitOutput("rev-parse", "--short=10", "HEAD")}\""
+        )
+    }
 }
 
 dependencies {
@@ -34,6 +50,9 @@ dependencies {
 
     //Logger
     api(libs.org.slf4j.api)
+
+    // Health Connect — for HR ingest path (2026-06-03)
+    implementation(libs.androidx.health.connect.client)
 
     ksp(libs.com.google.dagger.android.processor)
 }

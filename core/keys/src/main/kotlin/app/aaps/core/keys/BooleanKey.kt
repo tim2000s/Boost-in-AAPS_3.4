@@ -33,6 +33,7 @@ enum class BooleanKey(
     OverviewUseBolusReminder("use_bolus_reminder", true, defaultedBySM = true),
     OverviewUseSuperBolus("key_usersuperbolus", false, defaultedBySM = true, hideParentScreenIfHidden = true),
     OverviewUseBoostOverview("use_boost_overview", false, defaultedBySM = true),
+    OverviewUseBoostOverviewV2("use_boost_overview_v2", false, defaultedBySM = true),
 
     PumpBtWatchdog("bt_watchdog", false, showInNsClientMode = false, hideParentScreenIfHidden = true),
 
@@ -48,6 +49,15 @@ enum class BooleanKey(
     ApsUseDynamicSensitivity("use_dynamic_sensitivity", false),
     ApsUseAutosens("openapsama_useautosens", true, defaultedBySM = true, negativeDependency = ApsUseDynamicSensitivity), // change from default false
     ApsUseSmb("use_smb", true, defaultedBySM = true), // change from default false
+    /**
+     * Run the loop at the sensor's own cadence instead of once per five-minute bucket.
+     *
+     * OFF by default, and a no-op on a five-minute sensor, where the native series and the
+     * bucketed series are the same object. On a one-minute sensor it is the difference between a
+     * five-minute loop that happens to be reading one-minute data, and a loop that actually runs
+     * every minute. Those are separate interventions and this is what separates them. (2026-08-09)
+     */
+    ApsLoopAtNativeCadence("loop_at_native_cadence", false),
     ApsUseSmbWithHighTt("enableSMB_with_high_temptarget", false, defaultedBySM = true, dependency = ApsUseSmb),
     ApsUseSmbAlways("enableSMB_always", true, defaultedBySM = true, dependency = ApsUseSmb), // change from default false
     ApsUseSmbWithCob("enableSMB_with_COB", true, defaultedBySM = true, dependency = ApsUseSmb), // change from default false
@@ -69,12 +79,106 @@ enum class BooleanKey(
     ApsBoostEnableCircadianIsf("enableCircadianISF", false, defaultedBySM = true),
     ApsBoostAllowWithHighTt("enableBoost_with_high_temptarget", false, defaultedBySM = true),
     ApsBoostUseTdd("boost_use_tdd", false, defaultedBySM = true),
-    ApsBoostAdjustSensitivity("boost_adjust_sensitivity", false, defaultedBySM = true),
-    ApsBoostAllowAllBgSources("boost_allow_all_bg_sources", false, defaultedBySM = true),
+    // Only meaningful with TDD-based ISF: without a TDD there is no 24h/7D ratio, and the engine used to
+    // fall back to the DynISF curve ratio, which moves targets with BG. Forced off whenever UseTdd is off
+    // and cleared once on the first V6 run after V1 (OpenAPSBoostPlugin.reconcileSensitivitySettings).
+    ApsBoostAdjustSensitivity("boost_adjust_sensitivity", false, defaultedBySM = true, dependency = ApsBoostUseTdd),
+    ApsBoostAllowAllBgSources("boost_allow_all_bg_sources", true, defaultedBySM = true),
     ApsBoostNightModeEnabled("boost_night_mode_enabled", false, defaultedBySM = true),
     ApsBoostNightModeDisableWithCob("boost_night_mode_disable_with_cob", false, defaultedBySM = true),
     ApsBoostNightModeDisableWithLowTt("boost_night_mode_disable_with_low_tt", false, defaultedBySM = true),
-    ApsBoostBypassVersionCheck("boost_bypass_version_check", false, defaultedBySM = true),
+    // Sleep detection hybrid (2026-06-02): when on, sleep state (HR + steps + clock) drives
+    // night mode in HYBRID with the existing time window. PRE_SLEEP also engages night-mode
+    // SMB suppression early so the user doesn't carry excess IOB into the night.
+    ApsBoostNightModeAutoBySleep("boost_night_mode_auto_by_sleep", false, defaultedBySM = true),
+
+    // Health Connect HR ingest (2026-06-03) — bridge for overnight HR from Garmin/Wear OS via Android Health Connect
+    ApsBoostHealthConnectHrEnabled("boost_health_connect_hr_enabled", false, defaultedBySM = true),
+    ApsBoostBypassVersionCheck("boost_bypass_version_check", true, defaultedBySM = true),
+    // Boost V5 active-dosing alpha (2026-06-11) — when ON, V5's observe-confirm-commit SMB REPLACES
+    // V1's SMB on cycles V1 permits one. V1 still owns basal + all safety gates. Toggle OFF = instant revert.
+    // DEPRECATED 2026-06-15: V5 is now a selectable APS plugin ("Boost V5"); selecting it IS
+    // "V5 active". No longer read/surfaced. Kept only so existing stored prefs don't error.
+    ApsBoostV5ActiveDosing("boost_v5_active_dosing", false, defaultedBySM = true),
+    // V6 anticipatory pre-meal low target (2026-06-15) — when ON, the loop applies the learned
+    // pre-meal low target live ~45-60 min before a habitual meal. Default OFF = shadow (logs
+    // "V6 pre-meal WOULD apply" to reason for validation; no dosing change). See MealTimeLearner.
+    ApsBoostV6PreMealTarget("boost_v6_pre_meal_target", false, defaultedBySM = true),
+    // 2026-06-16 fast-carb fast-path — single-cycle OBSERVING/IDLE→CONFIRMED on a sharp, accelerating,
+    // score-corroborated rise while awake & not exercising. Replay-validated (backtesting/replay.py).
+    // Default ON (it's the fix for the 2026-06-16 fast-carb crash); toggle OFF = instant revert.
+    ApsBoostV5FastCarbConfirm("boost_v5_fast_carb_confirm", true, defaultedBySM = true),
+    // 2026-08-27 confirm tranche — split the confirm commitment, part now and the rest ten minutes
+    // later if the rise continues. The confirm shot is the same size whether the excursion reaches
+    // 20 mg/dL or 100, and the trace separates those two ends at 0.730 at the confirming cycle
+    // against 0.893 ten minutes on. Can only deliver LESS than without it, never more.
+    // A user setting, default OFF, and not managed by auto-config. The release rule's coefficients
+    // are population derived; only its threshold (DoubleKey.ApsBoostV5TrancheThreshold) is personal,
+    // and auto-config derives that one from the person's own confirm episodes.
+    ApsBoostV5ConfirmTranche("boost_v5_confirm_tranche", false, defaultedBySM = true),
+    // 2026-07-17 aggressive early-confirm — shaves the sustained-score early-confirm path one more
+    // cycle (age −2). The pre-push backtest showed ~28% of its candidates are fizzle-catches (new
+    // insulin at ~base rate), so it is NOT a clean cohort default; it is OPT-IN and AUTO-CONFIG
+    // MANAGED (BoostV5AutoConfig enables it only for clearly well-controlled users). Default OFF.
+    ApsBoostV5AggressiveEarlyConfirm("boost_v5_aggressive_early_confirm", false, defaultedBySM = true),
+    // 2026-08-03 post-rescue TIGHT-RAMP TRIAL enrolment (pre-registered within-user crossover —
+    // backtesting/protocols/2026-08_postrescue_tight_ramp_PREREG.md). When enrolled, days are
+    // randomised into a treatment arm that caps the post-rescue rebound scale at 0.60 and applies
+    // it across the WHOLE window (today the guard is gated off at BG >= 170). Both arms are at or
+    // below the shipped dose on every cycle — the trial can never deliver MORE insulin than today.
+    // Cohort evidence is UNPROVEN (2026-08-03 ramp study: every candidate ramp's cluster-bootstrap
+    // CI overlaps zero; only 2 of 8 users show favourable targeting), which is exactly why this is
+    // a randomised trial and not a ship. Default OFF; NOT auto-config managed — enrolment is a
+    // deliberate per-user act.
+    ApsBoostPostRescueTightRampTrial("boost_postrescue_tight_ramp_trial", false, defaultedBySM = true),
+    // 2026-07 composed Phase-3 brake floor (F = 0.25) — when ON (and V6 is the active doser), the
+    // delivered dose is floored at min(budget × 0.25, committedCapU) on meal-session high cycles
+    // (CONFIRMED/COMMITTED/RECOVERING ∧ BG > 160 ∧ eventualBG > target+20 ∧ awake ∧ not post-rescue ∧
+    // budget > 0) — fixes the soft-brake stack compounding to sub-pump-step zero doses mid-meal
+    // (Episode B). Default OFF; PER-USER activation gated on trailing-14d time-below-range being
+    // within consensus targets (TBR<70 < 3.5%, <54 < 0.8%) — the 2026-07 re-review excluded cohort
+    // users B/C/D whose TBR would cross those absolutes. All hard gates/caps still apply.
+    ApsBoostV5ComposedFloorActive("boost_v5_composed_floor_active", false, defaultedBySM = true),
+    // 2026-07-17 velocity-budget floor — when ON (and V6 active), the delivered dose is floored at
+    // min(0.5U, committedCapU) on the budget≈0 high tail (BG > 180 ∧ oref insulinReq ≈ 0 ∧ not
+    // RECOVERING ∧ awake ∧ not post-rescue), and the cycle is exempted from the non-meal seam cap so
+    // it can out-dose V1 (V1 also doses ~0 there). It deliberately overrides a prediction that was
+    // right-by-outcome on shadow data, so it is PER-USER opt-in AND gated on the SAME fail-closed
+    // 14d-TBR gate as the composed floor (TBR<63 < 2.0% ∧ TBR<70 < 3.5%). committedCap + maxIOB
+    // bounded; all Phase-3 hard gates + cumulative/boost-active/sleep seam guards still apply.
+    // Default OFF. Field driver: user H "postprandial highs" — his budget=0 tail (55% of his >180).
+    ApsBoostV5VelocityBudgetActive("boost_v5_velocity_budget_active", false, defaultedBySM = true),
+    // 2026-07-20 V1-acceleration primer delivery route (AUTO-CONFIG MANAGED). When ON, the early
+    // primer goes through a RETRACTABLE temp basal instead of a bolus (safe by unwinding rather than
+    // by size). OFF (default) = bolus primer. Onboarding turns it ON when the 14-day window is not
+    // well controlled (TBR<70 under 1.5% and time<54 under 0.3%); each weekly re-derivation then moves it to the temp basal on the first
+    // window that is not well controlled, and back to the bolus only after two consecutive
+    // well-controlled windows (BoostV5AutoConfigApply.resolvePrimerRoute). A value auto-config did not
+    // write is left alone. Overridable by ApsBoostV5PrimerBolusMode.
+    ApsBoostV5PrimerTbrFallback("boost_v5_primer_tbr_fallback", false, defaultedBySM = true),
+    // 2026-07-20 V1-acceleration primer — USER OVERRIDE (NOT auto-config-managed). When ON, forces
+    // the bolus primer even if auto-config routed this user to the temp-basal fallback
+    // (ApsBoostV5PrimerTbrFallback). Default OFF = respect the auto-config routing. Floors + net-off
+    // are unaffected by the override; it only changes bolus-vs-temp-basal delivery.
+    ApsBoostV5PrimerBolusMode("boost_v5_primer_bolus_mode", false, defaultedBySM = true),
+    // LEGACY (2026-06-26..2026-07): global auto-config one-shot flag. Superseded by per-knob
+    // BooleanComposedKey.BoostV5AutoConfigResolved; kept only so existing installs migrate
+    // (OpenAPSBoostV5Plugin reads it raw once, marks tuned knobs resolved, then clears it).
+    ApsBoostV5AutoConfigDone("boost_v5_autoconfig_done", false, defaultedBySM = true),
+    ApsBoostPostExerciseRecoveryEnabled("boost_post_exercise_recovery_enabled", false, defaultedBySM = true),
+    // Activity-load SHADOW (2026-06-16) — when ON, Boost reads HC steps, learns a personal daily-step
+    // baseline, and LOGS what an activity/inactivity ISF modifier WOULD do (shadow; never doses).
+    // Default ON but inert until READ_STEPS is granted in Health Connect.
+    ApsBoostActivityShadowEnabled("boost_activity_shadow_enabled", true, defaultedBySM = true),
+    // Autosens / TDD-DynISF coordination (2026-06-16). TDD-DynISF and traditional autosens are
+    // ALTERNATIVE sensitivity-adaptation mechanisms — never both. When TDD is OFF (profile-anchored
+    // DynISF curve), this lets traditional oref autosens drive basal/target/CR sensitivity instead of
+    // the curve ratio (which is not a sensitivity signal). Requires ApsUseAutosens enabled to do
+    // anything. Default ON from 2026-09-24: with TDD off the alternative is a neutral ratio, since the
+    // curve ratio is no longer produced (ApsBoostAdjustSensitivity is forced off). No effect when TDD is ON.
+    ApsBoostAutosensWhenNoTdd("boost_autosens_when_no_tdd", true, defaultedBySM = true),
+    ApsBoostHrIntegrationEnabled("boost_hr_integration_enabled", false, defaultedBySM = true),
+    ApsBoostHrStressDetection("boost_hr_stress_detection", false, defaultedBySM = true),
 
     MaintenanceEnableFabric("enable_fabric2", true, defaultedBySM = true, hideParentScreenIfHidden = true),
 

@@ -1,0 +1,73 @@
+{
+  "n_events": 157,
+  "n_users": 5,
+  "pooled_absolute": {
+    "median_low": 1.759,
+    "median_nolow": 1.356,
+    "auc": 0.5883838383838383
+  },
+  "pooled_standardised": {
+    "median_low": 0.05638827771666055,
+    "median_nolow": 0.048263888888888884,
+    "auc": 0.5486685032139578
+  },
+  "per_user": {
+    "A": {
+      "n": 22,
+      "lows": 4,
+      "auc_abs": 0.5833333333333334,
+      "auc_frac": 0.5694444444444444,
+      "med_low": 6.978,
+      "med_nolow": 5.993
+    },
+    "B": {
+      "n": 15,
+      "lows": 4,
+      "auc_abs": 0.7045454545454546,
+      "auc_frac": 0.75,
+      "med_low": 4.229,
+      "med_nolow": 3.489
+    },
+    "C": {
+      "n": 35,
+      "lows": 10,
+      "auc_abs": 0.632,
+      "auc_frac": 0.596,
+      "med_low": 1.8535,
+      "med_nolow": 0.172
+    },
+    "F": {
+      "n": 25,
+      "lows": 6,
+      "auc_abs": 0.5175438596491229,
+      "auc_frac": 0.5087719298245614,
+      "med_low": 3.7345,
+      "med_nolow": 4.03
+    },
+    "tim": {
+      "n": 60,
+      "lows": 12,
+      "auc_abs": 0.6701388888888888,
+      "auc_frac": 0.578125,
+      "med_low": 0.9065,
+      "med_nolow": 0.486
+    }
+  },
+  "cluster_iob": {
+    "auc": 0.5883838383838383,
+    "lo": 0.5184375,
+    "hi": 0.6557437407952872,
+    "n_users": 5
+  },
+  "cluster_iob_frac": {
+    "auc": 0.5486685032139578,
+    "lo": 0.51171875,
+    "hi": 0.6040051679586563,
+    "n_users": 5
+  },
+  "between_user": {
+    "corr_iob_lowrate": -0.3883116064562618,
+    "tdd_min": 16.299999999999997,
+    "tdd_max": 57.6
+  }
+}

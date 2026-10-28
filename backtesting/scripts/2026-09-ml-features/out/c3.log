@@ -1,0 +1,58 @@
+== OpenAPS Data Commons ==
+  33,451 recoveries, 181 participants
+    commons/y_high bg_only      AUC 0.5980 [0.5867, 0.6099]
+    commons/y_high clock        AUC 0.6045 [0.5890, 0.6200]
+    commons/y_high episode      AUC 0.6499 [0.6366, 0.6639]
+    commons/y_high loop         AUC 0.6671 [0.6466, 0.6875]
+    commons/y_high eventualbg   AUC 0.5479 [0.5195, 0.5769]
+    commons/y_high episode_vs_clock         +0.0454 [+0.0371, +0.0543] ahead on 122/181 participants -- distinguishable, positive
+    commons/y_high loop_vs_clock            +0.0626 [+0.0443, +0.0821] ahead on 124/181 participants -- distinguishable, positive
+    commons/y_high loop_vs_episode          +0.0172 [+0.0022, +0.0325] ahead on 118/181 participants -- distinguishable, positive
+    commons/y_high clock_vs_bgonly          +0.0064 [-0.0058, +0.0187] ahead on 96/181 participants -- UNPROVEN
+    commons/y_high clock_vs_eventualbg      +0.0566 [+0.0249, +0.0903] ahead on 112/181 participants -- distinguishable, positive
+    commons/y_relow bg_only      AUC 0.4788 [0.4643, 0.4980]
+    commons/y_relow clock        AUC 0.4975 [0.4901, 0.5052]
+    commons/y_relow episode      AUC 0.5626 [0.5539, 0.5723]
+    commons/y_relow loop         AUC 0.6013 [0.5814, 0.6220]
+    commons/y_relow eventualbg   AUC 0.4973 [0.4764, 0.5154]
+    commons/y_relow episode_vs_clock         +0.0651 [+0.0556, +0.0754] ahead on 130/181 participants -- distinguishable, positive
+    commons/y_relow loop_vs_clock            +0.1038 [+0.0821, +0.1254] ahead on 131/181 participants -- distinguishable, positive
+    commons/y_relow loop_vs_episode          +0.0387 [+0.0198, +0.0585] ahead on 95/181 participants -- distinguishable, positive
+    commons/y_relow clock_vs_bgonly          +0.0187 [+0.0013, +0.0317] ahead on 81/181 participants -- distinguishable, positive
+    commons/y_relow clock_vs_eventualbg      +0.0002 [-0.0182, +0.0230] ahead on 89/181 participants -- UNPROVEN
+== Boost cohort ==
+  4,979 recoveries, 16 participants
+    boost/y_high bg_only      AUC 0.4939 [0.4210, 0.5704]
+    boost/y_high clock        AUC 0.6221 [0.6045, 0.6354]
+    boost/y_high episode      AUC 0.6311 [0.6071, 0.6497]
+    boost/y_high loop         AUC 0.6103 [0.5732, 0.6480]
+    boost/y_high eventualbg   AUC 0.5981 [0.5387, 0.6381]
+    boost/y_high episode_vs_clock         +0.0090 [-0.0026, +0.0215] ahead on 11/16 participants -- UNPROVEN
+    boost/y_high loop_vs_clock            -0.0118 [-0.0433, +0.0270] ahead on 9/16 participants -- UNPROVEN
+    boost/y_high loop_vs_episode          -0.0208 [-0.0541, +0.0138] ahead on 6/16 participants -- UNPROVEN
+    boost/y_high clock_vs_bgonly          +0.1283 [+0.0509, +0.2011] ahead on 13/16 participants -- distinguishable, positive
+    boost/y_high clock_vs_eventualbg      +0.0240 [-0.0217, +0.0831] ahead on 12/16 participants -- UNPROVEN
+    boost/y_relow bg_only      AUC 0.4790 [0.4336, 0.5169]
+    boost/y_relow clock        AUC 0.5007 [0.4816, 0.5274]
+    boost/y_relow episode      AUC 0.5293 [0.5122, 0.5460]
+    boost/y_relow loop         AUC 0.5134 [0.4882, 0.5499]
+    boost/y_relow eventualbg   AUC 0.5078 [0.4699, 0.5517]
+    boost/y_relow episode_vs_clock         +0.0285 [+0.0035, +0.0460] ahead on 11/16 participants -- distinguishable, positive
+    boost/y_relow loop_vs_clock            +0.0127 [-0.0210, +0.0431] ahead on 11/16 participants -- UNPROVEN
+    boost/y_relow loop_vs_episode          -0.0159 [-0.0371, +0.0167] ahead on 10/16 participants -- UNPROVEN
+    boost/y_relow clock_vs_bgonly          +0.0217 [-0.0103, +0.0611] ahead on 8/16 participants -- UNPROVEN
+    boost/y_relow clock_vs_eventualbg      -0.0071 [-0.0386, +0.0211] ahead on 4/16 participants -- UNPROVEN
+== seven research corpora ==
+  563,120 recoveries, 1806 participants
+    studies/y_high bg_only      AUC 0.6473 [0.6388, 0.6553]
+    studies/y_high clock        AUC 0.6795 [0.6720, 0.6863]
+    studies/y_high episode      AUC 0.7082 [0.7004, 0.7151]
+    studies/y_high episode_vs_clock         +0.0286 [+0.0262, +0.0311] ahead on 1241/1806 participants -- distinguishable, positive
+    studies/y_high clock_vs_bgonly          +0.0322 [+0.0291, +0.0351] ahead on 1455/1806 participants -- distinguishable, positive
+    studies/y_relow bg_only      AUC 0.5628 [0.5502, 0.5761]
+    studies/y_relow clock        AUC 0.5763 [0.5650, 0.5882]
+    studies/y_relow episode      AUC 0.6302 [0.6167, 0.6453]
+    studies/y_relow episode_vs_clock         +0.0539 [+0.0483, +0.0603] ahead on 1497/1806 participants -- distinguishable, positive
+    studies/y_relow clock_vs_bgonly          +0.0134 [+0.0095, +0.0173] ahead on 988/1806 participants -- distinguishable, positive
+written c3_post_low_rebound.json
+C3_EXIT=0

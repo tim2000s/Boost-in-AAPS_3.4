@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boost Analyser — V1 vs V6 on your own data</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1e293b; --card2: #16202f; --line: #334155;
+    --text: #e2e8f0; --dim: #9aa0ad; --accent: #00d4ff; --v1col: #94a3b8;
+    --green: #4ade80; --red: #ef4444; --amber: #eab308; --orange: #f97316; --blue: #3b82f6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 { font-size: 1.6em; margin: 0 0 4px; } h1 .v6 { color: var(--accent); }
+  h2 { font-size: 1.15em; margin: 34px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .sub { color: var(--dim); margin: 0 0 18px; }
+  .banner { background: #2a2417; border: 1px solid #6b5d1f; border-radius: 8px; padding: 12px 14px; margin: 16px 0; font-size: 0.92em; }
+  .banner b { color: var(--amber); }
+  .privacy { background: #14231c; border: 1px solid #245c3a; border-radius: 8px; padding: 10px 14px; margin: 10px 0 18px; font-size: 0.9em; }
+  .privacy b { color: var(--green); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 12px 0; }
+  label { display: block; font-size: 0.85em; color: var(--dim); margin: 10px 0 3px; }
+  input[type=text], input[type=password], select {
+    width: 100%; padding: 9px 10px; background: var(--card2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 6px; font-size: 0.95em;
+  }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; } .row > div { flex: 1; min-width: 200px; }
+  button { background: var(--accent); color: #06202a; font-weight: 600; border: 0; border-radius: 6px; padding: 10px 22px; font-size: 1em; cursor: pointer; margin-top: 14px; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .remember { font-size: 0.85em; color: var(--dim); margin-top: 8px; } .remember input { vertical-align: middle; }
+  #progress { color: var(--accent); font-size: 0.9em; min-height: 1.4em; margin-top: 10px; white-space: pre-wrap; }
+  #error { color: var(--red); font-size: 0.92em; margin-top: 8px; white-space: pre-wrap; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .stat { background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .stat .k { font-size: 0.75em; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat .v { font-size: 1.35em; font-weight: 600; margin-top: 2px; } .stat .v small { font-size: 0.6em; color: var(--dim); font-weight: 400; }
+  .stat.hi .v { color: var(--accent); } .stat.good .v { color: var(--green); } .stat.warn .v { color: var(--amber); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9em; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--dim); font-weight: 500; font-size: 0.85em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  canvas { width: 100%; height: auto; display: block; border-radius: 6px; background: var(--card2); }
+  .legend { font-size: 0.8em; color: var(--dim); margin: 6px 0 0; }
+  .legend span { display: inline-block; margin-right: 14px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: baseline; }
+  .ep-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-size: 0.92em; margin-bottom: 8px; }
+  .ep-head b { color: var(--accent); }
+  .muted { color: var(--dim); font-size: 0.88em; }
+  #results { display: none; }
+  a { color: var(--accent); }
+  .navlinks { font-size: 0.85em; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="navlinks">Boost tools: <a href="boost_simulator.html">Simulator</a> · <a href="boost_tuning_guide.html">Tuning Guide</a> · <b>Analyser</b></div>
+  <h1>Boost Analyser <span class="v6">— V1 vs V6, on your own data</span></h1>
+  <p class="sub">Every Boost build since the multi-user shadow beta logs <em>both</em> engines' decisions every cycle:
+  what your running engine delivered, and what the other engine decided on identical inputs. This page reads that
+  telemetry straight from your Nightscout and shows you the real, paired comparison. Works with AAPS Boost builds
+  <em>and</em> the Trio (iOS) Boost port — the site type is auto-detected from the data.</p>
+
+  <div class="banner"><b>What this is — and is not.</b> This compares what the two engines <em>decided</em> on your
+  real history (doses, meal detection, timing). It does <b>not</b> simulate what your glucose would have been —
+  insulin you didn't actually receive would have changed the BG that followed, and no physiologic model is used here.
+  Glycaemia stats shown are your <em>actual</em> results on the engine you were running.</div>
+
+  <div class="privacy"><b>Privacy:</b> this page has no server. Your URL and token are used only by <em>your browser</em>
+  to call <em>your Nightscout</em> directly; nothing is sent anywhere else. Use a <b>read-only</b> token
+  (Nightscout → Admin tools → Subjects, role <code>readable</code>).</div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label for="nsurl">Nightscout URL</label>
+        <input type="text" id="nsurl" placeholder="https://yoursite.example.com" autocomplete="off">
+      </div>
+      <div>
+        <label for="nstoken">Read token</label>
+        <input type="password" id="nstoken" placeholder="e.g. readable-a1b2c3d4e5f6" autocomplete="off">
+      </div>
+      <div style="max-width:140px">
+        <label for="days">Look back</label>
+        <select id="days"><option value="7">7 days</option><option value="14" selected>14 days</option><option value="30">30 days</option></select>
+      </div>
+    </div>
+    <div class="remember"><input type="checkbox" id="remember"> remember URL &amp; token in this browser (localStorage) — untick on shared machines</div>
+    <button id="go">Analyse</button>
+    <div id="progress"></div>
+    <div id="error"></div>
+  </div>
+
+  <div id="results">
+    <div class="banner" id="modeBanner" style="display:none"></div>
+    <h2>Your actual glycaemia (on the engine you were running)</h2>
+    <div class="row" style="align-items:stretch">
+      <div class="card" style="flex:1.25;min-width:340px;margin:0">
+        <div style="font-weight:600;font-size:1.05em;margin-bottom:12px">Time in Ranges</div>
+        <div style="display:flex;gap:18px">
+          <div id="tirBar" style="flex:0 0 46px;min-height:260px;display:flex;flex-direction:column;border-radius:10px;overflow:hidden"></div>
+          <div id="tirLegend" style="flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:2px 0"></div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:250px"><div class="stats" id="glyStats"></div></div>
+    </div>
+    <p class="muted" id="modeLine"></p>
+
+    <h2 id="doseHead">Dose decisions: V1 vs V6</h2>
+    <div class="stats" id="doseStats"></div>
+    <div class="card">
+      <canvas id="histCanvas" width="1000" height="220"></canvas>
+      <div class="legend" id="histLegend">Per-cycle dose difference (V6 − V1), all paired cycles. Left of centre = V6 decided less
+      insulin than V1; right = more. The big bar at zero is both engines agreeing.</div>
+    </div>
+    <div class="card">
+      <table id="splitTable"></table>
+      <div class="legend" id="splitLegend">Night = 22:00–07:00 in your browser's timezone. “V6 extra at night, unannounced” is the
+      pattern the V6 night gate (July 2026) now suppresses on current builds.</div>
+    </div>
+
+    <h2>How the engines dose a meal, on average <span class="muted" id="epCount"></span></h2>
+    <p class="muted" id="mealBlurb">All auto-detected rises (≥50 mg/dL within 90 min) aligned at onset. Lines are the <b>mean
+    cumulative insulin</b> each engine decided from 30 min before onset — the shape difference IS the story:
+    V6 holds, fires its commit-shot, then tapers; V1 ramps steadily. The gap is shaded
+    (<span style="color:var(--accent)">cyan</span> where V6 has delivered more,
+    <span style="color:var(--amber)">amber</span> where V1 has). Modal V6 state underneath.</p>
+    <div class="card">
+      <canvas id="mealDoseCanvas" width="1000" height="280"></canvas>
+      <div class="legend" id="mealLegend"><span><span class="dot" style="background:#94a3b8"></span>V1 cumulative (mean)</span>
+        <span><span class="dot" style="background:#00d4ff"></span>V6 cumulative (mean)</span>
+        <span>ribbon: modal V6 state</span></div>
+    </div>
+    <details><summary class="muted" style="cursor:pointer;margin:8px 0">Show the individual meals…</summary>
+      <div class="card"><table id="epTable"></table></div>
+    </details>
+
+    <h2>Where the engines differ across your day <span class="muted">(counterfactual AGP)</span></h2>
+    <p class="muted">Your actual BG by time of day (<span style="color:var(--green)">green</span> median +
+    interquartile band) against the projected other-engine band (<span style="color:var(--accent)">cyan</span>,
+    dashed median). <b>Lower medians are not free:</b> wherever the other engine's 25th percentile dips below
+    70 mg/dL the low-side tail is filled <span style="color:var(--amber)">amber</span> — that is the hypo risk a
+    lower median line hides. Same absorbed-Δdose × logged-ISF projection as the panels below, with an IOB-feedback ledger (the other
+    engine's later intents shrink as its counterfactual insulin accumulates) and an LGS emulation (its further
+    insulin suspends once projected BG reaches 90). <b>Validated limitation:</b> cross-checked against a dual-era
+    user's <em>real</em> V1 history, even this bounded projection overstates low-side tails roughly 3× — rescue
+    carbs and the zero-temp basal cut can't be modelled from decision data. So read the amber areas as
+    <b>where the hypo pressure concentrates</b>, never as projected time-below-range.</p>
+    <div class="stats" id="cfStats" style="margin-bottom:10px"></div>
+    <div class="card">
+      <canvas id="dailyAgpCanvas" width="1000" height="300"></canvas>
+      <div class="legend"><span><span class="dot" style="background:#4ade80"></span>actual median + band</span>
+        <span><span class="dot" style="background:#00d4ff"></span>other engine, projected median + band</span>
+        <span><span class="dot" style="background:#eab308"></span>other engine's projected low tail (&lt;70)</span></div>
+    </div>
+
+    <h2>Likely-avoided lows <span class="muted">(first-order estimate)</span></h2>
+    <div class="banner" style="background:#1b2233;border-color:#31518a"><b style="color:#7fb2ff">How this is estimated — read before trusting it.</b>
+    For every BG nadir ≤95 mg/dL, the net dose difference between the engines over the preceding 3&nbsp;hours is
+    absorption-weighted (triangular activity, DIA&nbsp;5h) and multiplied by your <em>logged</em> per-cycle ISF to project
+    how much deeper (or shallower) the nadir would have been under the other engine. The range shown applies a 50%
+    discount for engine feedback — the counterfactual engine would have reacted to falling BG (zero-temps, LGS), and
+    carbs you might have eaten aren't modelled. Read these as <b>pressure toward hypo</b>, not predicted numbers.</div>
+    <details><summary class="muted" style="cursor:pointer;margin:8px 0">Show the occasions…</summary><div id="nearMiss"></div></details>
+
+    <h2>Counterfactual highs <span class="muted">(same method, other tail)</span></h2>
+    <details><summary class="muted" style="cursor:pointer;margin:8px 0">Show the occasions…</summary><div id="cfPeaks"></div></details>
+
+    <h2>Levers to consider</h2>
+    <div class="banner"><b>Not medical advice.</b> These are pattern-matched pointers at the Boost settings most
+    associated with what the data shows — validate any change against the
+    <a href="boost_tuning_guide.html">Tuning Guide</a>, move one lever at a time in small steps, and give each
+    change several days before judging it.</div>
+    <div id="levers"></div>
+
+    <h2>V6 state machine &amp; safety gates</h2>
+    <div class="row">
+      <div class="card"><table id="stateTable"></table></div>
+      <div class="card"><table id="gateTable"></table></div>
+    </div>
+    <p class="muted" id="confirmLine"></p>
+    <p class="muted" id="primerLine"></p>
+
+    <h2>Notes &amp; caveats</h2>
+    <div class="card muted" style="font-size:0.9em">
+      <ul style="margin:0; padding-left:18px">
+        <li>Decision-level comparison only — see the banner at the top. For the validation methodology behind Boost
+        changes (replay before ship), see <code>backtesting/README.md</code> in the repo.</li>
+        <li>Cycles are deduplicated to 5-minute buckets (AAPS re-invokes more often during SMB delivery).</li>
+        <li>On V6-active builds, V1's dose is parsed from the reason text (<code>base would=…</code>); cycles where
+        that isn't present are counted as unpaired and excluded from dose deltas.</li>
+        <li>If your build predates the shadow telemetry (~May 2026), no <code>boostV5_*</code> fields exist and this
+        page can't compare — update Boost first.</li>
+        <li><b>Trio sites</b> are auto-detected per dataset: structured <code>boostV5_*</code> fields → AAPS; the
+        <code>boostV5[…]</code> tag in <code>suggested.reason</code> (or the <code>device: "Trio"</code> signature)
+        → Trio, where stock trio-oref is the acting engine and Boost V6 runs in shadow. The acting dose is
+        trio-oref's suggested SMB (<code>suggested.units</code>; absent = 0), Boost V6 is parsed from the tag.
+        AAPS-only telemetry (Phase-3 gate fields, cap values, the <code>base would=</code> counterfactual) has no
+        Trio equivalent and is shown as n/a; Boost-ACTIVE Trio cycles don't log the oref counterfactual and are
+        counted unpaired. Mixed windows (uploader switched) are analysed per cycle in each record's own mode.</li>
+        <li>TING = Time In Normo-glycaemia, 3.5–7.8 mmol/L (63–140 mg/dL), reported alongside standard TIR 70–180.</li>
+        <li><b>Late-July 2026 engine changes</b> reflected in the comparison: a <b>composed rebound guard</b> (SMB
+        scaled down in the 45-min window after a low, closing the confirm-crash) and a <b>stop on adding insulin
+        during elevated-heart-rate exercise</b>. Both only ever <i>remove</i> insulin, so where they act you'll see
+        Boost's counterfactual dose sit at or below V1's.</li>
+        <li>Recent builds also run a read-only <b>anticipation shadow</b> (an <code>anticip=</code> tag that learns
+        when you tend to eat and exercise). It <b>doses nothing</b>, so it does not affect this dose comparison — it
+        is banking data for future per-user anticipatory dosing.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================ CORE ================================
+   Pure functions — no DOM, no fetch. Node-testable. */
+
+/* ---- Trio (iOS Boost port) support ----
+   On Trio sites the ACTING engine is stock trio-oref and Boost V6 runs in SHADOW, logged as a
+   compact tag APPENDED to openaps.suggested.reason (Trio BoostV5Adapter.reasonTag):
+     boostV5[<off|shadow|active>]: state=<STATE> score=<s> wouldSMB=<u>U; ml(hypo=<x|n/a> meal=<x|n/a>)[ exercise| postEx][ asleep]
+   There are NO structured boostV5_* fields on Trio. Trio's NS uploader only rewrites
+   ISF/Target/Dev/BGI/predBG patterns for mmol users, so the tag survives verbatim. */
+function parseTrioTag(reason) {
+  const m = String(reason || "").match(
+    /boostV5\[(off|shadow|active)\]:\s*state=([A-Z]+)\s+score=(-?[\d.]+)\s+wouldSMB=(-?[\d.]+)U;\s*ml\(hypo=([\d.]+|n\/a)\s+meal=([\d.]+|n\/a)\)((?:\s+(?:exercise|postEx|asleep))*)/);
+  if (!m) return null;
+  const flags = m[7].trim().split(/\s+/).filter(Boolean);
+  return {
+    mode: m[1], state: m[2],
+    score: parseFloat(m[3]), wouldSMB: parseFloat(m[4]),
+    mlHypo: m[5] === "n/a" ? null : parseFloat(m[5]),
+    mlMeal: m[6] === "n/a" ? null : parseFloat(m[6]),
+    exercise: flags.indexOf("exercise") >= 0,
+    postEx: flags.indexOf("postEx") >= 0,
+    asleep: flags.indexOf("asleep") >= 0
+  };
+}
+
+// Per-record source sniff: structured boostV5_* fields → AAPS Boost build; the boostV5[…] reason
+// tag or the Trio device signature (NightscoutStatus.device = "Trio") → Trio build; else unknown.
+/* The acceleration primer leaves a breadcrumb in the reason rather than a structured field, so it
+   has to be read from the text. Four forms are written by OpenAPSBoostPlugin:
+     primer=bolus,0.15U;                delivered as a bolus
+     primer=tbr,0.15U->...U/h x30m;     delivered as a retractable temp basal
+     primer=tbr-skipped(...)            base temp below basal, nothing delivered
+     primer=tbr-subsumed(...)           the base temp already exceeded the primer rate
+   Only the first two put insulin in. The other two are counted separately, because a primer that
+   was computed and then not delivered says something different about the configuration than one
+   that never fired at all. */
+function parsePrimer(reason) {
+  const t = String(reason || "");
+  let m = t.match(/primer=bolus,([\d.]+)U/);
+  if (m) return { mode: "bolus", units: parseFloat(m[1]), delivered: true };
+  m = t.match(/primer=tbr,([\d.]+)U/);
+  if (m) return { mode: "tbr", units: parseFloat(m[1]), delivered: true };
+  if (/primer=tbr-skipped/.test(t)) return { mode: "skipped", units: 0, delivered: false };
+  if (/primer=tbr-subsumed/.test(t)) return { mode: "subsumed", units: 0, delivered: false };
+  return null;
+}
+
+function classifyRecordSource(d) {
+  const sug = d && d.openaps && d.openaps.suggested;
+  if (!sug) return null;
+  if (sug.boostV5_state !== undefined || sug.boostV5_finalDose !== undefined ||
+      sug.boostV5_score !== undefined) return "aaps";
+  if (parseTrioTag(sug.reason)) return "trio";
+  if (/^trio\b/i.test(String(d.device || ""))) return "trio";   // Trio site, Boost off this cycle
+  return "unknown";
+}
+
+// Dataset-level detection, per fetched dataset (never a user toggle). mixed = uploader switched
+// mid-window; the analysis stays per-cycle so each segment is handled in its own mode.
+function detectSources(dsList) {
+  const counts = { aaps: 0, trio: 0, unknown: 0 };
+  for (const d of dsList) {
+    const s = classifyRecordSource(d);
+    if (s) counts[s]++;
+  }
+  const mode = counts.aaps && counts.trio ? "mixed" : counts.trio ? "trio" : counts.aaps ? "aaps" : "none";
+  return { counts, mode };
+}
+
+// Trio uploads suggested.ISF in mg/dL·U⁻¹; guard against a profile-unit leak (mmol ISFs are <15).
+function trioIsfMgdl(v) { return v === null ? null : (v < 15 ? v * 18.016 : v); }
+
+// Contiguous same-source runs over the (sorted, deduped) cycles, for the mixed-site banner.
+function sourceSegments(cycles) {
+  const segs = [];
+  for (const c of cycles) {
+    const s = c.src || "unknown";
+    if (s === "unknown") continue;
+    const last = segs.length ? segs[segs.length - 1] : null;
+    if (last && last.src === s) { last.toTs = c.ts; last.n++; }
+    else segs.push({ src: s, fromTs: c.ts, toTs: c.ts, n: 1 });
+  }
+  return segs;
+}
+
+function parseCycles(dsList) {
+  // devicestatus -> one record per openaps.suggested, newest or oldest order tolerated
+  const out = [];
+  for (const d of dsList) {
+    const sug = d && d.openaps && d.openaps.suggested;
+    if (!sug || !sug.timestamp) continue;
+    const ts = Date.parse(sug.timestamp);
+    if (!isFinite(ts)) continue;
+    const reason = String(sug.reason || "");
+    const src = classifyRecordSource(d) || "unknown";
+    if (src === "trio") {
+      // Trio record: everything Boost comes from the reason tag; no structured fields exist.
+      const tag = parseTrioTag(reason);
+      out.push({
+        ts, bg: numOrNull(sug.bg),
+        units: numOrNull(sug.units),          // trio-oref's suggested SMB; absent = no SMB decided
+        state: tag ? tag.state : null,
+        age: null,                            // no age in the tag — reconstructed from state runs below
+        score: tag ? tag.score : null,
+        budget: null,                         // AAPS-only telemetry
+        fd: tag ? tag.wouldSMB : null,
+        active: !!tag && tag.mode === "active",
+        gates: null,                          // AAPS-only telemetry
+        boostActive: undefined,
+        isf: trioIsfMgdl(numOrNull(sug.ISF)),
+        ccap: null, fcap: null,               // AAPS-only telemetry
+        ml: tag ? { hypo: tag.mlHypo, meal: tag.mlMeal } : null,
+        src, reason
+      });
+      continue;
+    }
+    out.push({
+      src,
+      ts, bg: numOrNull(sug.bg),
+      units: numOrNull(sug.units),
+      state: sug.boostV5_state || null,
+      age: numOrNull(sug.boostV5_age),
+      score: numOrNull(sug.boostV5_score),
+      budget: numOrNull(sug.boostV5_budget),
+      fd: numOrNull(sug.boostV5_finalDose),
+      // Per-cycle mode: the boostV5_active flag is recent — older V6-ACTIVE records lack it, so a
+      // global majority-vote misclassifies long lookbacks. Fall back to the reason-text markers
+      // that V6-active builds have always written.
+      active: sug.boostV5_active === true || /V6-ACTIVE drove|V6 suppressed \(|V6 override skipped/.test(String(sug.reason || "")),
+      gates: sug.boostV5_gateReduction || null,
+      boostActive: sug.boostActive,
+      isf: numOrNull(sug.variable_sens),
+      ccap: numOrNull(sug.boostV5_committedCap),
+      fcap: numOrNull(sug.boostV5_confirmedCap),
+      // 2026-07 telemetry: floorWouldAdd = the shadow composed-floor's would-be uplift this cycle
+      // (evidence of mid-meal brake-stack collapse); confirmGate = "pass"/"blocked"/"n/a" — whether
+      // a confirm-eligible OBSERVING cycle's dose-adequacy gate passed (distinguishes a gated confirm
+      // from a score fade). Powers the brake-floor + confirm-gate lever hints.
+      floorWouldAdd: numOrNull(sug.boostV5_floorWouldAdd),
+      confirmGate: sug.boostV5_confirmGate || null,
+      primer: parsePrimer(reason),
+      reason
+    });
+  }
+  out.sort((a, b) => a.ts - b.ts);
+  // dedupe to 5-min buckets (first record per bucket)
+  const seen = new Set(); const ded = [];
+  for (const c of out) {
+    const b = Math.floor(c.ts / 300000);
+    if (seen.has(b)) continue;
+    seen.add(b); ded.push(c);
+  }
+  // Trio: reconstruct the state age (cycles spent in the current consecutive state run) — the tag
+  // carries no boostV5_age, and the commit-shot stats key on age === 0 (first CONFIRMED cycle).
+  let prev = null;
+  for (const c of ded) {
+    if (c.src === "trio" && c.state !== null)
+      c.age = (prev && prev.src === "trio" && prev.state === c.state && prev.age !== null)
+        ? prev.age + 1 : 0;
+    prev = c;
+  }
+  return ded;
+}
+
+function numOrNull(v) { return (typeof v === "number" && isFinite(v)) ? v : null; }
+
+// Pair each cycle into {v1, v6}. Returns null for unpaired.
+// On Trio records "v1" is the ACTING trio-oref SMB and "v6" the tag's shadow wouldSMB.
+function pairDoses(c) {
+  if (c.fd === null) return null;                    // no V6 telemetry
+  const v6 = c.fd;
+  if (c.src === "trio") {
+    // shadow: trio-oref delivered; absent suggested.units = oref decided NO SMB (0), not missing data
+    if (!c.active) return { v1: c.units === null ? 0 : c.units, v6 };
+    // Boost-ACTIVE Trio cycle: the oref counterfactual isn't logged on Trio — unpaired
+    return null;
+  }
+  if (!c.active) {
+    // shadow build: delivered units ARE V1's dose
+    return (c.units === null) ? null : { v1: c.units, v6 };
+  }
+  // V6-active build: V1 comes from the reason text
+  const m = c.reason.match(/base would=([\d.]+)\s*U/);
+  if (m) return { v1: parseFloat(m[1]), v6 };
+  // suppression branches: units delivered were V1's base dose
+  if (/V6 (suppressed|override skipped)/.test(c.reason) && c.units !== null)
+    return { v1: c.units, v6 };
+  return null;
+}
+
+function glycaemia(entries) {
+  // entries: [{date(ms), sgv}]
+  const v = entries.map(e => e.sgv).filter(x => typeof x === "number" && x > 20);
+  const n = v.length;
+  if (!n) return null;
+  const mean = v.reduce((a, b) => a + b, 0) / n;
+  const inR = v.filter(x => x >= 70 && x <= 180).length;
+  const ting = v.filter(x => x >= 63 && x <= 140).length;
+  const lo = v.filter(x => x < 70).length, lo54 = v.filter(x => x < 54).length;
+  const lo63 = v.filter(x => x < 63).length;   // for the composed-floor hypo-gate (TBR<63)
+  const hi = v.filter(x => x > 180).length;
+  const sd = Math.sqrt(v.reduce((a, b) => a + (b - mean) * (b - mean), 0) / n);
+  return {
+    n, mean, gmi: 3.31 + 0.02392 * mean,
+    tir: 100 * inR / n, ting: 100 * ting / n,
+    below70: 100 * lo / n, below54: 100 * lo54 / n, below63: 100 * lo63 / n, above180: 100 * hi / n,
+    cv: 100 * sd / mean
+  };
+}
+
+function detectEpisodes(entries) {
+  // entries sorted asc by date; find local-min onsets followed by >=50 mg/dL rise within 90 min
+  const es = entries.filter(e => typeof e.sgv === "number" && e.sgv > 20)
+                    .map(e => ({ t: e.date, bg: e.sgv })).sort((a, b) => a.t - b.t);
+  const eps = [];
+  let i = 0;
+  while (i < es.length) {
+    const onset = es[i];
+    // find peak within 90 min
+    let peak = onset, j = i + 1;
+    while (j < es.length && es[j].t - onset.t <= 90 * 60000) {
+      if (es[j].bg > peak.bg) peak = es[j];
+      j++;
+    }
+    if (peak.bg - onset.bg >= 50) {
+      // extend end: until BG returns to onset+20 or 4h
+      let end = peak, k = j;
+      while (k < es.length && es[k].t - onset.t <= 240 * 60000) {
+        end = es[k];
+        if (es[k].bg <= onset.bg + 20) break;
+        k++;
+      }
+      eps.push({ onsetT: onset.t, onsetBg: onset.bg, peakT: peak.t, peakBg: peak.bg, endT: end.t });
+      // skip past the episode
+      while (i < es.length && es[i].t <= end.t) i++;
+      continue;
+    }
+    i++;
+  }
+  return eps;
+}
+
+function isNightLocal(ts) { const h = new Date(ts).getHours(); return h >= 22 || h < 7; }
+
+function analyse(cycles, entries, episodes) {
+  const gly = glycaemia(entries);
+  // Site mode + series labels: AAPS = V1 acting / V6 shadow; Trio = trio-oref acting / Boost V6
+  // shadow (from the reason tag). All maths below is per-cycle, so mixed sites are analysed
+  // correctly segment-by-segment for free — the labels just have to say so.
+  const sources = { aaps: 0, trio: 0, unknown: 0 };
+  for (const c of cycles) sources[c.src || "unknown"]++;
+  const siteMode = sources.aaps && sources.trio ? "mixed"
+                 : sources.trio ? "trio" : sources.aaps ? "aaps" : "none";
+  const labels = siteMode === "trio" ? { v1: "Trio oref", v6: "Boost V6" }
+               : siteMode === "mixed" ? { v1: "V1/oref", v6: "Boost V6" }
+               : { v1: "V1", v6: "V6" };
+  const paired = [];
+  let unpaired = 0, withV6 = 0;
+  const stateCount = {}; const gateCount = {};
+  let activeCount = 0;
+  for (const c of cycles) {
+    if (c.fd !== null) withV6++;
+    if (c.active) activeCount++;
+    if (c.state) stateCount[c.state] = (stateCount[c.state] || 0) + 1;
+    if (c.gates && c.gates !== "none")
+      for (const g of c.gates.split(",")) {
+        const tag = g.split(":")[0].trim();
+        if (tag) gateCount[tag] = (gateCount[tag] || 0) + 1;
+      }
+    const p = pairDoses(c);
+    if (p) paired.push({ ts: c.ts, ...p, state: c.state });
+    else if (c.fd !== null) unpaired++;
+  }
+  const sum = a => a.reduce((x, y) => x + y, 0);
+  const mk = rows => ({
+    n: rows.length,
+    v1: sum(rows.map(r => r.v1)), v6: sum(rows.map(r => r.v6)),
+    v6MoreN: rows.filter(r => r.v6 - r.v1 > 0.1).length,
+    v1MoreN: rows.filter(r => r.v1 - r.v6 > 0.1).length,
+  });
+  const night = paired.filter(r => isNightLocal(r.ts));
+  const day = paired.filter(r => !isNightLocal(r.ts));
+  const inEp = ts => episodes.some(e => ts >= e.onsetT - 15 * 60000 && ts <= e.endT);
+  const meal = paired.filter(r => inEp(r.ts));
+  // confirm stats
+  const confirms = cycles.filter(c => c.state === "CONFIRMED" && c.age === 0);
+  const commitShots = confirms.map(c => c.fd).filter(x => x !== null);
+  // episode enrichment
+  const eps = episodes.map(e => {
+    const win = cycles.filter(c => c.ts >= e.onsetT - 15 * 60000 && c.ts <= e.endT);
+    const pw = win.map(pairDoses).map((p, ix) => p ? { ...p, ts: win[ix].ts } : null).filter(Boolean);
+    const conf = win.find(c => c.state === "CONFIRMED");
+    return {
+      ...e, cycles: win,
+      v1: sum(pw.map(r => r.v1)), v6: sum(pw.map(r => r.v6)),
+      confirmLatencyMin: conf ? Math.round((conf.ts - e.onsetT) / 60000) : null,
+      commitShot: conf ? conf.fd : null,
+      commitCap: conf ? conf.fcap : null
+    };
+  });
+  const days = cycles.length ? (cycles[cycles.length - 1].ts - cycles[0].ts) / 86400000 : 0;
+  const activeMode = (cycles.filter(c=>c.active).length) > cycles.length/2;
+  const cfDeltas = counterfactualDeltas(cycles);
+  const nearMiss = nearMissAnalysis(cycles, entries, cfDeltas, labels);
+  const modelStub = { episodes: eps, nearMiss, night: mk(night), gly };
+  const hints = leverHints(modelStub, cycles, activeMode, labels);
+  const cfSeries = counterfactualSeries(entries, cycles);
+  // Acceleration primer. Counted separately from the paired dose comparison, because the primer is
+  // additive only up to its base and the excess is netted off the commit-shot, so folding it into a
+  // V6 total would double-count insulin the commit-shot has already given up.
+  const primed = cycles.filter(c => c.primer);
+  const primerDelivered = primed.filter(c => c.primer.delivered);
+  const primerSummary = {
+    cycles: primed.length,
+    delivered: primerDelivered.length,
+    units: sum(primerDelivered.map(c => c.primer.units)),
+    bolus: primed.filter(c => c.primer.mode === "bolus").length,
+    tbr: primed.filter(c => c.primer.mode === "tbr").length,
+    notDelivered: primed.filter(c => !c.primer.delivered).length,
+    perDay: days > 0 ? primerDelivered.length / days : null
+  };
+  return {
+    primer: primerSummary,
+    siteMode, sources, labels, segments: sourceSegments(cycles),
+    cfN: cfDeltas.length,
+    nearMiss,
+    cfPeaks: counterfactualPeaks(cycles, entries, cfDeltas, labels),
+    hints,
+    dailyAgp: { act: agpBins(cfSeries, x => x.bg), cf: agpBins(cfSeries, x => x.cf) },
+    cfGly: cfGlycaemia(cfSeries),
+    tirBands: tirBands(entries),
+    mealDose: mealDoseCurves(eps),
+    _activeMode: activeMode,
+    gly, cycles: cycles.length, withV6, paired: paired.length, unpaired,
+    activeShare: cycles.length ? activeCount / cycles.length : 0,
+    days, stateCount, gateCount,
+    totals: mk(paired), night: mk(night), dayStats: mk(day), meal: mk(meal),
+    deltas: paired.map(r => r.v6 - r.v1),
+    confirms: confirms.length, commitShots,
+    episodes: eps
+  };
+}
+
+// ---- Likely-avoided / likely-caused lows (first-order estimate) ----
+// Absorbed fraction of a dose t minutes after delivery: triangular insulin-activity model,
+// peak 75 min, tail 300 min (DIA 5h). Returns cumulative fraction in [0,1].
+function absorbedFrac(tMin) {
+  if (tMin <= 0) return 0;
+  if (tMin >= 300) return 1;
+  // triangle area: rise 0..75, fall 75..300; total area normalised to 1
+  // activity(t) = t/75 rising, (300−t)/225 falling (unit peak); total area = 150
+  const T = 150;
+  if (tMin <= 75) return (tMin * tMin / 150) / T;
+  const f = tMin - 75;
+  return (37.5 + f - (f * f) / 450) / T;
+}
+
+function findNadirs(entries) {
+  const es = entries.filter(e => typeof e.sgv === "number" && e.sgv > 20)
+                    .map(e => ({ t: e.date, bg: e.sgv })).sort((a, b) => a.t - b.t);
+  const nadirs = [];
+  for (let i = 2; i < es.length - 2; i++) {
+    const c = es[i];
+    if (c.bg > 95) continue;                                    // candidates: nadir ≤ 95
+    if (es[i-1].bg < c.bg || es[i+1].bg < c.bg) continue;       // local minimum
+    if (nadirs.length && c.t - nadirs[nadirs.length-1].t < 60*60000) {
+      if (c.bg < nadirs[nadirs.length-1].bg) nadirs[nadirs.length-1] = c;   // keep deeper within 1h
+      continue;
+    }
+    nadirs.push({ t: c.t, bg: c.bg });
+  }
+  return nadirs;
+}
+
+// For each nadir: net counterfactual-minus-actual insulin in the prior 3h, absorption-weighted
+// to the nadir, × median logged ISF → projected nadir shift. active=true → counterfactual is V1.
+function nearMissAnalysis(cycles, entries, deltas, labels) {
+  const L = labels || { v1: "V1", v6: "V6" };
+  const nadirs = findNadirs(entries);
+  const events = [];
+  for (const nd of nadirs) {
+    const win = deltas.filter(x => x.ts >= nd.t - 180 * 60000 && x.ts < nd.t);
+    if (win.length < 6) continue;
+    let extra = 0, v6MinusV1 = 0;
+    for (const x of win) {
+      const w = absorbedFrac((nd.t - x.ts) / 60000);
+      extra += x.d * w;
+      v6MinusV1 += (x.active ? -x.d : x.d) * w;
+    }
+    if (Math.abs(extra) < 0.25) continue;
+    const activeMode = win.filter(x => x.active).length > win.length / 2;
+    const isfs = win.map(x => x.isf).sort((a, b) => a - b);
+    const isf = isfs[Math.floor(isfs.length / 2)];
+    const shiftHi = extra * isf, shiftLo = shiftHi * 0.5;
+    const projHi = nd.bg - shiftHi, projLo = nd.bg - shiftLo;
+    const pf = x => x < 40 ? "<40" : String(Math.round(x));
+    const projRange = (projHi < 40 && projLo < 40) ? "well under 40" : ("~" + pf(Math.min(projHi, projLo)) + "\u2013" + pf(Math.max(projHi, projLo)));
+    let verdict = null;
+    const cf = activeMode ? L.v1 : L.v6, ran = activeMode ? L.v6 : L.v1;
+    if (extra > 0) {
+      if (nd.bg >= 54 && projHi < 54) verdict = `${ran} likely avoided a SEVERE low (${cf} pressure → ${projRange})`;
+      else if (nd.bg >= 70 && projHi < 70) verdict = `${ran} likely avoided a low (${cf} pressure → ${projRange})`;
+      else if (nd.bg < 70) verdict = `actual low — ${cf} would likely have made it worse (${projRange})`;
+    } else {
+      if (nd.bg < 70 && projLo >= 70) verdict = `${cf} would likely have avoided this low (${projRange})`;
+      else if (nd.bg < 70) verdict = `actual low — ${cf} pressure was lower (${projRange})`;
+    }
+    if (!verdict) continue;
+    events.push({ t: nd.t, nadir: nd.bg, extra, v6ExtraU: v6MinusV1, isf, projLo, projHi, projRange, verdict, avoided: extra > 0 && nd.bg >= 70 });
+  }
+  return events;
+}
+
+// ---- Counterfactual peaks: would the other engine have run higher/lower? ----
+function findPeaks(entries) {
+  const es = entries.filter(e => typeof e.sgv === "number" && e.sgv > 20)
+                    .map(e => ({ t: e.date, bg: e.sgv })).sort((a, b) => a.t - b.t);
+  const peaks = [];
+  for (let i = 2; i < es.length - 2; i++) {
+    const c = es[i];
+    if (c.bg < 180) continue;
+    if (es[i-1].bg > c.bg || es[i+1].bg > c.bg) continue;
+    if (peaks.length && c.t - peaks[peaks.length-1].t < 60*60000) {
+      if (c.bg > peaks[peaks.length-1].bg) peaks[peaks.length-1] = c;
+      continue;
+    }
+    peaks.push({ t: c.t, bg: c.bg });
+  }
+  return peaks;
+}
+
+function counterfactualPeaks(cycles, entries, deltas, labels) {
+  const L = labels || { v1: "V1", v6: "V6" };
+  const out = [];
+  for (const pk of findPeaks(entries)) {
+    const win = deltas.filter(x => x.ts >= pk.t - 180 * 60000 && x.ts < pk.t);
+    if (win.length < 6) continue;
+    let extra = 0;
+    for (const x of win) extra += x.d * absorbedFrac((pk.t - x.ts) / 60000);
+    if (Math.abs(extra) < 0.25) continue;
+    const activeMode = win.filter(x => x.active).length > win.length / 2;
+    const isfs = win.map(x => x.isf).sort((a, b) => a - b);
+    const isf = isfs[Math.floor(isfs.length / 2)];
+    const shiftHi = extra * isf, shiftLo = shiftHi * 0.5;
+    const projHi = pk.bg - shiftHi, projLo = pk.bg - shiftLo;
+    const cf = activeMode ? L.v1 : L.v6, ran = activeMode ? L.v6 : L.v1;
+    const rng = "~" + Math.round(Math.min(projHi, projLo)) + "\u2013" + Math.round(Math.max(projHi, projLo));
+    let verdict;
+    if (extra < 0)
+      verdict = `${ran} likely reduced this high — ${cf} would have peaked ${rng}`;
+    else
+      verdict = `${cf} would likely have peaked lower (${rng}) — ${ran} traded peak height for descent safety; check the lows panel`;
+    out.push({ t: pk.t, peak: pk.bg, extra, isf, projRange: rng, verdict, reduced: extra < 0 });
+  }
+  return out;
+}
+
+// ---- Lever hints: map observed patterns to the user-adjustable Boost settings ----
+function leverHints(model, cycles, activeMode, labels) {
+  const L = labels || { v1: "V1", v6: "V6" };
+  const hints = [];
+  const eps = model.episodes || [];
+  // sharp onset helper: max BG step in the first 30 min of the episode
+  const sharp = e => {
+    const c2 = (e.cycles || []).filter(c => c.bg !== null && c.ts <= e.onsetT + 30*60000).map(c => c.bg);
+    for (let i = 1; i < c2.length; i++) if (c2[i] - c2[i-1] >= 8) return true;
+    return false;
+  };
+  // 1. slow confirm on sharp meals → fast-carb confirm
+  const slow = eps.filter(e => e.peakBg >= 200 && e.confirmLatencyMin !== null && e.confirmLatencyMin >= 25 && sharp(e));
+  if (slow.length >= 2)
+    hints.push({ lever: "Fast-carb confirm (Advanced)", dir: "enable / review",
+      why: `${slow.length} sharp rises peaked ≥200 with CONFIRMED arriving ≥25 min after onset (median ${median(slow.map(e=>e.confirmLatencyMin))} min). The fast path confirms sharp+accelerating rises in one cycle.` });
+  // 2. confirmed cap binding. Each shot is tested against the cap in force when it fired, and only
+  //    a cap at or above today's counts: a clip at a cap the user has since raised says nothing now.
+  const fc = cycles.filter(c => c.fcap !== null).pop();
+  if (fc) {
+    const clipped = eps.filter(e => e.commitShot !== null && e.commitCap !== null && e.commitCap >= fc.fcap &&
+      e.commitShot >= 0.95 * e.commitCap && e.peakBg >= 200);
+    if (clipped.length >= 2)
+      hints.push({ lever: "Confirmed cap (U)", dir: "consider a modest raise",
+        why: `${clipped.length} commit-shots were clipped at the cap (now ${fc.fcap}U) on episodes that still peaked ≥200.` });
+  }
+  // 3. committed cap binding while still rising high (same per-cycle rule as 2)
+  const cc = cycles.filter(c => c.ccap !== null).pop();
+  if (cc) {
+    const pinned = cycles.filter(c => c.state === "COMMITTED" && c.fd !== null && c.ccap !== null && c.ccap >= cc.ccap &&
+      c.fd >= 0.95 * c.ccap && (c.bg || 0) > 180);
+    if (pinned.length >= 4)
+      hints.push({ lever: "Committed cap (U)", dir: "consider a modest raise",
+        why: `${pinned.length} COMMITTED holding cycles were pinned at the cap (now ${cc.ccap}U) while BG was above 180.` });
+  }
+  // 4. events where V6's dosing was the low-side pressure → gentler V6 (v6ExtraU is the
+  //    absorbed V6-minus-V1 insulin before the nadir, computed per-cycle — mode-independent)
+  const v6Pressure = (model.nearMiss || []).filter(e => e.v6ExtraU > 0.2 && e.nadir < 80);
+  if (v6Pressure.length >= 1)
+    hints.push({ lever: "Aggression ↓ or Hypo Caution ↑", dir: "gentler",
+      why: `${v6Pressure.length} low/near-low event(s) where ${L.v6}'s extra dosing was the low-side pressure — see the lows panel for the occasions.` });
+  // 5. maxIOB clamp binding during highs
+  const iobClamp = cycles.filter(c => (c.gates || "").includes("maxIOB") && (c.bg || 0) > 200).length;
+  if (iobClamp >= 3)
+    hints.push({ lever: "Max IOB", dir: "review (safety setting — small steps)",
+      why: `the maxIOB clamp was the binding constraint on ${iobClamp} cycles while BG was above 200.` });
+  // 5b. mid-meal dose "strangling" the composed brake-floor would fix → enable IF hypo-safe.
+  //     boostV5_floorWouldAdd logs exactly where the shadow floor would have added dose; the SAME 14d
+  //     hypo-gate the engine enforces (TBR<63<2.0% AND TBR<70<3.5%) decides eligibility here, so the
+  //     hint only suggests the floor when the engine would actually let it engage.
+  const floorC = cycles.filter(c => c.floorWouldAdd !== null && c.floorWouldAdd > 0.05);
+  const gl = model.gly;
+  if (floorC.length >= 4 && gl && gl.below63 != null) {
+    const totalWould = floorC.reduce((a, c) => a + c.floorWouldAdd, 0);
+    const hypoSafe = gl.below63 < 2.0 && gl.below70 < 3.5;
+    hints.push(hypoSafe
+      ? { lever: "Composed brake-floor (Advanced)", dir: "eligible — consider enabling",
+          why: `${floorC.length} cycles where the soft-brake stack collapsed the dose to ~0 mid-meal (shadow floor would have added ${fmt2(totalWould)}U total). Your low exposure (TBR<63 ${gl.below63.toFixed(1)}%, <70 ${gl.below70.toFixed(1)}%) is under the safety gate, so the floor may engage.` }
+      : { lever: "Composed brake-floor (Advanced)", dir: "not eligible yet",
+          why: `${floorC.length} cycles showed the mid-meal dose collapse the floor targets, but your low exposure (TBR<63 ${gl.below63.toFixed(1)}%, <70 ${gl.below70.toFixed(1)}%) is over the gate (needs <2.0% AND <3.5%) — the floor stays suppressed until it drops.` });
+  }
+  // 5c. confirm blocked by the dose-adequacy gate (not a score fade) → caps too low for the meal.
+  const gatedBlocked = cycles.filter(c => c.confirmGate === "blocked").length;
+  if (gatedBlocked >= 3)
+    hints.push({ lever: "Confirmed / Committed cap (U)", dir: "review — the confirm gate is blocking",
+      why: `${gatedBlocked} confirm-eligible cycles were blocked by the dose-adequacy gate (the prospective shot fell below the confirm floor) — the meal was recognised but the caps held the shot back.` });
+  // 6. nights running high while V6 held back
+  const nightHi = model.night && model.night.n > 24 && model.gly && model.night.v6 < model.night.v1 - 1.0;
+  if (nightHi)
+    hints.push({ lever: "Night mode window / basal profile", dir: "review",
+      why: `overnight, ${L.v6} decided ${fmt2(model.night.v1 - model.night.v6)}U less than ${L.v1} (by design — the night gate). If nights run high, the fix is the night window end or basal, not Boost aggression.` });
+  // 7. nothing binding → profile, not Boost
+  const bigPeaks = eps.filter(e => e.peakBg >= 220).length;
+  if (bigPeaks >= 3 && hints.length === 0)
+    hints.push({ lever: "Profile (ISF / basal / CR)", dir: "look outside Boost",
+      why: `${bigPeaks} peaks ≥220 with no Boost cap or gate binding — the engine delivered what its budget allowed, which points at profile strength rather than Boost settings.` });
+  return hints;
+}
+function median(a){ const s=a.slice().sort((x,y)=>x-y); return s.length? s[Math.floor(s.length/2)] : 0; }
+function fmt2(x){ return (Math.round(x*100)/100).toFixed(2); }
+
+// ---- Self-consistent counterfactual deltas (ONE model used by the daily series AND the
+// low/high event windows) ----
+// Two corrections over the naive sum-of-intents, both validated against a user's REAL V1-era data:
+//  1. IOB FEEDBACK LEDGER: each logged intent was computed against the ACTUAL delivered IOB. Had
+//     the other engine delivered its earlier (different) doses, its later intents would shrink
+//     ~1:1 with the counterfactual insulin still unabsorbed (and grow when it is BEHIND — so V1
+//     catches up after a V6 commit-shot). Without this the projection compounds absurdly.
+//  2. LGS GATE: further counterfactual insulin suspends once projected BG ≤ 90 (the engine would
+//     have zero-temped / failed minGuard, not kept dosing into a low).
+function counterfactualDeltas(cycles) {
+  const raw = [];
+  for (const c of cycles) {
+    const p = pairDoses(c);
+    if (!p || !c.isf) continue;
+    raw.push({ ts: c.ts, bg: c.bg, isf: c.isf, active: c.active,
+               other: c.active ? p.v1 : p.v6, actual: c.active ? p.v6 : p.v1 });
+  }
+  raw.sort((a, b) => a.ts - b.ts);
+  const out = [];
+  for (let j = 0; j < raw.length; j++) {
+    let outstanding = 0, shift = 0;
+    for (let i = out.length - 1; i >= 0; i--) {
+      const dt = (raw[j].ts - out[i].ts) / 60000;
+      if (dt >= 300) break;
+      const af = absorbedFrac(dt);
+      outstanding += out[i].d * (1 - af);           // counterfactual insulin still on board
+      shift += out[i].d * out[i].isf * af;          // BG shift already realised
+    }
+    const r = raw[j];
+    const cfIntent = Math.max(0, r.other - outstanding);   // feedback: ahead → wants less; behind → wants more
+    let d = cfIntent - r.actual;
+    const cfBg = (r.bg !== null ? r.bg : 120) - shift;
+    if (cfBg <= 90 && d > 0) d = 0;                        // LGS gate: no further counterfactual SMBs into a low
+    // NOTE: no zero-temp basal credit — tried and it oscillates (5h absorption tail + threshold
+    // gating rings). Its absence is one reason the low-side projection OVERSTATES; see the banner.
+    out.push({ ts: r.ts, d, isf: r.isf, active: r.active });
+  }
+  return out;
+}
+
+function counterfactualSeries(entries, cycles) {
+  const pre = counterfactualDeltas(cycles);
+  const es = entries.filter(e => typeof e.sgv === "number" && e.sgv > 20).sort((a, b) => a.date - b.date);
+  let lo = 0; const out = [];
+  for (const e of es) {
+    while (lo < pre.length && pre[lo].ts < e.date - 300 * 60000) lo++;
+    let shift = 0;
+    for (let i = lo; i < pre.length && pre[i].ts < e.date; i++)
+      shift += pre[i].d * pre[i].isf * absorbedFrac((e.date - pre[i].ts) / 60000);
+    out.push({ t: e.date, bg: e.sgv, cf: e.sgv - shift });
+  }
+  return out;
+}
+
+function quantile(a, p) {
+  if (!a.length) return null;
+  const s = a.slice().sort((x, y) => x - y);
+  return s[Math.min(s.length - 1, Math.floor(p * s.length))];
+}
+
+// 30-min time-of-day bins (LOCAL time) of any series value
+function agpBins(series, get, binMin = 30) {
+  const nb = Math.round(1440 / binMin);
+  const bins = Array.from({ length: nb }, () => []);
+  for (const s of series) {
+    const d = new Date(s.t);
+    bins[Math.floor((d.getHours() * 60 + d.getMinutes()) / binMin)].push(get(s));
+  }
+  return bins.map(a => ({ p25: quantile(a, 0.25), p50: quantile(a, 0.5), p75: quantile(a, 0.75), n: a.length }));
+}
+
+// Mean CUMULATIVE dose per engine vs time-from-onset, averaged across all meal episodes.
+// This is the "how does dosing differ over a meal, on average" curve: V6's shape is
+// hold → commit-shot step → taper; V1's is a steadier ramp.
+function mealDoseCurves(episodes) {
+  const LO = -30, HI = 180, BIN = 5, nb = (HI - LO) / BIN + 1;
+  const sum1 = new Array(nb).fill(0), sum6 = new Array(nb).fill(0), cnt = new Array(nb).fill(0);
+  const st = Array.from({ length: nb }, () => ({}));
+  for (const ep of episodes) {
+    let c1 = 0, c6 = 0;
+    const covered = new Array(nb).fill(null);
+    const cyc = (ep.cycles || []).slice().sort((a, b) => a.ts - b.ts);
+    for (const c of cyc) {
+      const off = (c.ts - ep.onsetT) / 60000;
+      if (off < LO || off > HI) continue;
+      const b = Math.round((off - LO) / BIN);
+      const p = pairDoses(c);
+      if (p) { c1 += p.v1; c6 += p.v6; }
+      covered[b] = { c1, c6 };
+      if (c.state) st[b][c.state] = (st[b][c.state] || 0) + 1;
+    }
+    let last = null;                                  // carry cumulative forward across gaps
+    for (let b = 0; b < nb; b++) { if (covered[b]) last = covered[b]; else if (last) covered[b] = last; }
+    for (let b = 0; b < nb; b++) if (covered[b]) { sum1[b] += covered[b].c1; sum6[b] += covered[b].c6; cnt[b]++; }
+  }
+  return {
+    LO, HI, BIN, n: Math.max(0, ...cnt),
+    v1: sum1.map((v, i) => cnt[i] ? v / cnt[i] : null),
+    v6: sum6.map((v, i) => cnt[i] ? v / cnt[i] : null),
+    modal: st.map(o => { let best = null, bn = 0; for (const k in o) if (o[k] > bn) { bn = o[k]; best = k; } return best; })
+  };
+}
+
+// Consensus CGM bands for the standard TIR bar
+function tirBands(entries) {
+  const v = entries.map(e => e.sgv).filter(x => typeof x === "number" && x > 20);
+  const n = v.length || 1;
+  const pc = f => 100 * v.filter(f).length / n;
+  return {
+    vlow: pc(x => x < 54), low: pc(x => x >= 54 && x < 70), inR: pc(x => x >= 70 && x <= 180),
+    high: pc(x => x > 180 && x <= 250), vhigh: pc(x => x > 250)
+  };
+}
+
+// Glycaemia of the PROJECTED other-engine series — the stat that shows what medians hide
+function cfGlycaemia(cfSeries) {
+  const v = cfSeries.map(x => x.cf).filter(x => isFinite(x));
+  const a = cfSeries.map(x => x.bg);
+  const n = v.length || 1;
+  const pc = (arr, f) => 100 * arr.filter(f).length / (arr.length || 1);
+  return {
+    below70: pc(v, x => x < 70), below54: pc(v, x => x < 54), tir: pc(v, x => x >= 70 && x <= 180),
+    actBelow70: pc(a, x => x < 70), actBelow54: pc(a, x => x < 54)
+  };
+}
+
+/* =============================== ENDCORE =============================== */
+
+/* ------------------------------ fetching ------------------------------ */
+async function nsGet(base, token, path, params) {
+  const q = new URLSearchParams({ ...params, token });
+  const r = await fetch(`${base}/api/v1/${path}?${q}`, { headers: { Accept: "application/json" } });
+  if (r.status === 401 || r.status === 403) throw new Error("Nightscout rejected the token (401/403). Check the token and that it has read access.");
+  if (!r.ok) throw new Error(`Nightscout returned HTTP ${r.status} for ${path}.`);
+  return r.json();
+}
+
+async function fetchAll(base, token, sinceMs, progress) {
+  // entries: page backwards on date(ms)
+  const entries = [];
+  let lt = Date.now() + 60000;
+  for (let p = 0; p < 60; p++) {
+    const batch = await nsGet(base, token, "entries/sgv.json",
+      { count: 1000, "find[date][$gte]": sinceMs, "find[date][$lt]": lt });
+    entries.push(...batch);
+    progress(`Fetching BG… ${entries.length} readings`);
+    if (batch.length < 1000) break;
+    lt = Math.min(...batch.map(e => e.date));
+  }
+  // devicestatus: page backwards on created_at (ISO)
+  const ds = [];
+  let ltIso = new Date(Date.now() + 60000).toISOString();
+  const sinceIso = new Date(sinceMs).toISOString();
+  for (let p = 0; p < 120; p++) {
+    const batch = await nsGet(base, token, "devicestatus.json",
+      { count: 1000, "find[created_at][$gte]": sinceIso, "find[created_at][$lt]": ltIso });
+    ds.push(...batch);
+    progress(`Fetching device status… ${ds.length} records`);
+    if (batch.length < 1000) break;
+    ltIso = batch.map(d => d.created_at).sort()[0];
+  }
+  entries.sort((a, b) => a.date - b.date);
+  return { entries, ds };
+}
+
+/* ------------------------------ rendering ----------------------------- */
+const $ = id => document.getElementById(id);
+const fmtU = x => (Math.round(x * 100) / 100).toFixed(2);
+const mmol = mgdl => (mgdl / 18.016).toFixed(1);
+
+function stat(k, v, cls = "", sub = "") {
+  return `<div class="stat ${cls}"><div class="k">${k}</div><div class="v">${v}${sub ? ` <small>${sub}</small>` : ""}</div></div>`;
+}
+
+function drawHist(canvas, deltas) {
+  const edges = [-Infinity, -1, -0.5, -0.2, -0.05, 0.05, 0.2, 0.5, 1, Infinity];
+  const labels = ["<−1", "−1..−.5", "−.5..−.2", "−.2..−.05", "≈0", ".05...2", ".2...5", ".5..1", ">1"];
+  const bins = new Array(labels.length).fill(0);
+  for (const d of deltas) for (let i = 0; i < labels.length; i++)
+    if (d > edges[i] && d <= edges[i + 1]) { bins[i]++; break; }
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const max = Math.max(...bins, 1);
+  const bw = W / labels.length;
+  ctx.font = "12px system-ui"; ctx.textAlign = "center";
+  bins.forEach((b, i) => {
+    const h = (H - 46) * b / max;
+    ctx.fillStyle = i < 4 ? "#94a3b8" : i === 4 ? "#475569" : "#00d4ff";
+    ctx.fillRect(i * bw + 6, H - 28 - h, bw - 12, h);
+    ctx.fillStyle = "#9aa0ad";
+    ctx.fillText(labels[i], i * bw + bw / 2, H - 12);
+    if (b) ctx.fillText(String(b), i * bw + bw / 2, H - 34 - h);
+  });
+}
+
+const STATE_COLORS = { IDLE: "#475569", OBSERVING: "#eab308", CONFIRMED: "#ef4444", COMMITTED: "#f97316", RECOVERING: "#3b82f6" };
+
+function drawMealDose(canvas, md) {
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const nb = md.v1.length;
+  const X = i => 46 + (W - 58) * i / (nb - 1);
+  const vals = md.v1.concat(md.v6).filter(x => x !== null);
+  if (!vals.length || md.n === 0) { ctx.fillStyle = "#9aa0ad"; ctx.font = "13px system-ui"; ctx.fillText("No meal episodes with paired dosing in this window", 60, 40); return; }
+  const vMax = Math.max(0.5, ...vals) * 1.1;
+  const chartH = H - 66;
+  const Y = v => 10 + chartH * (1 - v / vMax);
+  // shaded gap between the curves: cyan where V6 ahead, amber where V1 ahead
+  for (let i = 0; i < nb - 1; i++) {
+    const a1 = md.v1[i], a6 = md.v6[i], b1 = md.v1[i + 1], b6 = md.v6[i + 1];
+    if (a1 === null || a6 === null || b1 === null || b6 === null) continue;
+    ctx.beginPath();
+    ctx.moveTo(X(i), Y(a6)); ctx.lineTo(X(i + 1), Y(b6));
+    ctx.lineTo(X(i + 1), Y(b1)); ctx.lineTo(X(i), Y(a1));
+    ctx.closePath();
+    ctx.fillStyle = (a6 + b6) / 2 >= (a1 + b1) / 2 ? "rgba(0,212,255,0.16)" : "rgba(234,179,8,0.18)";
+    ctx.fill();
+  }
+  // the two cumulative curves
+  for (const [arr, col] of [[md.v1, "#94a3b8"], [md.v6, "#00d4ff"]]) {
+    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); let started = false;
+    for (let i = 0; i < nb; i++) {
+      if (arr[i] === null) { started = false; continue; }
+      const f = started ? "lineTo" : "moveTo"; ctx[f](X(i), Y(arr[i])); started = true;
+    }
+    ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+  // onset line
+  const onsetI = Math.round(-md.LO / md.BIN);
+  ctx.strokeStyle = "#64748b"; ctx.setLineDash([3, 3]); ctx.beginPath();
+  ctx.moveTo(X(onsetI), 10); ctx.lineTo(X(onsetI), H - 40); ctx.stroke(); ctx.setLineDash([]);
+  // modal state ribbon
+  const rY = H - 36;
+  for (let i = 0; i < nb; i++) if (md.modal[i]) {
+    ctx.fillStyle = STATE_COLORS[md.modal[i]] || "#333";
+    ctx.fillRect(X(i) - (W - 58) / (nb - 1) / 2, rY, (W - 58) / (nb - 1) + 1, 9);
+  }
+  // axes
+  ctx.fillStyle = "#9aa0ad"; ctx.font = "11px system-ui"; ctx.textAlign = "right";
+  [0, vMax / 2, vMax].forEach(v => ctx.fillText(v.toFixed(1) + "U", 42, Y(v) + 4));
+  ctx.textAlign = "center";
+  for (let t = md.LO; t <= md.HI; t += 30)
+    ctx.fillText((t > 0 ? "+" : "") + t + "m", X((t - md.LO) / md.BIN), H - 8);
+  ctx.textAlign = "left";
+  ctx.fillText(`${md.n} meals averaged`, 50, 20);
+}
+
+function drawDailyAgp(canvas, act, cf) {
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const nb = act.length;
+  const X = i => 44 + (W - 56) * i / (nb - 1);
+  const vals = act.flatMap(b => [b.p25, b.p75]).concat(cf.map(b => b.p50)).filter(x => x !== null);
+  if (!vals.length) return;
+  const vMax = Math.max(200, ...vals) + 10, vMin = Math.max(40, Math.min(...vals) - 10);
+  const Y = v => 10 + (H - 44) * (1 - (v - vMin) / (vMax - vMin));
+  // guides 70 / 180
+  for (const g of [70, 180]) {
+    ctx.strokeStyle = g === 70 ? "#4a3535" : "#513a3a"; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(44, Y(g)); ctx.lineTo(W - 12, Y(g)); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // other-engine projected band (p25–p75, faint cyan)
+  ctx.beginPath(); let cfStarted = false;
+  for (let i = 0; i < nb; i++) if (cf[i].p75 !== null) { const f = cfStarted ? "lineTo" : "moveTo"; ctx[f](X(i), Y(cf[i].p75)); cfStarted = true; }
+  for (let i = nb - 1; i >= 0; i--) if (cf[i].p25 !== null) ctx.lineTo(X(i), Y(cf[i].p25));
+  ctx.closePath(); ctx.fillStyle = "rgba(0,212,255,0.10)"; ctx.fill();
+  // AMBER low tail: wherever the other engine's p25 dips under 70, fill 70→p25 —
+  // this is the hypo risk a lower median hides
+  for (let i = 0; i < nb - 1; i++) {
+    const c0 = cf[i].p25, c1 = cf[i + 1].p25;
+    if (c0 === null || c1 === null || (c0 >= 70 && c1 >= 70)) continue;
+    ctx.beginPath();
+    ctx.moveTo(X(i), Y(Math.min(70, Math.max(c0, vMin))));
+    ctx.lineTo(X(i + 1), Y(Math.min(70, Math.max(c1, vMin))));
+    ctx.lineTo(X(i + 1), Y(70)); ctx.lineTo(X(i), Y(70));
+    ctx.closePath(); ctx.fillStyle = "rgba(234,179,8,0.45)"; ctx.fill();
+  }
+  // actual band + median
+  ctx.beginPath(); let started = false;
+  for (let i = 0; i < nb; i++) if (act[i].p75 !== null) { const f = started ? "lineTo" : "moveTo"; ctx[f](X(i), Y(act[i].p75)); started = true; }
+  for (let i = nb - 1; i >= 0; i--) if (act[i].p25 !== null) ctx.lineTo(X(i), Y(act[i].p25));
+  ctx.closePath(); ctx.fillStyle = "rgba(74,222,128,0.14)"; ctx.fill();
+  ctx.strokeStyle = "#4ade80"; ctx.lineWidth = 2; ctx.beginPath(); started = false;
+  for (let i = 0; i < nb; i++) if (act[i].p50 !== null) { const f = started ? "lineTo" : "moveTo"; ctx[f](X(i), Y(act[i].p50)); started = true; }
+  ctx.stroke();
+  // counterfactual median (dashed)
+  ctx.strokeStyle = "#00d4ff"; ctx.setLineDash([6, 4]); ctx.beginPath(); started = false;
+  for (let i = 0; i < nb; i++) if (cf[i].p50 !== null) { const f = started ? "lineTo" : "moveTo"; ctx[f](X(i), Y(cf[i].p50)); started = true; }
+  ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1;
+  // axes
+  ctx.fillStyle = "#9aa0ad"; ctx.font = "11px system-ui"; ctx.textAlign = "right";
+  [70, 180, Math.round(vMax)].forEach(v => ctx.fillText(String(v), 40, Y(v) + 4));
+  ctx.textAlign = "center";
+  for (let h = 0; h <= 24; h += 3)
+    ctx.fillText(String(h).padStart(2, "0") + ":00", X(Math.min(nb - 1, h * 2)), H - 8);
+}
+
+function render(model, entries) {
+  const g = model.gly;
+  const L = model.labels || { v1: "V1", v6: "V6" };
+  const isTrio = model.siteMode === "trio", isMixed = model.siteMode === "mixed";
+  // Detected-mode banner (per fetched dataset — never a toggle)
+  const mb = $("modeBanner");
+  if (isTrio) {
+    mb.style.display = "block";
+    mb.innerHTML = `<b>Detected: Trio (oref acting) + Boost V6 shadow.</b> The acting engine on this site is
+      stock trio-oref; Boost V6's decision is parsed from the <code>boostV5[…]</code> tag it appends to each
+      cycle's reason. The comparison below answers: <b>how would the dose decisions have differed if Boost V6
+      drove the SMB instead of oref?</b> As everywhere on this page, that is a dose-decision comparison, not a
+      glucose-outcome simulation. AAPS-only telemetry (Phase-3 gate fields, caps, the “base would=”
+      counterfactual) is shown as n/a.`;
+  } else if (isMixed) {
+    const segName = s => (s.src === "trio" ? "Trio" : "AAPS") + " " +
+      new Date(s.fromTs).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + "–" +
+      new Date(s.toTs).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ` (${s.n} cycles)`;
+    const segs = (model.segments || []).slice(0, 6).map(segName).join(" · ");
+    mb.style.display = "block";
+    mb.innerHTML = `<b>Detected: MIXED window — AAPS and Trio records</b> (${model.sources.aaps} AAPS +
+      ${model.sources.trio} Trio cycles; the uploader switched mid-window). Every cycle is analysed in its own
+      mode and all the maths is per-cycle, so totals remain valid. On Trio segments the acting engine is stock
+      trio-oref; on AAPS segments it is Boost V1 — Boost V6 is the shadow on both.
+      Segments: ${segs}${(model.segments || []).length > 6 ? " · …" : ""}.`;
+  } else if (model.siteMode === "aaps") {
+    mb.style.display = "block";
+    mb.innerHTML = `<b>Detected: AAPS Boost build</b> — V1 acting, Boost V6 shadow
+      (structured <code>boostV5_*</code> telemetry).`;
+  } else { mb.style.display = "none"; }
+  // Relabel the static series text on Trio/mixed sites (AAPS keeps the original wording untouched)
+  if (isTrio || isMixed) {
+    $("doseHead").textContent = `Dose decisions: ${L.v1} (acting) vs ${L.v6} (shadow)`;
+    $("histLegend").textContent = `Per-cycle dose difference (${L.v6} − ${L.v1}), all paired cycles. ` +
+      `Left of centre = ${L.v6} decided less insulin than ${L.v1}; right = more. The big bar at zero is both engines agreeing.`;
+    $("splitLegend").textContent = `Night = 22:00–07:00 in your browser's timezone. “${L.v6} extra at night, ` +
+      `unannounced” is the pattern the Boost night gate (July 2026) suppresses on current builds.`;
+    $("mealBlurb").innerHTML = `All auto-detected rises (≥50 mg/dL within 90 min) aligned at onset. Lines are the
+      <b>mean cumulative insulin</b> each engine decided from 30 min before onset — the shape difference IS the
+      story: ${L.v6} holds, fires its commit-shot, then tapers; ${L.v1} ramps steadily. The gap is shaded
+      (<span style="color:var(--accent)">cyan</span> where ${L.v6} has delivered more,
+      <span style="color:var(--amber)">amber</span> where ${L.v1} has). Modal ${L.v6} state underneath.`;
+    $("mealLegend").innerHTML = `<span><span class="dot" style="background:#94a3b8"></span>${L.v1} cumulative (mean)</span>
+      <span><span class="dot" style="background:#00d4ff"></span>${L.v6} cumulative (mean)</span>
+      <span>ribbon: modal ${L.v6} state</span>`;
+  }
+  // Time in Ranges — Clarity-style: thin rounded bar + legend rows (chip, name, range, %, h/min per day)
+  const tb = model.tirBands;
+  const BANDS = [
+    { k: "vhigh", col: "#f97316", name: "Very High", rng: "&gt;13.9", mg: "&gt;250" },
+    { k: "high",  col: "#eab308", name: "High",      rng: "10.0–13.9", mg: "181–250" },
+    { k: "inR",   col: "#4ade80", name: "Target Range", rng: "3.9–10.0", mg: "70–180", green: true },
+    { k: "low",   col: "#ef4444", name: "Low",       rng: "3.0–3.8", mg: "54–69" },
+    { k: "vlow",  col: "#7f1d1d", name: "Very Low",  rng: "&lt;3.0", mg: "&lt;54" },
+  ];
+  const bandPerDay = pct => {
+    const mins = Math.round(pct * 1440 / 100);
+    return (mins >= 60 ? Math.floor(mins / 60) + "h " : "") + (mins % 60) + "min/day avg";
+  };
+  if (tb) {
+    $("tirBar").innerHTML = BANDS.map(b =>
+      `<div style="flex:${Math.max(tb[b.k], 0.8)} 0 0;background:${b.col}"></div>`).join("");
+    $("tirLegend").innerHTML = BANDS.map(b =>
+      `<div style="display:flex;align-items:baseline;gap:10px;padding:3px 0">
+        <span class="dot" style="background:${b.col};width:13px;height:13px;border-radius:3px;flex:0 0 13px;align-self:center"></span>
+        <span style="flex:0 0 108px;${b.green ? "color:var(--green);font-weight:600" : "font-weight:600"}">${b.name}</span>
+        <span class="muted" style="flex:0 0 84px">${b.rng}<br><span style="font-size:0.8em">${b.mg} mg/dL</span></span>
+        <span style="flex:0 0 66px;font-weight:700;font-size:1.15em">${tb[b.k].toFixed(1)}%</span>
+        <span class="muted">${bandPerDay(tb[b.k])}</span>
+      </div>`).join("");
+  }
+  $("glyStats").innerHTML = !g ? "<div class='muted'>No BG entries found.</div>" : [
+    stat("TING 63–140", g.ting.toFixed(0) + "%", "hi", "3.5–7.8 mmol"),
+    stat("Mean BG", Math.round(g.mean), "", mmol(g.mean) + " mmol"),
+    stat("GMI", g.gmi.toFixed(1) + "%"),
+    stat("CV", g.cv.toFixed(0) + "%", g.cv <= 36 ? "good" : "warn"),
+  ].join("");
+  const shr = model.activeShare;
+  let mode;
+  if (isTrio) {
+    mode = model.withV6 === 0 ? "Trio site, but no boostV5[…] tag found — enable Boost shadow mode in Trio"
+         : shr > 0.85 ? "Trio — Boost V6 ACTIVE (oref counterfactual not logged on Trio; those cycles are unpaired)"
+         : shr < 0.15 ? "Trio — oref acting, Boost V6 in shadow (tag-parsed)"
+         : `Trio — Boost drove ${(100 * shr).toFixed(0)}% of cycles (only shadow cycles pair; active ones are unpaired)`;
+  } else if (isMixed) {
+    mode = `MIXED SITE — ${model.sources.aaps} AAPS + ${model.sources.trio} Trio cycles, each analysed in its own mode (see banner above)`;
+  } else {
+    mode = model.withV6 === 0 ? "no V6 telemetry found — update your Boost build"
+         : shr > 0.85 ? "V6 ACTIVE (V1 reconstructed from reason text)"
+         : shr < 0.15 ? "V1 active, V6 running in shadow"
+         : `MIXED — V6 was the active doser on ${(100 * shr).toFixed(0)}% of cycles (all maths is per-cycle, so this is handled correctly)`;
+  }
+  $("modeLine").textContent =
+    `${model.days.toFixed(1)} days · ${model.cycles} cycles (5-min deduped) · mode: ${mode} · paired dose decisions: ${model.paired}` +
+    (model.unpaired ? ` (${model.unpaired} unpaired excluded)` : "");
+  const t = model.totals, perDay = x => model.days ? x / model.days : 0;
+  $("doseStats").innerHTML = [
+    stat(`${L.v1} decided`, fmtU(perDay(t.v1)) + " U/d", "", "total " + fmtU(t.v1)),
+    stat(`${L.v6} decided`, fmtU(perDay(t.v6)) + " U/d", "hi", "total " + fmtU(t.v6)),
+    stat(`${L.v6} vs ${L.v1}`, (t.v6 >= t.v1 ? "+" : "") + fmtU(perDay(t.v6 - t.v1)) + " U/d",
+         Math.abs(t.v6 - t.v1) / Math.max(t.v1, 0.1) > 0.2 ? "warn" : ""),
+    stat(`Cycles ${L.v6} > ${L.v1}`, String(t.v6MoreN), "", `${L.v1} &gt; ${L.v6}: ${t.v1MoreN}`),
+  ].join("");
+  drawHist($("histCanvas"), model.deltas);
+  const rows = [["", "cycles", `${L.v1} (U)`, `${L.v6} (U)`, `${L.v6}−${L.v1} (U)`],
+    ["Night (22–07)", model.night.n, fmtU(model.night.v1), fmtU(model.night.v6), fmtU(model.night.v6 - model.night.v1)],
+    ["Day (07–22)", model.dayStats.n, fmtU(model.dayStats.v1), fmtU(model.dayStats.v6), fmtU(model.dayStats.v6 - model.dayStats.v1)],
+    ["In meal episodes", model.meal.n, fmtU(model.meal.v1), fmtU(model.meal.v6), fmtU(model.meal.v6 - model.meal.v1)]];
+  $("splitTable").innerHTML = rows.map((r, i) =>
+    `<tr>${r.map((c, j) => `<t${i ? "d" : "h"}${j ? ' class="num"' : ""}>${c}</t${i ? "d" : "h"}>`).join("")}</tr>`).join("");
+  // meal dose-difference curves + compact episode table
+  $("epCount").textContent = `(${model.episodes.length} detected)`;
+  drawMealDose($("mealDoseCanvas"), model.mealDose);
+  $("epTable").innerHTML = `<tr><th>when</th><th class="num">rise</th><th class="num">${L.v1} (U)</th><th class="num">${L.v6} (U)</th><th class="num">confirmed</th><th class="num">shot (U)</th></tr>` +
+    model.episodes.slice().reverse().map(ep => {
+      const d = new Date(ep.onsetT);
+      const when = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) +
+        " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+      return `<tr><td>${when}</td><td class="num">${Math.round(ep.onsetBg)}→${Math.round(ep.peakBg)}</td>
+        <td class="num">${fmtU(ep.v1)}</td><td class="num">${fmtU(ep.v6)}</td>
+        <td class="num">${ep.confirmLatencyMin !== null ? "+" + ep.confirmLatencyMin + " min" : "—"}</td>
+        <td class="num">${ep.commitShot !== null ? fmtU(ep.commitShot) : "—"}</td></tr>`;
+    }).join("");
+  // daily counterfactual AGP + the medians-hide-risk stats
+  const cg = model.cfGly;
+  const amberBins = model.dailyAgp.cf.filter(b => b.p25 !== null && b.p25 < 70).length;
+  const cyanBins = model.dailyAgp.cf.filter((b, i) => b.p50 !== null && model.dailyAgp.act[i].p50 !== null && b.p50 < model.dailyAgp.act[i].p50 - 10).length;
+  $("cfStats").innerHTML = !cg ? ""
+    : ((isTrio || isMixed) && !model.cfN)
+    ? `<div class="muted" style="grid-column:1/-1">Counterfactual projection n/a — this dataset has no per-cycle
+       ISF telemetry to project with (the cyan band below simply mirrors your actual BG).</div>`
+    : [
+    stat("Actual time <70", cg.actBelow70.toFixed(1) + "%", cg.actBelow70 < 4 ? "good" : "warn"),
+    stat("Low-side pressure window", (amberBins / 2).toFixed(1) + " h/day", amberBins ? "warn" : "good", "other engine p25 < 70"),
+    stat("Other engine runs lower", (cyanBins / 2).toFixed(1) + " h/day", "", "median gap ≥ 10"),
+  ].join("");
+  drawDailyAgp($("dailyAgpCanvas"), model.dailyAgp.act, model.dailyAgp.cf);
+  // near-miss events
+  const nm = model.nearMiss || [];
+  $("nearMiss").innerHTML = nm.length ? `<div class="card"><table>
+      <tr><th>when</th><th class="num">actual nadir</th><th class="num">net Δdose (3h, absorbed)</th><th class="num">ISF</th><th class="num">projected nadir</th><th>assessment</th></tr>` +
+    nm.map(e => {
+      const d = new Date(e.t);
+      const when = d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}) +
+        " " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+      const badge = e.avoided ? `<b style="color:var(--green)">●</b> ` : `<b style="color:var(--amber)">●</b> `;
+      return `<tr><td>${when}</td><td class="num">${Math.round(e.nadir)}</td>
+        <td class="num">${e.extra>0?"+":""}${fmtU(e.extra)} U</td><td class="num">${Math.round(e.isf)}</td>
+        <td class="num">${e.projRange}</td><td>${badge}${e.verdict}</td></tr>`;
+    }).join("") + `</table></div>`
+    : `<div class="card muted">No events found: no nadir ≤95 mg/dL had a material (≥0.4U absorbed) dose difference
+       between the engines in the preceding 3 hours. That itself is informative — the engines' disagreements didn't
+       coincide with your low-side excursions in this window.</div>`;
+
+  // counterfactual peaks
+  const cp = model.cfPeaks || [];
+  $("cfPeaks").innerHTML = cp.length ? `<div class="card"><table>
+      <tr><th>when</th><th class="num">actual peak</th><th class="num">net Δdose (3h, absorbed)</th><th class="num">ISF</th><th class="num">other engine's peak</th><th>assessment</th></tr>` +
+    cp.map(e => {
+      const d = new Date(e.t);
+      const when = d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}) +
+        " " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+      const badge = e.reduced ? `<b style="color:var(--green)">●</b> ` : `<b style="color:var(--blue)">●</b> `;
+      return `<tr><td>${when}</td><td class="num">${Math.round(e.peak)}</td>
+        <td class="num">${e.extra>0?"+":""}${fmtU(e.extra)} U</td><td class="num">${Math.round(e.isf)}</td>
+        <td class="num">${e.projRange}</td><td>${badge}${e.verdict}</td></tr>`;
+    }).join("") + `</table></div>`
+    : `<div class="card muted">No peaks ≥180 mg/dL had a material dose difference between the engines in the
+       preceding 3 hours.</div>`;
+  // levers
+  const hv = model.hints || [];
+  $("levers").innerHTML = hv.length ? hv.map(h =>
+      `<div class="card"><b style="color:var(--accent)">${h.lever}</b> — ${h.dir}<br>
+       <span class="muted">${h.why}</span></div>`).join("")
+    : `<div class="card muted">No lever pattern stood out in this window: confirms arrived promptly, no cap or gate
+       was persistently binding, and neither tail flagged. If results still aren't where you want them, the
+       <a href="boost_tuning_guide.html">Tuning Guide</a> walks the settings from conservative to aggressive.</div>`;
+
+  // states + gates
+  const sc = model.stateCount, total = Object.values(sc).reduce((a, b) => a + b, 0) || 1;
+  $("stateTable").innerHTML = `<tr><th>${L.v6} state</th><th class="num">cycles</th><th class="num">share</th></tr>` +
+    ["IDLE", "OBSERVING", "CONFIRMED", "COMMITTED", "RECOVERING"].map(s =>
+      `<tr><td><span class="dot" style="background:${STATE_COLORS[s]}"></span>${s}</td><td class="num">${sc[s] || 0}</td><td class="num">${(100 * (sc[s] || 0) / total).toFixed(1)}%</td></tr>`).join("");
+  const gc = Object.entries(model.gateCount).sort((a, b) => b[1] - a[1]);
+  $("gateTable").innerHTML = `<tr><th>Phase-3 gate fired</th><th class="num">cycles</th></tr>` +
+    (gc.length ? gc.map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join("")
+               : `<tr><td class="muted" colspan="2">${isTrio ? "n/a on Trio sites — gate telemetry is AAPS-only" : "none recorded"}</td></tr>`);
+  const shots = model.commitShots;
+  $("confirmLine").textContent = model.confirms
+    ? `CONFIRMED commit-shots: ${model.confirms} (${(model.confirms / Math.max(model.days, 0.1)).toFixed(1)}/day) · ` +
+      `median shot ${fmtU(shots.slice().sort((a, b) => a - b)[Math.floor(shots.length / 2)] || 0)}U · largest ${fmtU(Math.max(0, ...shots))}U`
+    : "No CONFIRMED transitions in this window.";
+  // Acceleration primer. Reported apart from the dose comparison: the base is additive but the
+  // velocity-scaled excess is netted off the commit-shot, so the primer's units are not simply
+  // extra insulin and must not be read as though they were.
+  const pr = model.primer;
+  $("primerLine").textContent = !pr || pr.cycles === 0
+    ? "Acceleration primer: not seen in this window (cap 0, or no qualifying accelerating rise)."
+    : `Acceleration primer: ${pr.delivered} delivered` +
+      (pr.perDay != null ? ` (${pr.perDay.toFixed(1)}/day)` : "") +
+      ` · ${fmtU(pr.units)}U total · ${pr.bolus} as bolus, ${pr.tbr} as temp basal` +
+      (pr.notDelivered ? ` · ${pr.notDelivered} computed but not delivered` : "") +
+      ". The base is additive; any velocity-scaled excess is netted off the commit-shot.";
+  $("results").style.display = "block";
+}
+
+/* ------------------------------ wiring ------------------------------ */
+(function init() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("boostAnalyser") || "null");
+    if (saved) { $("nsurl").value = saved.url || ""; $("nstoken").value = saved.token || ""; $("remember").checked = true; }
+  } catch (_) {}
+  $("go").onclick = run;
+})();
+
+async function run() {
+  const base = $("nsurl").value.trim().replace(/\/+$/, "");
+  const token = $("nstoken").value.trim();
+  const days = parseInt($("days").value, 10);
+  $("error").textContent = "";
+  if (!/^https:\/\//.test(base)) { $("error").textContent = "URL must start with https://"; return; }
+  if (!token) { $("error").textContent = "A read token is required."; return; }
+  if ($("remember").checked) localStorage.setItem("boostAnalyser", JSON.stringify({ url: base, token }));
+  else localStorage.removeItem("boostAnalyser");
+  $("go").disabled = true;
+  const progress = m => { $("progress").textContent = m; };
+  try {
+    const sinceMs = Date.now() - days * 86400000;
+    const { entries, ds } = await fetchAll(base, token, sinceMs, progress);
+    progress(`Analysing ${ds.length} device statuses / ${entries.length} BG readings…`);
+    const cycles = parseCycles(ds);
+    if (!cycles.length) throw new Error("No AAPS or Trio device status with openaps.suggested found in this window.");
+    const episodes = detectEpisodes(entries);
+    const model = analyse(cycles, entries, episodes);
+    render(model, entries);
+    progress(`Done — ${model.cycles} cycles analysed.`);
+  } catch (e) {
+    $("error").textContent = (e && e.message) ? e.message +
+      (String(e).includes("Failed to fetch") ? "\nLikely causes: wrong URL, no HTTPS, or the site blocks cross-origin requests (standard Nightscout allows them)." : "") : String(e);
+    $("progress").textContent = "";
+  } finally {
+    $("go").disabled = false;
+  }
+}
+</script>
+</body>
+</html>

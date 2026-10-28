@@ -1,4 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <application>
+        <!-- Health Connect permission request (2026-06-03) — single-purpose
+             Activity launched from the Boost Night Mode preference to request
+             READ_HEART_RATE. -->
+        <activity
+            android:name="app.aaps.plugins.aps.openAPSBoost.HealthConnectPermissionActivity"
+            android:exported="false"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Health Connect rationale Activity — REQUIRED for HC to surface the
+             permission UI. Two intent filters cover the Android-13-and-below
+             flow (androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE) and the
+             Android-14+ flow (VIEW_PERMISSION_USAGE with HEALTH_PERMISSIONS
+             category, protected by START_VIEW_PERMISSION_USAGE). HC does NOT
+             call Activity.startActivity here directly on 14+; the OS does,
+             gated by the permission, so exported=true is correct. -->
+        <activity
+            android:name="app.aaps.plugins.aps.openAPSBoost.HealthConnectPrivacyActivity"
+            android:exported="true"
+            android:label="AndroidAPS — Heart rate use">
+
+            <!-- Android 14+ -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+
+            <!-- Android 13 and below (Health Connect APK on Play Store) -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+    </application>
+
 </manifest>

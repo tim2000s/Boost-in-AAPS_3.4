@@ -1,0 +1,4 @@
+# Extraction caches: parquet rebuilt from the database by the scripts, 491 MB.
+# Delete a file here to force a rebuild.
+cache/
+__pycache__/

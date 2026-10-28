@@ -1,0 +1,80 @@
+announced meals after excluding rescues: 592
+unannounced rises used as negatives:     2883
+  carbohydrate: median 20 g, quartiles 13 to 30, range 8 to 87
+  per participant: {'A': 54, 'C': 11, 'D': 35, 'E': 372, 'F': 82, 'H': 38}
+
+==============================================================================
+1. IS A MEAL DISTINGUISHABLE FROM AN UNANNOUNCED RISE, BY HORIZON
+==============================================================================
+  Both classes are rises. The question is whether a declared meal looks different
+  from a rise that nobody declared, which bounds what any detector can do.
+
+    horizon     AUC             95% CI
+       10m   0.805  [0.748, 0.850]
+       15m   0.866  [0.774, 0.905]
+       20m   0.917  [0.840, 0.947]
+       30m   0.975  [0.946, 0.985]
+       45m   0.947  [0.895, 0.965]
+       60m   0.934  [0.871, 0.957]
+
+==============================================================================
+2. IS THE AMOUNT READABLE, AND WHEN
+==============================================================================
+  Small is under 20 g, large is over 40 g. Middle sizes are
+  dropped so the comparison is between classes that differ rather than adjacent bins.
+
+  279 meals, 95 large and 184 small
+
+    horizon     AUC             95% CI   rise alone
+       10m   0.267  [0.167, 0.553]        0.587
+       15m   0.275  [0.183, 0.511]        0.589
+       20m   0.364  [0.263, 0.577]        0.582
+       30m   0.398  [0.316, 0.569]        0.564
+       45m   0.508  [0.414, 0.643]        0.616
+       60m   0.505  [0.443, 0.681]        0.654
+
+==============================================================================
+3. THE AMOUNT AS A QUANTITY, HELD OUT BY PARTICIPANT
+==============================================================================
+
+    horizon    corr   MAE g  MAE of the mean
+       10m  -0.326    21.4             13.2
+       15m  -0.254    20.8             13.2
+       20m  -0.188    20.6             13.2
+       30m  -0.167    20.3             13.2
+       45m  -0.085    18.4             13.2
+       60m  -0.062    18.9             13.2
+
+==============================================================================
+4. THE EVENTUAL EXCURSION, WHICH NEEDS NO ANNOUNCEMENT
+==============================================================================
+  The peak rise over the onset is available from the record for every rise, announced
+  or not, so a model predicting it can be trained on everybody. This is the quantity
+  the commit would need in order to size itself.
+
+  592 meals, median eventual rise 42 mg/dL
+
+    horizon    corr  MAE mg/dL  MAE of the mean
+       10m  -0.100       32.0             25.6
+       15m  -0.033       31.1             25.6
+       20m  -0.007       30.3             25.6
+       30m   0.095       29.8             25.6
+       45m   0.391       25.8             25.6
+       60m   0.515       23.0             25.6
+
+==============================================================================
+5. WITHIN A PARTICIPANT, FITTED ON THEIR EARLIER MEALS
+==============================================================================
+  Cross-participant failure in this programme has repeatedly meant that the
+  relationship lives within people. A temporal split, first 60 per cent of a
+  participant's meals to fit and the last 40 to score, asks that directly.
+
+  user    meals  test     10m     15m     20m     30m     45m     60m
+  A          54    22   0.517  0.291  0.624  0.581  0.483  0.423
+  E         372   149   0.541  0.492  0.500  0.515  0.452  0.549
+  F          82    33   0.769  0.635  0.750  0.619  0.662  0.662
+
+  Above the participant's own median carbohydrate against below it, so the class
+  boundary is set per person rather than at a shared threshold.
+
+wrote results.json

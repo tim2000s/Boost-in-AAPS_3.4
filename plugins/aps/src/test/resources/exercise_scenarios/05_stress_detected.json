@@ -1,0 +1,17 @@
+{
+  "scenario": "05_stress_detected",
+  "description": "Low steps + zone 2 HR + stressDetection enabled → STRESS",
+  "type": "hr_classification",
+  "input": {
+    "avgBpm": 100,
+    "hrMax": 180,
+    "hrResting": 60,
+    "stepsLast15Min": 5,
+    "stressDetection": true
+  },
+  "expected": {
+    "exerciseState": "STRESS",
+    "hrZone": "zone2",
+    "confidence": "LOW"
+  }
+}

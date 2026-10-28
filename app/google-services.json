@@ -179,6 +179,93 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:477603612366:android:efc956f55b28162b",
+        "android_client_info": {
+          "package_name": "info.nightscout.androidaps.b"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "477603612366-a925drvlvs7qn7gt73r585erbqto8c79.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9HRtJJsnk_SbAMAuvudSua2vEm3j3430"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "477603612366-a925drvlvs7qn7gt73r585erbqto8c79.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:477603612366:android:efc956f55b28162c",
+        "android_client_info": {
+          "package_name": "info.nightscout.androidaps.c"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "477603612366-a925drvlvs7qn7gt73r585erbqto8c79.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9HRtJJsnk_SbAMAuvudSua2vEm3j3430"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "477603612366-a925drvlvs7qn7gt73r585erbqto8c79.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:477603612366:android:efc956f55b28162d",
+        "android_client_info": {
+          "package_name": "info.nightscout.androidaps.d"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "477603612366-a925drvlvs7qn7gt73r585erbqto8c79.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9HRtJJsnk_SbAMAuvudSua2vEm3j3430"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "477603612366-a925drvlvs7qn7gt73r585erbqto8c79.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

@@ -1,0 +1,74 @@
+====================================================================================================
+USER C   anchor=2026-07-03 14:41:19.801000+01:00   pin-era starts 2026-06-19
+
+--- window 14d (2026-06-19 → 2026-07-03) ---
+ inputs: TDDmed(tdd_1d/day)=48.0U  [tdd_7d last=50.0; NS-treatments TDD≈48.1 (basal 30.5 + bolus 17.6)]
+         SMB n=413 p75=0.75 p95=1.8   manual n=11 p90=4.0   TDD/40=1.2
+         TBR<70=3.17%  TBR<54=0.55%  (hypo-prone triggers: <54>1.5 → False; <70>6.0 → False; <70>4.0 → False)
+ derived: committedCap=1.2  confirmedCap=4.0  cumulative60=5.0  Aggr=1.0  HypoCaution=1.0  FCC=ON  confirmFloor=1.20
+
+--- window 28d (2026-06-05 → 2026-07-03) ---
+ inputs: TDDmed(tdd_1d/day)=46.8U  [tdd_7d last=50.0; NS-treatments TDD≈46.5 (basal 30.1 + bolus 16.4)]
+         SMB n=812 p75=0.65 p95=1.8   manual n=18 p90=4.86   TDD/40=1.17
+         TBR<70=4.04%  TBR<54=0.78%  (hypo-prone triggers: <54>1.5 → False; <70>6.0 → False; <70>4.0 → True)
+ derived: committedCap=1.17  confirmedCap=4.86  cumulative60=5.0  Aggr=0.92  HypoCaution=1.0  FCC=ON  confirmFloor=1.17
+
+--- pin-era replay (2026-06-19 → 2026-07-03): 3778 deduped cycles, 466 with V5 dose>0, shadow total 103.7U ---
+ (a) committedCap 0.25→1.2: pinned COMMITTED cycles=100 (2.6% of cycles); v1_units>0.25 on 45 of them
+     pre-pin COMMITTED≥0.25 doses n=53: est. uplift E[min(x,new)-min(x,.25)]=0.458U/cycle → est. ADDED ≈ 45.8U over era (44.1% of shadow total)
+     outcome after pinned cycles (2h): minBG<70 21/100 (21.0%)  maxBG>180&no-low 22/100 (22.0%)
+ (b) confirmedCap 1.0→4.0: CONFIRMED shots=71 (sizes p50=0.75 p90=1.00 max=1.00); pinned at 1.0: 23 (32%)
+     outcome after 1.0-pinned confirms (2h): minBG<70 3/23  maxBG>180&no-low 5/23
+     confirm floor: old min(0.25,0.8×1.0)=0.25 → new min(1.2,0.8×4.0)=1.20; observed confirm shots below new floor: 71/71 (these would be HELD by the dose-adequacy gate)
+ (c) cumulative60 6.0(operative)/10.0(new factory)→5.0: cycles trimmed 0→0, insulin removed 0.0U→0.0U (0.00% of shadow total) [on 0.25/1.0-capped stream — lower bound]
+ (d) Aggression stays 1.0 — no change
+ (e) HypoCaution stays 1.0 — no change
+ (f) FastCarbConfirm stays ON; fast_carb_protection values in era: {'false': 3684, 'true': 94}
+ (g) design check: derived cumulative 5.0 vs confirmedCap 4.0 (ratio 1.25); one max confirm leaves 1.00U/hr = 0.8 committed holds; observed confirm p90 1.00U leaves 4.00U/hr
+====================================================================================================
+USER D   anchor=2026-07-03 14:40:36.433000+01:00   pin-era starts 2026-06-17
+
+--- window 14d (2026-06-19 → 2026-07-03) ---
+ inputs: TDDmed(tdd_1d/day)=28.8U  [tdd_7d last=27.6; NS-treatments TDD≈29.2 (basal 6.8 + bolus 22.4)]
+         SMB n=717 p75=0.7 p95=1.0   manual n=20 p90=1.03   TDD/40=0.72
+         TBR<70=11.65%  TBR<54=2.16%  (hypo-prone triggers: <54>1.5 → True; <70>6.0 → True; <70>4.0 → True)
+ derived: committedCap=0.72  confirmedCap=1.5  cumulative60=2.9  Aggr=0.85  HypoCaution=2.0  FCC=OFF  confirmFloor=0.72
+
+--- window 28d (2026-06-05 → 2026-07-03) ---
+ inputs: TDDmed(tdd_1d/day)=28.9U  [tdd_7d last=27.6; NS-treatments TDD≈28.6 (basal 6.3 + bolus 22.3)]
+         SMB n=1563 p75=0.55 p95=0.95   manual n=54 p90=1.5   TDD/40=0.72
+         TBR<70=10.05%  TBR<54=1.96%  (hypo-prone triggers: <54>1.5 → True; <70>6.0 → True; <70>4.0 → True)
+ derived: committedCap=0.72  confirmedCap=1.5  cumulative60=2.9  Aggr=0.85  HypoCaution=2.0  FCC=OFF  confirmFloor=0.72
+
+--- pin-era replay (2026-06-17 → 2026-07-03): 4543 deduped cycles, 939 with V5 dose>0, shadow total 244.1U ---
+ (a) committedCap 0.25→0.72: pinned COMMITTED cycles=80 (1.8% of cycles); v1_units>0.25 on 51 of them
+     pre-pin COMMITTED≥0.25 doses n=24: est. uplift E[min(x,new)-min(x,.25)]=0.379U/cycle → est. ADDED ≈ 30.3U over era (12.4% of shadow total)
+     outcome after pinned cycles (2h): minBG<70 22/80 (27.5%)  maxBG>180&no-low 10/80 (12.5%)
+ (b) confirmedCap 1.0→1.5: CONFIRMED shots=68 (sizes p50=1.00 p90=1.00 max=1.00); pinned at 1.0: 43 (63%)
+     outcome after 1.0-pinned confirms (2h): minBG<70 13/43  maxBG>180&no-low 6/43
+     confirm floor: old min(0.25,0.8×1.0)=0.25 → new min(0.72,0.8×1.5)=0.72; observed confirm shots below new floor: 11/68 (these would be HELD by the dose-adequacy gate)
+ (c) cumulative60 6.0(operative)/10.0(new factory)→2.9: cycles trimmed 18→91, insulin removed 8.0U→33.2U (13.60% of shadow total) [on 0.25/1.0-capped stream — lower bound]
+ (d) Aggression 1.0→0.85: scales CONFIRMED only → REMOVES ≈8.8U (3.6% of shadow total; linear approx on capped-at-1.0 shots — lower bound)
+     confirm-shot outcomes (2h): minBG<70 20/68 (29.4%, protective) vs maxBG>180&no-low 10/68 (14.7%, costly)
+ (e) HypoCaution 1.0→2.0: risk>0.30 on 1519 cycles; deeper cut on 734 dosing cycles → REMOVES ≈45.4U (18.61%); of those, 173 preceded a <70 (protective), 51 preceded >180 w/o low (costly)
+ (f) FastCarbConfirm ON→OFF (hypo-prone); fast_carb_protection values in era: {'false': 4378, 'true': 165}
+ (g) design check: derived cumulative 2.9 vs confirmedCap 1.5 (ratio 1.93); one max confirm leaves 1.40U/hr = 1.9 committed holds; observed confirm p90 1.00U leaves 1.90U/hr
+====================================================================================================
+==========================================================================================
+USER C  era cycles=3778 dosing=466 total=103.7U
+ BASE rates (all dosing cycles): pre-low(<70 in 2h) 61/466 (13.1%)  pre-high-only(>180) 95/466 (20.4%)
+ confirm-floor 1.20: certainly-held 48/71 shots (26.1U deferred); pinned@1.0: 1 certainly-held, 22 vf-dependent
+   held-shot outcomes: pre-low 3/48  pre-high-only 12/48
+ COMBINED sim (uplift+knobs+cumulative5.0): counterfactual total 149.5U vs shadow 103.7U → NET +45.8U (+44.2%)
+   gross ADDED 45.8U on 100 cycles; gross REMOVED 0.0U scale/floor + (cum trim included) — removed cycles 0
+   ADDED insulin: 45.8U priced → pre-low 9.6U (21%) | pre-high-only 10.1U (22%) | in-range 26.1U (57%)   [pre-low=risky / pre-high=useful]
+==========================================================================================
+USER D  era cycles=4543 dosing=939 total=244.1U
+ BASE rates (all dosing cycles): pre-low(<70 in 2h) 191/936 (20.4%)  pre-high-only(>180) 58/936 (6.2%)
+ confirm-floor 0.72: certainly-held 11/68 shots (3.8U deferred); pinned@1.0 all pass (floor<1.0)
+   held-shot outcomes: pre-low 2/11  pre-high-only 3/11
+ COMBINED sim (uplift+knobs+cumulative2.9): counterfactual total 181.3U vs shadow 244.1U → NET -62.8U (-25.7%)
+   gross ADDED 16.6U on 79 cycles; gross REMOVED 79.4U scale/floor + (cum trim included) — removed cycles 735
+   ADDED insulin: 16.6U priced → pre-low 4.1U (25%) | pre-high-only 1.9U (12%) | in-range 10.6U (64%)   [pre-low=risky / pre-high=useful]
+   REMOVED insulin: 79.2U priced → pre-low 14.2U (18%) | pre-high-only 5.6U (7%) | in-range 59.4U (75%)   [pre-low=protective / pre-high=costly]
+==========================================================================================

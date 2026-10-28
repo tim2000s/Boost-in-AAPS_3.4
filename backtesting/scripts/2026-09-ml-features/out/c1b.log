@@ -1,0 +1,38 @@
+/Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-09-ml-features/common.py:50: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql_query(sql, conn, params=params)
+/Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-09-ml-features/common.py:211: RuntimeWarning: All-NaN slice encountered
+  r = np.where(allnan, np.nan, red(np.where(np.isnan(valid), np.nan, valid), axis=1))
+  1h: Commons 561,715 rows / 183 participants, Boost 60,350 / 16; base rate Commons 0.081, Boost 0.103
+  1h eventualbg       AUC 0.6895 [0.6538, 0.7141]
+  1h external_full    AUC 0.8842 [0.8610, 0.9042]
+  1h within_full      AUC 0.8599 [0.8375, 0.8869]
+  1h external_clock   AUC 0.8300 [0.8063, 0.8487]
+  1h within_clock     AUC 0.8096 [0.7901, 0.8330]
+  1h external_loop    AUC 0.8696 [0.8468, 0.8927]
+  1h within_loop      AUC 0.8590 [0.8412, 0.8801]
+  1h external_full_over_clock     +0.0542 [+0.0475, +0.0654] ahead on 16/16 participants -- distinguishable, positive
+  1h within_full_over_clock       +0.0503 [+0.0352, +0.0682] ahead on 16/16 participants -- distinguishable, positive
+  1h transfer_cost_full           +0.0243 [+0.0125, +0.0338] ahead on 9/16 participants -- distinguishable, positive
+  1h transfer_cost_clock          +0.0204 [+0.0059, +0.0316] ahead on 9/16 participants -- distinguishable, positive
+  1h external_full_over_loopstate +0.0146 [+0.0086, +0.0223] ahead on 11/16 participants -- distinguishable, positive
+  1h clock_vs_eventualbg          +0.1406 [+0.1090, +0.1753] ahead on 16/16 participants -- distinguishable, positive
+/Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-09-ml-features/common.py:50: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql_query(sql, conn, params=params)
+/Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-09-ml-features/common.py:211: RuntimeWarning: All-NaN slice encountered
+  r = np.where(allnan, np.nan, red(np.where(np.isnan(valid), np.nan, valid), axis=1))
+  4h: Commons 542,492 rows / 183 participants, Boost 60,157 / 16; base rate Commons 0.203, Boost 0.259
+  4h eventualbg       AUC 0.5908 [0.5555, 0.6201]
+  4h external_full    AUC 0.7127 [0.6714, 0.7433]
+  4h within_full      AUC 0.6397 [0.6049, 0.6864]
+  4h external_clock   AUC 0.6591 [0.6332, 0.6809]
+  4h within_clock     AUC 0.6261 [0.6028, 0.6599]
+  4h external_loop    AUC 0.7092 [0.6735, 0.7473]
+  4h within_loop      AUC 0.6794 [0.6608, 0.7037]
+  4h external_full_over_clock     +0.0536 [+0.0258, +0.0793] ahead on 16/16 participants -- distinguishable, positive
+  4h within_full_over_clock       +0.0136 [-0.0227, +0.0566] ahead on 14/16 participants -- UNPROVEN
+  4h transfer_cost_full           +0.0731 [+0.0256, +0.1017] ahead on 6/16 participants -- distinguishable, positive
+  4h transfer_cost_clock          +0.0330 [-0.0067, +0.0634] ahead on 7/16 participants -- UNPROVEN
+  4h external_full_over_loopstate +0.0035 [-0.0296, +0.0330] ahead on 8/16 participants -- UNPROVEN
+  4h clock_vs_eventualbg          +0.0684 [+0.0408, +0.1039] ahead on 16/16 participants -- distinguishable, positive
+written c1b_hypo_transfer.json
+C1B_EXIT=0

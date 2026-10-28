@@ -1,0 +1,24 @@
+{
+  "features": [
+    "cgm_mgdl",
+    "iob_iob",
+    "iob_basaliob",
+    "bg_above_target",
+    "direction_num",
+    "hour",
+    "iob_activity",
+    "sug_insulinReq"
+  ],
+  "n_trees": 50,
+  "max_depth": 4,
+  "num_leaves": 15,
+  "group_kfold_auc": 0.7342,
+  "louo_auc": 0.7375,
+  "n_train": 2978062,
+  "n_users": 28,
+  "peak_threshold_mgdl": 50,
+  "lookahead_min": 90,
+  "model_size_kb": 147.6,
+  "acceptance_gate": 0.65,
+  "status": "ACCEPTED"
+}

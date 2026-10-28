@@ -1,0 +1,46 @@
+200 participants, 121,334 meal onsets
+  50/200 participants prepared
+  100/200 participants prepared
+  150/200 participants prepared
+  200/200 participants prepared
+200 participants usable
+
+shadow: catches 55.1% of meals [35.8% to 68.2% across participants], 7.51 false alarms/day
+
+  fold done, fitted on 5,021,217 cycles
+  fold done, fitted on 5,062,716 cycles
+  fold done, fitted on 5,202,234 cycles
+  fold done, fitted on 5,082,939 cycles
+  fold done, fitted on 5,061,762 cycles
+model thr 0.0787: catches 14.2%, 2.89 false alarms/day
+model thr 0.0922: catches 17.1%, 3.10 false alarms/day
+model thr 0.1060: catches 20.1%, 3.33 false alarms/day
+model thr 0.1210: catches 23.4%, 3.59 false alarms/day
+model thr 0.1385: catches 27.2%, 3.87 false alarms/day
+model thr 0.1595: catches 31.7%, 4.12 false alarms/day
+model thr 0.1848: catches 36.8%, 4.33 false alarms/day
+model thr 0.2151: catches 43.0%, 4.43 false alarms/day
+model thr 0.2551: catches 47.1%, 4.19 false alarms/day
+model thr 0.3114: catches 43.6%, 3.18 false alarms/day
+model thr 0.3188: catches 42.3%, 3.00 false alarms/day
+model thr 0.3223: catches 41.5%, 2.90 false alarms/day
+model thr 0.3260: catches 40.4%, 2.80 false alarms/day
+model thr 0.3298: catches 39.5%, 2.69 false alarms/day
+model thr 0.3338: catches 38.4%, 2.58 false alarms/day
+model thr 0.3378: catches 37.2%, 2.47 false alarms/day
+model thr 0.3419: catches 35.9%, 2.34 false alarms/day
+model thr 0.3463: catches 34.5%, 2.22 false alarms/day
+model thr 0.3509: catches 33.0%, 2.09 false alarms/day
+model thr 0.3557: catches 31.5%, 1.96 false alarms/day
+model thr 0.3609: catches 29.8%, 1.82 false alarms/day
+model thr 0.3665: catches 28.0%, 1.67 false alarms/day
+model thr 0.3727: catches 25.9%, 1.52 false alarms/day
+model thr 0.3794: catches 23.7%, 1.36 false alarms/day
+model thr 0.3873: catches 21.4%, 1.19 false alarms/day
+model thr 0.3968: catches 18.8%, 1.01 false alarms/day
+model thr 0.4086: catches 15.9%, 0.83 false alarms/day
+model thr 0.4232: catches 12.5%, 0.61 false alarms/day
+model thr 0.4417: catches 8.0%, 0.37 false alarms/day
+model thr 0.4748: catches 1.9%, 0.08 false alarms/day
+
+wrote /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out/streaming_detection.json

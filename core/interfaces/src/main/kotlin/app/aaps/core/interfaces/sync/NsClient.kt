@@ -87,6 +87,30 @@ interface NsClient : Sync {
     fun resetToFullSync()
 
     /**
+     * Request a BOUNDED re-download of history from Nightscout, starting at [fromTimestamp].
+     *
+     * Added 2026-07-30 for the install-time history gap: a user migrating onto a fresh AAPS database
+     * has a local history far shorter than their Nightscout site's, which silently corrupts every
+     * history-derived quantity (TDD, and hence dynamic ISF; the Boost auto-config window).
+     * [resetToFullSync] already exists for this shape of problem but it is a MANUAL, unbounded
+     * (100-day) action that also resets the UPLOAD cursors and re-pushes everything to the server.
+     * This is the download-only, time-bounded sibling:
+     *  - the download cursors are rewound to [fromTimestamp] and no further;
+     *  - the upload sync state is left completely untouched;
+     *  - nothing blocks — the request only arms the existing NSClient worker chain, which performs
+     *    the fetch on its own thread. Implementations must not do network I/O on the calling thread.
+     *
+     * Storage goes through the normal NS sync transactions, which deduplicate on
+     * nightscoutId / pumpId / timestamp, so the call is idempotent and safe to repeat.
+     *
+     * @param fromTimestamp epoch ms; the oldest record to fetch. Implementations may clamp it to
+     *                      their own maximum age.
+     * @return true if the request was armed, false if this client cannot service it (disabled,
+     *         paused, not configured, or not supported by this NSClient version).
+     */
+    fun requestHistoryBackfill(fromTimestamp: Long): Boolean = false
+
+    /**
      * Upload new record to NS
      *
      * @param collection target ns collection

@@ -25,7 +25,9 @@ import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.objects.workflow.LoggingWorker
-import app.aaps.core.utils.receivers.DataWorkerStorage
+import app.aaps.core.utils.receivers.DataInbox
+import app.aaps.core.utils.receivers.Inbox
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -79,7 +81,7 @@ class XdripSourcePlugin @Inject constructor(
         @Inject lateinit var persistenceLayer: PersistenceLayer
         @Inject lateinit var preferences: Preferences
         @Inject lateinit var dateUtil: DateUtil
-        @Inject lateinit var dataWorkerStorage: DataWorkerStorage
+        @Inject lateinit var dataInbox: DataInbox
 
         fun getSensorStartTime(bundle: Bundle): Long? {
             val now = dateUtil.now()
@@ -97,12 +99,33 @@ class XdripSourcePlugin @Inject constructor(
 
         @SuppressLint("CheckResult")
         override suspend fun doWorkAndLog(): Result {
-            var ret = Result.success()
-
+            // Drain first, unconditionally: drain() clears DataInbox's pending gate, so every
+            // enqueued worker must reach it. Bundles drained while disabled are discarded.
+            val bundles = dataInbox.drain(XdripInbox)
             if (!xdripSourcePlugin.isEnabled()) return Result.success(workDataOf("Result" to "Plugin not enabled"))
-            val bundle = dataWorkerStorage.pickupBundle(inputData.getLong(DataWorkerStorage.STORE_KEY, -1))
-                ?: return Result.failure(workDataOf("Error" to "missing input data"))
+            if (bundles.isEmpty()) return Result.success(workDataOf("Result" to "no data"))
 
+            var failed = 0
+            for ((index, bundle) in bundles.withIndex()) {
+                try {
+                    processBundle(bundle)
+                } catch (e: CancellationException) {
+                    // WorkManager stopped this run. drain() removed the whole batch, so put this
+                    // bundle and everything after it back before propagating, or they are lost.
+                    dataInbox.requeue(XdripInbox, bundles.subList(index, bundles.size))
+                    throw e
+                } catch (e: Exception) {
+                    aapsLogger.error(LTag.BGSOURCE, "Failed processing xDrip bundle", e)
+                    failed++
+                }
+            }
+            // Success even when a bundle failed: a FAILED run makes WorkManager fail the worker
+            // already appended behind it without running it, and nothing here is retried anyway.
+            return if (failed > 0) Result.success(workDataOf("Error" to "$failed of ${bundles.size} bundles failed"))
+            else Result.success()
+        }
+
+        private fun processBundle(bundle: Bundle) {
             aapsLogger.debug(LTag.BGSOURCE, "Received xDrip data: $bundle")
             val glucoseValues = mutableListOf<GV>()
             glucoseValues += GV(
@@ -134,12 +157,15 @@ class XdripSourcePlugin @Inject constructor(
             // Always update glucoseValues, but use the decided sensorStartTime
             if (glucoseValues[0].timestamp > 0 && glucoseValues[0].value > 0.0)
                 persistenceLayer.insertCgmSourceData(Sources.Xdrip, glucoseValues, emptyList(), finalSensorStartTime)
-                    .doOnError { ret = Result.failure(workDataOf("Error" to it.toString())) }
                     .blockingGet()
                     .also { savedValues -> savedValues.all().forEach { xdripSourcePlugin.detectSource(it) } }
-            else return Result.failure(workDataOf("Error" to "missing glucoseValue"))
+            else {
+                aapsLogger.warn(LTag.BGSOURCE, "Skipping xDrip bundle: missing glucoseValue")
+                return
+            }
             xdripSourcePlugin.sensorBatteryLevel = bundle.getInt(Intents.EXTRA_SENSOR_BATTERY, -1)
-            return ret
         }
     }
 }
+
+object XdripInbox : Inbox<Bundle>("xdrip-bg", XdripSourcePlugin.XdripSourceWorker::class.java)

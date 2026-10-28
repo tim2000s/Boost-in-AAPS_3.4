@@ -52,6 +52,15 @@ class LoadBgDataWorker(
                 val smoothedData = activePlugin.activeSmoothing.smooth(it)
                 bucketedData = smoothedData
             }
+            // Smooth the native series too when it is a distinct object, which it is only on a
+            // feed faster than five minutes. Until 2026-08 the smoother only ever saw the
+            // five-minute series, so on a one-minute sensor it was filtering an interpolated
+            // reconstruction in which four of every five real readings had already been replaced
+            // by an interpolation of their neighbours.
+            val native = bucketedDataNative
+            if (native != null && native !== bucketedData) {
+                bucketedDataNative = activePlugin.activeSmoothing.smooth(native)
+            }
         }
     }
 

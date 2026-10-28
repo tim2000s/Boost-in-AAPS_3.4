@@ -47,9 +47,13 @@ abstract class InsulinLyumjevPDBasePlugin(
     }
 
     /**
-     * Returns the effective dose for peak time calculation.
-     * U100: doubles the dose (concentration effect)
-     * U200: uses raw dose
+     * Returns the dose X, in units of insulin, that sets the peak time.
+     * U100: the bolus amount, since one pump unit is one unit of insulin.
+     * U200: twice the bolus amount, since the amounts are U200 pump units of two units of insulin each.
+     *
+     * The two were swapped from the model's first commit (44a0263099, May 2022): it doubled the dose
+     * for insulin ID 6 under the comment "ID = 6 for Lyumjev U200", but ID 6 was the U100 plugin. So
+     * U100 had four times U200's peak-time dose for the same insulin, where it should be the same.
      */
     abstract fun effectiveDose(bolusAmount: Double): Double
 

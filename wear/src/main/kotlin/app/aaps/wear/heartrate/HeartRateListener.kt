@@ -54,6 +54,15 @@ class HeartRateListener(
     private val sampler = Sampler(now, sp)
     private var schedule: Disposable? = null
 
+    // ── Sensor-feed watchdog (F4, 2026-07-07) ──
+    // Some Wear devices silently stop delivering TYPE_HEART_RATE events (doze, sensor HAL wedging)
+    // while the listener registration nominally stays alive — the phone side then sees the HR feed
+    // "go dark" with no error anywhere. Track the last sensor callback and, on the 60s send tick,
+    // re-register the listener when nothing has arrived for [watchdogTimeoutMillis].
+    private val watchdogTimeoutMillis = 5 * 60_000L
+    private val sensorManager = ctx.getSystemService(SENSOR_SERVICE) as SensorManager?
+    @Volatile private var lastSensorEventMillis = now
+
     /** We only use values with these accuracies and ignore NO_CONTACT and UNRELIABLE. */
     private val goodAccuracies = arrayOf(
         SensorManager.SENSOR_STATUS_ACCURACY_LOW,
@@ -63,20 +72,44 @@ class HeartRateListener(
 
     init {
         aapsLogger.info(LTag.WEAR, "Create ${javaClass.simpleName}")
-        val sensorManager = ctx.getSystemService(SENSOR_SERVICE) as SensorManager?
-        if (sensorManager == null) {
-            aapsLogger.warn(LTag.WEAR, "Cannot get sensor manager to get heart rate readings")
-        } else {
-            val heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE)
-            if (heartRateSensor == null) {
-                aapsLogger.warn(LTag.WEAR, "Cannot get heart rate sensor")
-            } else {
-                sensorManager.registerListener(this, heartRateSensor, SensorManager.SENSOR_DELAY_NORMAL)
-            }
-        }
+        registerSensorListener("startup")
         schedule = aapsSchedulers.io.schedulePeriodicallyDirect(
             ::send, samplingIntervalMillis, samplingIntervalMillis, TimeUnit.MILLISECONDS
         )
+    }
+
+    /**
+     * (Re-)registers this listener for TYPE_HEART_RATE and LOGS registerListener's boolean —
+     * previously the result was ignored, so a refused registration was indistinguishable from a
+     * healthy one (F4, 2026-07-07).
+     */
+    private fun registerSensorListener(why: String) {
+        if (sensorManager == null) {
+            aapsLogger.warn(LTag.WEAR, "Cannot get sensor manager to get heart rate readings ($why)")
+            return
+        }
+        val heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE)
+        if (heartRateSensor == null) {
+            aapsLogger.warn(LTag.WEAR, "Cannot get heart rate sensor ($why)")
+            return
+        }
+        val registered = sensorManager.registerListener(this, heartRateSensor, SensorManager.SENSOR_DELAY_NORMAL)
+        aapsLogger.info(LTag.WEAR, "HR sensor registerListener($why) → $registered")
+    }
+
+    /**
+     * F4 watchdog, run on every 60s send tick: no sensor event for ≥ [watchdogTimeoutMillis] while
+     * enabled → unregister + re-register the sensor listener. The stamp is reset afterwards so a
+     * still-dead sensor retries once per timeout period, not every tick.
+     */
+    @VisibleForTesting
+    fun watchdogCheck(timestampMillis: Long) {
+        val quietMillis = timestampMillis - lastSensorEventMillis
+        if (quietMillis < watchdogTimeoutMillis) return
+        aapsLogger.warn(LTag.WEAR, "No HR sensor event for ${quietMillis / 60_000} min — re-registering sensor listener")
+        sensorManager?.unregisterListener(this)
+        registerSensorListener("watchdog")
+        lastSensorEventMillis = timestampMillis
     }
 
     /**
@@ -93,12 +126,14 @@ class HeartRateListener(
     override fun dispose() {
         aapsLogger.info(LTag.WEAR, "Dispose ${javaClass.simpleName}")
         schedule?.dispose()
-        (ctx.getSystemService(SENSOR_SERVICE) as SensorManager?)?.unregisterListener(this)
+        sensorManager?.unregisterListener(this)
     }
 
     /** Sends currently sampled value to the phone. Executed every [samplingIntervalMillis]. */
     private fun send() {
-        send(System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        watchdogCheck(now)
+        send(now)
     }
 
     @VisibleForTesting
@@ -132,6 +167,7 @@ class HeartRateListener(
             aapsLogger.error(LTag.WEAR, "Invalid SensorEvent $sensorType $accuracy $timestampMillis ${values.joinToString()}")
             return
         }
+        lastSensorEventMillis = timestampMillis   // F4 watchdog: the sensor is alive (any accuracy)
         val heartRate = values[0].toDouble().takeIf { accuracy in goodAccuracies }
         sampler.setHeartRate(timestampMillis, heartRate)
     }

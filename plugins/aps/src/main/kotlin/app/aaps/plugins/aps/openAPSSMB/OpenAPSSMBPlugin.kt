@@ -115,8 +115,9 @@ open class OpenAPSSMBPlugin @Inject constructor(
         .preferencesId(PluginDescription.PREFERENCE_SCREEN)
         .preferencesVisibleInSimpleMode(false)
         .showInList(showInList = { config.APS })
-        .description(R.string.description_smb)
-        .setDefault(),
+        .description(R.string.description_smb),
+    // NOTE: .setDefault() moved to OpenAPSBoostV5Plugin (Boost V6) — this fork defaults to V6.
+    // Exactly one APS plugin may be the default; keep it off SMB here.
     aapsLogger, rh
 ), APS, PluginConstraints {
 

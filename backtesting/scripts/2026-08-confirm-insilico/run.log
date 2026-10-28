@@ -1,0 +1,77 @@
+tim, last 30 days: 8518 sensor readings over 29.8 days, 84 confirms
+  whole period     TBR<70 5.63%  TIR 86.6%  mean 118
+  the 5h after a confirm is 42% of the record, and everything below is computed on it
+  in window TBR<70 6.54%  TBR<54 0.74%  TIR 77.6%  TAR 15.8%  mean 131  episodes 35
+  confirm dose: median 1.70 U, total 165.9 U
+  sensitivity at confirm: median 111 mg/dL/U, range 41 to 216
+  multiplier drawn uniformly on [0.5, 1.0], 400 replicates
+
+====================================================================================
+1. THE TRIAL, REPLICATED
+====================================================================================
+     measure  observed    median     2.5%    97.5%    change
+       tbr70      6.54      0.63     0.25     1.32     -5.91
+       tbr54      0.74      0.05     0.00     0.19     -0.69
+         tir     77.64     55.90    50.71    60.61    -21.74
+         tar     15.82     43.40    38.71    48.85    +27.57
+        mean    131.32    178.55   172.22   184.10    +47.23
+    episodes     35.00      3.00     1.00     8.00    -32.00
+
+  insulin withheld per replicate: median 41.6 U of 165.9 U committed (25%)
+
+====================================================================================
+2. DOSE-RESPONSE, EACH MULTIPLIER APPLIED TO EVERY CONFIRM
+====================================================================================
+  Deterministic, so no replication is needed.
+
+    mult  U withheld   TBR<70   TBR<54     TIR     TAR   mean  episodes
+    1.00         0.0     6.54     0.74    77.6    15.8    131        35
+    0.90        16.6     1.13     0.14    76.5    22.3    150         6
+    0.80        33.2     0.36     0.03    65.0    34.6    169         3
+    0.70        49.8     0.16     0.00    49.9    49.9    188         0
+    0.60        66.4     0.08     0.00    36.4    63.5    206         0
+    0.50        83.0     0.03     0.00    26.0    74.0    225         0
+    0.30       116.2     0.00     0.00    15.2    84.8    263         0
+    0.00       165.9     0.00     0.00     9.5    90.5    319         0
+
+====================================================================================
+3. THE COST OF EACH CONFIRM, ONE AT A TIME
+====================================================================================
+  Each confirm scaled to 0.5 with every other left alone, so the effect is that
+  confirm's own. Sorted by hypoglycaemia removed. Times are local.
+
+              when  dose   ISF   BG   IOB  U off   dTBR70   dTBR54    dTAR  dEp
+      Thu 16 22:17  2.05   141  145 -0.14   1.03  -46.668   +0.000 +51.668   -3
+      Wed 22 13:40  1.56   104  132  0.61   0.78  -31.667   -8.329 +18.337   -3
+      Mon 03 12:26  1.65   131  127  0.34   0.83  -24.997   -5.001 +41.667   -2
+      Mon 10 17:46  3.75    68  137  0.96   1.88  -21.055   +0.000 +71.931   -1
+      Tue 21 14:05  2.20    98  144  0.78   1.10  -19.999   -5.002 +46.667   -2
+      Thu 13 17:10  4.50    48  183  1.49   2.25  -18.365   -8.162 +44.901   -1
+      Sun 02 15:51  2.25    81  266  2.50   1.12  -18.332   -5.002 +20.002   -2
+      Sun 26 18:15  1.55   107  172  0.40   0.78  -16.670   +0.000 +20.001   -1
+      Sun 26 10:50  2.18   154  124  0.11   1.09  -16.665   -5.002 +74.996   -2
+      Sat 25 12:55  0.98    70  269  3.31   0.49  -15.003   -6.666 +10.000   -2
+      Tue 04 14:06  2.25    78  122  0.24   1.12  -15.002   +0.000 +26.669   -1
+      Mon 03 09:26  1.95   147  148  0.27   0.98  -14.998   -3.333 +88.332   -1
+
+  confirms whose reduction removes hypoglycaemia: 50 of 84
+  confirms where it changes nothing below range:   34 of 84
+  summed over all confirms at 0.5: TBR<70 -532.292 pp, TAR +3681.941 pp
+
+====================================================================================
+4. HOW MUCH OF EACH EFFECT ARRIVES EARLY
+====================================================================================
+  The loop is not re-run, so the longer the window the more the estimate assumes the
+  algorithm sat still while glucose climbed. Hypoglycaemia lands early and
+  hyperglycaemia accrues late, so the two sides are not equally trustworthy.
+
+    window   covers   dTBR<70   dTBR<54     dTAR  TAR per TBR
+      60m      12%     -3.35     -1.03    +8.24          2.5
+     120m      23%     -5.79     -0.88   +10.75          1.9
+     180m      31%     -6.33     -0.91   +17.76          2.8
+     300m      42%     -6.37     -0.74   +34.07          5.3
+
+  A rising ratio with window length is the unmodelled loop response showing up as
+  hyperglycaemia the algorithm would in fact have corrected.
+
+wrote results.json

@@ -1,0 +1,92 @@
+== Commons, 33,451 recoveries ==
+    commons_episode by s_high decile  1  n= 3,346  rebound 0.133  re-low 0.240  both 0.019
+    commons_episode by s_high decile  2  n= 3,345  rebound 0.170  re-low 0.295  both 0.028
+    commons_episode by s_high decile  3  n= 3,345  rebound 0.219  re-low 0.289  both 0.030
+    commons_episode by s_high decile  4  n= 3,345  rebound 0.237  re-low 0.310  both 0.033
+    commons_episode by s_high decile  5  n= 3,345  rebound 0.251  re-low 0.285  both 0.039
+    commons_episode by s_high decile  6  n= 3,345  rebound 0.293  re-low 0.300  both 0.043
+    commons_episode by s_high decile  7  n= 3,345  rebound 0.316  re-low 0.299  both 0.049
+    commons_episode by s_high decile  8  n= 3,345  rebound 0.363  re-low 0.301  both 0.061
+    commons_episode by s_high decile  9  n= 3,345  rebound 0.411  re-low 0.297  both 0.073
+    commons_episode by s_high decile 10  n= 3,345  rebound 0.506  re-low 0.309  both 0.105
+    commons_episode by s_high: base 0.290/0.292; top decile 0.506/0.309, bottom 0.133/0.240
+    commons_episode by s_relow decile  1  n= 3,346  rebound 0.244  re-low 0.222  both 0.033
+    commons_episode by s_relow decile  2  n= 3,345  rebound 0.260  re-low 0.253  both 0.035
+    commons_episode by s_relow decile  3  n= 3,345  rebound 0.286  re-low 0.260  both 0.047
+    commons_episode by s_relow decile  4  n= 3,345  rebound 0.301  re-low 0.257  both 0.040
+    commons_episode by s_relow decile  5  n= 3,345  rebound 0.285  re-low 0.281  both 0.043
+    commons_episode by s_relow decile  6  n= 3,345  rebound 0.300  re-low 0.300  both 0.049
+    commons_episode by s_relow decile  7  n= 3,345  rebound 0.312  re-low 0.309  both 0.051
+    commons_episode by s_relow decile  8  n= 3,345  rebound 0.316  re-low 0.320  both 0.062
+    commons_episode by s_relow decile  9  n= 3,345  rebound 0.308  re-low 0.342  both 0.059
+    commons_episode by s_relow decile 10  n= 3,345  rebound 0.286  re-low 0.380  both 0.062
+    commons_episode by s_relow: base 0.290/0.292; top decile 0.286/0.380, bottom 0.244/0.222
+    commons_loop by s_high decile  1  n= 3,346  rebound 0.111  re-low 0.262  both 0.018
+    commons_loop by s_high decile  2  n= 3,345  rebound 0.163  re-low 0.320  both 0.033
+    commons_loop by s_high decile  3  n= 3,345  rebound 0.191  re-low 0.309  both 0.034
+    commons_loop by s_high decile  4  n= 3,345  rebound 0.234  re-low 0.299  both 0.034
+    commons_loop by s_high decile  5  n= 3,345  rebound 0.267  re-low 0.295  both 0.041
+    commons_loop by s_high decile  6  n= 3,345  rebound 0.291  re-low 0.302  both 0.046
+    commons_loop by s_high decile  7  n= 3,345  rebound 0.314  re-low 0.290  both 0.052
+    commons_loop by s_high decile  8  n= 3,345  rebound 0.370  re-low 0.279  both 0.057
+    commons_loop by s_high decile  9  n= 3,345  rebound 0.424  re-low 0.274  both 0.063
+    commons_loop by s_high decile 10  n= 3,345  rebound 0.532  re-low 0.295  both 0.103
+    commons_loop by s_high: base 0.290/0.292; top decile 0.532/0.295, bottom 0.111/0.262
+    commons_loop by s_relow decile  1  n= 3,346  rebound 0.274  re-low 0.169  both 0.027
+    commons_loop by s_relow decile  2  n= 3,345  rebound 0.312  re-low 0.222  both 0.043
+    commons_loop by s_relow decile  3  n= 3,345  rebound 0.298  re-low 0.234  both 0.040
+    commons_loop by s_relow decile  4  n= 3,345  rebound 0.303  re-low 0.257  both 0.042
+    commons_loop by s_relow decile  5  n= 3,345  rebound 0.315  re-low 0.287  both 0.047
+    commons_loop by s_relow decile  6  n= 3,345  rebound 0.298  re-low 0.292  both 0.051
+    commons_loop by s_relow decile  7  n= 3,345  rebound 0.293  re-low 0.326  both 0.047
+    commons_loop by s_relow decile  8  n= 3,345  rebound 0.289  re-low 0.337  both 0.060
+    commons_loop by s_relow decile  9  n= 3,345  rebound 0.274  re-low 0.367  both 0.062
+    commons_loop by s_relow decile 10  n= 3,345  rebound 0.241  re-low 0.435  both 0.062
+    commons_loop by s_relow: base 0.290/0.292; top decile 0.241/0.435, bottom 0.274/0.169
+== Boost, 4,979 recoveries ==
+    boost_episode by s_high decile  1  n=   498  rebound 0.072  re-low 0.271  both 0.018
+    boost_episode by s_high decile  2  n=   498  rebound 0.141  re-low 0.305  both 0.034
+    boost_episode by s_high decile  3  n=   498  rebound 0.199  re-low 0.335  both 0.028
+    boost_episode by s_high decile  4  n=   498  rebound 0.241  re-low 0.295  both 0.056
+    boost_episode by s_high decile  5  n=   498  rebound 0.239  re-low 0.386  both 0.056
+    boost_episode by s_high decile  6  n=   497  rebound 0.256  re-low 0.316  both 0.040
+    boost_episode by s_high decile  7  n=   498  rebound 0.279  re-low 0.299  both 0.042
+    boost_episode by s_high decile  8  n=   498  rebound 0.357  re-low 0.351  both 0.078
+    boost_episode by s_high decile  9  n=   498  rebound 0.297  re-low 0.349  both 0.060
+    boost_episode by s_high decile 10  n=   498  rebound 0.382  re-low 0.265  both 0.072
+    boost_episode by s_high: base 0.246/0.317; top decile 0.382/0.265, bottom 0.072/0.271
+    boost_episode by s_relow decile  1  n=   498  rebound 0.201  re-low 0.295  both 0.048
+    boost_episode by s_relow decile  2  n=   498  rebound 0.217  re-low 0.291  both 0.034
+    boost_episode by s_relow decile  3  n=   498  rebound 0.263  re-low 0.329  both 0.052
+    boost_episode by s_relow decile  4  n=   498  rebound 0.273  re-low 0.293  both 0.048
+    boost_episode by s_relow decile  5  n=   498  rebound 0.235  re-low 0.293  both 0.050
+    boost_episode by s_relow decile  6  n=   497  rebound 0.270  re-low 0.288  both 0.054
+    boost_episode by s_relow decile  7  n=   498  rebound 0.285  re-low 0.329  both 0.048
+    boost_episode by s_relow decile  8  n=   498  rebound 0.225  re-low 0.333  both 0.036
+    boost_episode by s_relow decile  9  n=   498  rebound 0.259  re-low 0.329  both 0.052
+    boost_episode by s_relow decile 10  n=   498  rebound 0.235  re-low 0.392  both 0.062
+    boost_episode by s_relow: base 0.246/0.317; top decile 0.235/0.392, bottom 0.201/0.295
+    boost_loop by s_high decile  1  n=   498  rebound 0.116  re-low 0.259  both 0.030
+    boost_loop by s_high decile  2  n=   498  rebound 0.171  re-low 0.293  both 0.038
+    boost_loop by s_high decile  3  n=   498  rebound 0.197  re-low 0.345  both 0.036
+    boost_loop by s_high decile  4  n=   498  rebound 0.207  re-low 0.369  both 0.050
+    boost_loop by s_high decile  5  n=   498  rebound 0.231  re-low 0.337  both 0.044
+    boost_loop by s_high decile  6  n=   497  rebound 0.256  re-low 0.344  both 0.054
+    boost_loop by s_high decile  7  n=   498  rebound 0.299  re-low 0.327  both 0.074
+    boost_loop by s_high decile  8  n=   498  rebound 0.311  re-low 0.333  both 0.054
+    boost_loop by s_high decile  9  n=   498  rebound 0.333  re-low 0.269  both 0.042
+    boost_loop by s_high decile 10  n=   498  rebound 0.341  re-low 0.295  both 0.062
+    boost_loop by s_high: base 0.246/0.317; top decile 0.341/0.295, bottom 0.116/0.259
+    boost_loop by s_relow decile  1  n=   498  rebound 0.171  re-low 0.281  both 0.032
+    boost_loop by s_relow decile  2  n=   498  rebound 0.213  re-low 0.303  both 0.028
+    boost_loop by s_relow decile  3  n=   498  rebound 0.237  re-low 0.291  both 0.046
+    boost_loop by s_relow decile  4  n=   498  rebound 0.257  re-low 0.329  both 0.060
+    boost_loop by s_relow decile  5  n=   498  rebound 0.243  re-low 0.327  both 0.034
+    boost_loop by s_relow decile  6  n=   497  rebound 0.239  re-low 0.314  both 0.044
+    boost_loop by s_relow decile  7  n=   498  rebound 0.267  re-low 0.357  both 0.074
+    boost_loop by s_relow decile  8  n=   498  rebound 0.275  re-low 0.363  both 0.058
+    boost_loop by s_relow decile  9  n=   498  rebound 0.299  re-low 0.297  both 0.062
+    boost_loop by s_relow decile 10  n=   498  rebound 0.261  re-low 0.309  both 0.046
+    boost_loop by s_relow: base 0.246/0.317; top decile 0.261/0.309, bottom 0.171/0.281
+written c3_operating.json
+C3OP2_EXIT=0

@@ -1,0 +1,118 @@
+model: /Users/timstreet/StudioProjects/Boost-AAPS-core/app/src/main/assets/boost/hypo_risk_model.json
+  100 trees, 53 features
+
+n = 80711 scored cycles, base rate 0.0343
+
+==============================================================================
+1. WHERE THE ERROR LIVES: reliability within bands of current glucose
+==============================================================================
+  If the model were merely mis-scaled, the gap would be similar in every band.
+
+  glucose 0-80 mg/dL   n=2191  base=0.0945  AUC=0.572
+        score band       n    pred     obs  pred/obs
+    0.10-0.20       368   0.166   0.038       4.4
+    0.20-0.30       387   0.248   0.085       2.9
+    0.30-0.40       237   0.347   0.139       2.5
+    0.40-0.55       256   0.476   0.109       4.3
+    0.55-1.01       939   0.715   0.105       6.8
+
+  glucose 80-100 mg/dL   n=10557  base=0.0592  AUC=0.571
+        score band       n    pred     obs  pred/obs
+    0.00-0.05      1600   0.041   0.046       0.9
+    0.05-0.10      3415   0.073   0.045       1.6
+    0.10-0.20      1522   0.133   0.085       1.6
+    0.20-0.30       151   0.235   0.192       1.2
+    0.30-0.40       308   0.370   0.032      11.4
+    0.40-0.55      2236   0.495   0.054       9.2
+    0.55-1.01      1325   0.592   0.084       7.1
+
+  glucose 100-140 mg/dL   n=42404  base=0.0296  AUC=0.577
+        score band       n    pred     obs  pred/obs
+    0.00-0.05     21810   0.028   0.022       1.3
+    0.05-0.10      3721   0.065   0.068       1.0
+    0.10-0.20       534   0.129   0.092       1.4
+    0.20-0.30      3818   0.251   0.017      15.2
+    0.30-0.40      5419   0.346   0.032      11.0
+    0.40-0.55      6963   0.466   0.034      13.5
+    0.55-1.01       139   0.566   0.014      39.3
+
+  glucose 140-180 mg/dL   n=15650  base=0.0265  AUC=0.549
+        score band       n    pred     obs  pred/obs
+    0.00-0.05      8911   0.024   0.026       0.9
+    0.05-0.10       614   0.066   0.047       1.4
+    0.20-0.30      2085   0.255   0.016      15.6
+    0.30-0.40      2729   0.343   0.026      13.0
+    0.40-0.55      1262   0.441   0.035      12.6
+
+  glucose 180-400 mg/dL   n=9877  base=0.0270  AUC=0.484
+        score band       n    pred     obs  pred/obs
+    0.00-0.05      6220   0.019   0.028       0.7
+    0.05-0.10        59   0.060   0.000       inf
+    0.20-0.30       469   0.270   0.068       4.0
+    0.30-0.40      2809   0.352   0.020      17.6
+    0.40-0.55       320   0.432   0.013      34.5
+
+==============================================================================
+2. IS THE MODEL ITSELF SANE? one-feature sweeps through the exported trees
+==============================================================================
+  All features held at the cohort median; one swept. A hypo model should rise
+  steeply as glucose falls and rise with insulin on board.
+
+  sweeping current glucose  (touches 7 of 53 features)
+       value     risk
+        45.0   0.8613
+        55.0   0.8684
+        65.0   0.7798
+        75.0   0.4419
+        90.0   0.1697
+       110.0   0.1052
+       140.0   0.0812
+       180.0   0.0698
+       250.0   0.0778
+
+  sweeping insulin on board  (touches 7 of 53 features)
+       value     risk
+         0.0   0.0933
+         0.5   0.0933
+         1.0   0.0933
+         2.0   0.1034
+         3.0   0.1137
+         5.0   0.1110
+         8.0   0.1110
+
+  sweeping insulin activity  (touches 7 of 53 features)
+       value     risk
+        -0.1   0.0936
+        -0.0   0.0936
+         0.0   0.0936
+         0.0   0.0899
+         0.1   0.0991
+         0.1   0.1355
+
+==============================================================================
+3. WHAT THE HIGH-SCORING CYCLES ACTUALLY LOOK LIKE
+==============================================================================
+  score quantiles: median 0.057, p90 0.466, p99 0.645
+
+      score band       n  BG mean   BG p10     IOB  obs rate
+    0.00-0.10     46222    137.4     99.0    1.28    0.0299
+    0.10-0.30      9423    122.0     81.0    0.58    0.0413
+    0.30-0.45     15463    146.4    103.0    2.00    0.0307
+    0.45-0.60      8262    108.7     88.0    0.33    0.0467
+    0.60-1.01      1341     74.7     61.0   -0.06    0.1037
+
+==============================================================================
+4. WHAT RECALIBRATION WOULD BUY
+==============================================================================
+  Isotonic fit, held out by user so the map is not fitted on what it scores.
+
+  expected calibration error   raw 0.1433   recalibrated 0.0154
+  AUC                          raw 0.584   recalibrated 0.505   (a monotone map cannot change ranking; this is a sanity check)
+
+  firing rates at the shipped thresholds
+    riskScale engages (>0.30)  raw  30.90%   recalibrated   0.01%
+    tier downgrade   (>0.60)   raw   1.62%   recalibrated   0.00%
+
+  observed event rate when the damper engages: 0.0397   when it does not: 0.0319   base 0.0343
+
+wrote calibration.json

@@ -1,0 +1,63 @@
+commits with estimator fields: 221 across 7 participants
+  low within 3h 0.208   peak within 10 min 0.163
+  per participant: A=18, B=49, C=22, E=17, F=21, I=12, tim=82
+
+==============================================================================
+0. WHETHER THE PRIMARY DISCRIMINATOR HAS ANY SPREAD TO TEST
+==============================================================================
+  quantiles of appearance / recent max: 1%=0.571 5%=0.983 10%=1.000 25%=1.000 50%=1.000 75%=1.000 100%=1.000
+  at or above 0.95 on 96.4 per cent of commits
+  exactly at its own recent maximum on 93.2 per cent
+  quantiles of the appearance rate itself:   5%=0.62 25%=1.19 50%=1.66 75%=2.16 95%=3.28
+
+  The estimator's inferred appearance has essentially never turned over at the
+  moment of commit, so the discriminator this test was built on has no spread and
+  the areas under the curve below cannot be read as a test of it.
+
+==============================================================================
+1. THE PRIMARY, REPORTED FOR COMPLETENESS
+==============================================================================
+  A low fraction means appearance has turned over within the last 30 min,
+  so the meal is past its absorption peak. Negated, so lower scores higher.
+
+  appearance fraction -> low   AUC 0.540 [0.505, 0.676]  clear of chance
+
+     fraction band     n  low rate  early rate  median BG
+  0.95-1.01        213     0.197       0.160        136
+
+==============================================================================
+2. EVERY ESTIMATOR QUANTITY AT THE COMMIT, AGAINST BOTH TARGETS
+==============================================================================
+
+  quantity                                       -> low          -> early peak
+  appearance / recent max         0.540 [0.505,0.676] *  0.557 [0.484,0.605]
+  appearance rate                 0.338 [0.298,0.417] *  0.334 [0.271,0.432]
+  fall in appearance              0.540 [0.505,0.677] *  0.558 [0.485,0.605]
+  appearance slope                0.426 [0.341,0.618]    0.492 [0.391,0.614]
+  projected low at 30 min         0.378 [0.346,0.428] *  0.311 [0.237,0.430]
+  projected low at 60 min         0.337 [0.282,0.419] *  0.359 [0.265,0.511]
+  forecast at 30 min              0.369 [0.339,0.414] *  0.318 [0.240,0.429]
+  glucose in the model            0.579 [0.555,0.612] *  0.664 [0.526,0.740]
+  insulin in the model            0.538 [0.389,0.609]    0.580 [0.502,0.625]
+  glucose at commit (reference)   0.589 [0.561,0.608] *  0.664 [0.528,0.730]
+  insulin on board (reference)    0.530 [0.484,0.612]    0.569 [0.374,0.696]
+
+  * marks an interval clear of chance against the low.
+
+==============================================================================
+3. DOES ANY OF IT REACH THE HARMFUL CELL?
+==============================================================================
+  The cell that matters is an early peak arriving at ordinary glucose, which is what
+  a glucose-keyed predictor cannot see. Restricted to commits below 150 mg/dL.
+
+  132 commits across 5 participants, low rate 0.212
+
+  appearance / recent max        0.513 [0.488, 0.617]
+  appearance rate                0.345 [0.232, 0.463] *
+  fall in appearance             0.513 [0.488, 0.617]
+  appearance slope               0.418 [0.293, 0.517]
+  projected low at 30 min        0.350 [0.248, 0.423] *
+  projected low at 60 min        0.303 [0.216, 0.367] *
+  forecast at 30 min             0.330 [0.185, 0.414] *
+
+wrote twin.json

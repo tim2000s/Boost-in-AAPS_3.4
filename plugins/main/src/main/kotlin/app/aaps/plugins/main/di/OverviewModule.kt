@@ -3,12 +3,17 @@ package app.aaps.plugins.main.di
 import app.aaps.core.interfaces.overview.OverviewData
 import app.aaps.core.interfaces.overview.OverviewMenus
 import app.aaps.core.interfaces.profile.ProfileFunction
+import app.aaps.core.interfaces.profile.ProfileUtil
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.plugins.main.general.overview.OverviewDataImpl
 import app.aaps.plugins.main.general.overview.OverviewFragment
 import app.aaps.plugins.main.general.overview.OverviewMenusImpl
 import app.aaps.plugins.main.general.overview.boost.BoostOverviewFragment
+import app.aaps.plugins.main.general.overview.boost.BoostOverviewV2Fragment
+import app.aaps.plugins.main.general.overview.boost.widget.BoostWidget
+import app.aaps.plugins.main.general.overview.boost.widget.BoostWidgetConfigureActivity
+import app.aaps.plugins.main.general.overview.boost.BoostV2GraphData
 import app.aaps.plugins.main.general.overview.graphData.GraphData
 import app.aaps.plugins.main.general.overview.notifications.receivers.DismissNotificationReceiver
 import dagger.Binds
@@ -28,6 +33,9 @@ abstract class OverviewModule {
     @ContributesAndroidInjector abstract fun contributesDismissNotificationReceiver(): DismissNotificationReceiver
     @ContributesAndroidInjector abstract fun contributesOverviewFragment(): OverviewFragment
     @ContributesAndroidInjector abstract fun contributesBoostOverviewFragment(): BoostOverviewFragment
+    @ContributesAndroidInjector abstract fun contributesBoostOverviewV2Fragment(): BoostOverviewV2Fragment
+    @ContributesAndroidInjector abstract fun contributesBoostWidget(): BoostWidget
+    @ContributesAndroidInjector abstract fun contributesBoostWidgetConfigureActivity(): BoostWidgetConfigureActivity
     @ContributesAndroidInjector abstract fun graphDataInjector(): GraphData
 
     @Module
@@ -39,6 +47,14 @@ abstract class OverviewModule {
             preferences: Preferences,
             rh: ResourceHelper
         ): GraphData = GraphData(profileFunction, preferences, rh)
+
+        @Provides
+        fun providesBoostV2GraphData(
+            profileFunction: ProfileFunction,
+            profileUtil: ProfileUtil,
+            preferences: Preferences,
+            rh: ResourceHelper
+        ): BoostV2GraphData = BoostV2GraphData(profileFunction, profileUtil, preferences, rh)
     }
 
     @Module

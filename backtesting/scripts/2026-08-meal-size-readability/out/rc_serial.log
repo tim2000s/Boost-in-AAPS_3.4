@@ -1,0 +1,86 @@
+1,986,123 rise onsets, 1807 participants, 7 studies
+ peak_rise_ge_60        onset_bg h 10  base 0.66  AUC 0.664 [0.657, 0.672]
+ peak_rise_ge_60  onset_bg_clock h 10  base 0.66  AUC 0.717 [0.710, 0.725]
+ peak_rise_ge_60           shape h 10  base 0.66  AUC 0.731 [0.724, 0.739]
+ peak_rise_ge_60        onset_bg h 15  base 0.66  AUC 0.664 [0.657, 0.672]
+ peak_rise_ge_60  onset_bg_clock h 15  base 0.66  AUC 0.717 [0.710, 0.725]
+ peak_rise_ge_60           shape h 15  base 0.66  AUC 0.739 [0.731, 0.746]
+ peak_rise_ge_60        onset_bg h 20  base 0.66  AUC 0.664 [0.657, 0.672]
+ peak_rise_ge_60  onset_bg_clock h 20  base 0.66  AUC 0.717 [0.710, 0.725]
+ peak_rise_ge_60           shape h 20  base 0.66  AUC 0.750 [0.742, 0.757]
+ peak_rise_ge_60        onset_bg h 30  base 0.66  AUC 0.664 [0.657, 0.672]
+ peak_rise_ge_60  onset_bg_clock h 30  base 0.66  AUC 0.717 [0.710, 0.725]
+ peak_rise_ge_60           shape h 30  base 0.66  AUC 0.799 [0.793, 0.805]
+ peak_rise_ge_80        onset_bg h 10  base 0.49  AUC 0.652 [0.644, 0.660]
+ peak_rise_ge_80  onset_bg_clock h 10  base 0.49  AUC 0.702 [0.693, 0.710]
+ peak_rise_ge_80           shape h 10  base 0.49  AUC 0.722 [0.717, 0.727]
+ peak_rise_ge_80        onset_bg h 15  base 0.49  AUC 0.669 [0.664, 0.674]
+ peak_rise_ge_80  onset_bg_clock h 15  base 0.49  AUC 0.709 [0.704, 0.715]
+ peak_rise_ge_80           shape h 15  base 0.49  AUC 0.729 [0.724, 0.734]
+ peak_rise_ge_80        onset_bg h 20  base 0.49  AUC 0.669 [0.664, 0.674]
+ peak_rise_ge_80  onset_bg_clock h 20  base 0.49  AUC 0.709 [0.704, 0.715]
+ peak_rise_ge_80           shape h 20  base 0.49  AUC 0.736 [0.731, 0.741]
+ peak_rise_ge_80        onset_bg h 30  base 0.49  AUC 0.669 [0.664, 0.674]
+ peak_rise_ge_80  onset_bg_clock h 30  base 0.49  AUC 0.709 [0.704, 0.715]
+ peak_rise_ge_80           shape h 30  base 0.49  AUC 0.773 [0.768, 0.776]
+peak_rise_ge_100        onset_bg h 10  base 0.36  AUC 0.665 [0.659, 0.671]
+peak_rise_ge_100  onset_bg_clock h 10  base 0.36  AUC 0.702 [0.697, 0.708]
+peak_rise_ge_100           shape h 10  base 0.36  AUC 0.714 [0.709, 0.720]
+peak_rise_ge_100        onset_bg h 15  base 0.36  AUC 0.665 [0.659, 0.671]
+peak_rise_ge_100  onset_bg_clock h 15  base 0.36  AUC 0.702 [0.697, 0.708]
+peak_rise_ge_100           shape h 15  base 0.36  AUC 0.721 [0.716, 0.726]
+peak_rise_ge_100        onset_bg h 20  base 0.36  AUC 0.665 [0.659, 0.671]
+peak_rise_ge_100  onset_bg_clock h 20  base 0.36  AUC 0.702 [0.697, 0.708]
+peak_rise_ge_100           shape h 20  base 0.36  AUC 0.727 [0.723, 0.732]
+peak_rise_ge_100        onset_bg h 30  base 0.36  AUC 0.665 [0.659, 0.671]
+peak_rise_ge_100  onset_bg_clock h 30  base 0.36  AUC 0.702 [0.697, 0.708]
+peak_rise_ge_100           shape h 30  base 0.36  AUC 0.759 [0.755, 0.764]
+   max_bg_gt_180        onset_bg h 10  base 0.70  AUC 0.796 [0.791, 0.800]
+   max_bg_gt_180  onset_bg_clock h 10  base 0.70  AUC 0.828 [0.823, 0.832]
+   max_bg_gt_180           shape h 10  base 0.70  AUC 0.841 [0.837, 0.845]
+   max_bg_gt_180        onset_bg h 15  base 0.70  AUC 0.796 [0.791, 0.800]
+   max_bg_gt_180  onset_bg_clock h 15  base 0.70  AUC 0.828 [0.823, 0.832]
+   max_bg_gt_180           shape h 15  base 0.70  AUC 0.848 [0.844, 0.851]
+   max_bg_gt_180        onset_bg h 20  base 0.70  AUC 0.796 [0.791, 0.800]
+   max_bg_gt_180  onset_bg_clock h 20  base 0.70  AUC 0.828 [0.823, 0.832]
+   max_bg_gt_180           shape h 20  base 0.70  AUC 0.855 [0.851, 0.858]
+   max_bg_gt_180        onset_bg h 30  base 0.70  AUC 0.796 [0.791, 0.800]
+   max_bg_gt_180  onset_bg_clock h 30  base 0.70  AUC 0.828 [0.823, 0.832]
+   max_bg_gt_180           shape h 30  base 0.70  AUC 0.884 [0.881, 0.887]
+   max_bg_gt_250        onset_bg h 10  base 0.29  AUC 0.805 [0.800, 0.810]
+   max_bg_gt_250  onset_bg_clock h 10  base 0.29  AUC 0.822 [0.817, 0.826]
+   max_bg_gt_250           shape h 10  base 0.29  AUC 0.835 [0.832, 0.839]
+   max_bg_gt_250        onset_bg h 15  base 0.29  AUC 0.805 [0.800, 0.810]
+   max_bg_gt_250  onset_bg_clock h 15  base 0.29  AUC 0.822 [0.817, 0.826]
+   max_bg_gt_250           shape h 15  base 0.29  AUC 0.841 [0.837, 0.845]
+   max_bg_gt_250        onset_bg h 20  base 0.29  AUC 0.805 [0.800, 0.810]
+   max_bg_gt_250  onset_bg_clock h 20  base 0.29  AUC 0.822 [0.817, 0.826]
+   max_bg_gt_250           shape h 20  base 0.29  AUC 0.846 [0.843, 0.850]
+   max_bg_gt_250        onset_bg h 30  base 0.29  AUC 0.805 [0.800, 0.810]
+   max_bg_gt_250  onset_bg_clock h 30  base 0.29  AUC 0.822 [0.817, 0.826]
+   max_bg_gt_250           shape h 30  base 0.29  AUC 0.872 [0.869, 0.875]
+
+what the shape of the rise adds over onset glucose and the clock
+
+ peak_rise_ge_60 h 10  shape 0.734  baseline 0.720  delta +0.014
+ peak_rise_ge_60 h 15  shape 0.743  baseline 0.720  delta +0.023
+ peak_rise_ge_60 h 20  shape 0.752  baseline 0.720  delta +0.033
+ peak_rise_ge_60 h 30  shape 0.799  baseline 0.720  delta +0.079
+ peak_rise_ge_80 h 10  shape 0.722  baseline 0.709  delta +0.013
+ peak_rise_ge_80 h 15  shape 0.729  baseline 0.709  delta +0.020
+ peak_rise_ge_80 h 20  shape 0.736  baseline 0.709  delta +0.027
+ peak_rise_ge_80 h 30  shape 0.773  baseline 0.709  delta +0.063
+peak_rise_ge_100 h 10  shape 0.714  baseline 0.702  delta +0.012
+peak_rise_ge_100 h 15  shape 0.721  baseline 0.702  delta +0.018
+peak_rise_ge_100 h 20  shape 0.727  baseline 0.702  delta +0.025
+peak_rise_ge_100 h 30  shape 0.759  baseline 0.702  delta +0.057
+   max_bg_gt_180 h 10  shape 0.841  baseline 0.828  delta +0.013
+   max_bg_gt_180 h 15  shape 0.848  baseline 0.828  delta +0.020
+   max_bg_gt_180 h 20  shape 0.855  baseline 0.828  delta +0.027
+   max_bg_gt_180 h 30  shape 0.884  baseline 0.828  delta +0.057
+   max_bg_gt_250 h 10  shape 0.835  baseline 0.822  delta +0.013
+   max_bg_gt_250 h 15  shape 0.841  baseline 0.822  delta +0.019
+   max_bg_gt_250 h 20  shape 0.846  baseline 0.822  delta +0.024
+   max_bg_gt_250 h 30  shape 0.872  baseline 0.822  delta +0.050
+
+wrote /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out/rise_consequence.json

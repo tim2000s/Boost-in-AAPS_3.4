@@ -1,0 +1,6 @@
+*.jar
+.jsonjar
+__pycache__/
+*.class
+*.json
+out*.txt

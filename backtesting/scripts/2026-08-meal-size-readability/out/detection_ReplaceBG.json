@@ -1,0 +1,138 @@
+{
+ "study": "ReplaceBG",
+ "boot": 0,
+ "results": [
+  {
+   "variant": "as_prior",
+   "horizon": 10,
+   "n": 163811,
+   "meals": 71761,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.8040444879795591,
+   "lo": NaN,
+   "hi": NaN
+  },
+  {
+   "variant": "as_prior",
+   "horizon": 15,
+   "n": 163811,
+   "meals": 71761,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.8296460643268888,
+   "lo": NaN,
+   "hi": NaN
+  },
+  {
+   "variant": "as_prior",
+   "horizon": 20,
+   "n": 163811,
+   "meals": 71761,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.8660520990065089,
+   "lo": NaN,
+   "hi": NaN
+  },
+  {
+   "variant": "as_prior",
+   "horizon": 30,
+   "n": 163811,
+   "meals": 71761,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.9455980560766769,
+   "lo": NaN,
+   "hi": NaN
+  },
+  {
+   "variant": "as_prior",
+   "horizon": 45,
+   "n": 163811,
+   "meals": 71761,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.920418795261454,
+   "lo": NaN,
+   "hi": NaN
+  },
+  {
+   "variant": "as_prior",
+   "horizon": 60,
+   "n": 163811,
+   "meals": 71761,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.9095386998188,
+   "lo": NaN,
+   "hi": NaN
+  },
+  {
+   "variant": "matched_on_rise",
+   "horizon": 10,
+   "n": 119735,
+   "meals": 27685,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.8178282588015618,
+   "lo": NaN,
+   "hi": NaN
+  },
+  {
+   "variant": "matched_on_rise",
+   "horizon": 15,
+   "n": 119735,
+   "meals": 27685,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.8302851035113444,
+   "lo": NaN,
+   "hi": NaN
+  },
+  {
+   "variant": "matched_on_rise",
+   "horizon": 20,
+   "n": 119735,
+   "meals": 27685,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.8501542480946656,
+   "lo": NaN,
+   "hi": NaN
+  },
+  {
+   "variant": "matched_on_rise",
+   "horizon": 30,
+   "n": 119735,
+   "meals": 27685,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.8632964858302995,
+   "lo": NaN,
+   "hi": NaN
+  },
+  {
+   "variant": "matched_on_rise",
+   "horizon": 45,
+   "n": 119735,
+   "meals": 27685,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.8574632148726011,
+   "lo": NaN,
+   "hi": NaN
+  },
+  {
+   "variant": "matched_on_rise",
+   "horizon": 60,
+   "n": 119735,
+   "meals": 27685,
+   "rises": 92050,
+   "subjects": 196,
+   "auc": 0.8511804502758933,
+   "lo": NaN,
+   "hi": NaN
+  }
+ ]
+}

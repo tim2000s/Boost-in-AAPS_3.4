@@ -44,7 +44,10 @@ class LoadBgWorker(
             while (continueLoading) {
                 val isFirstLoad = nsClientV3Plugin.isFirstLoad(NsClient.Collection.ENTRIES)
                 val lastLoaded =
-                    if (isFirstLoad) max(nsClientV3Plugin.firstLoadContinueTimestamp.collections.entries, dateUtil.now() - nsClientV3Plugin.maxAge)
+                    // firstLoadFloor() is `now - maxAge`, raised by an active bounded backfill request
+                    // (NsClient.requestHistoryBackfill) so a deliberate 14-day window is not silently
+                    // widened to the 100-day ceiling. Inert (== now - maxAge) when none is in flight.
+                    if (isFirstLoad) max(nsClientV3Plugin.firstLoadContinueTimestamp.collections.entries, nsClientV3Plugin.firstLoadFloor())
                     else max(nsClientV3Plugin.lastLoadedSrvModified.collections.entries, dateUtil.now() - nsClientV3Plugin.maxAge)
                 if ((nsClientV3Plugin.newestDataOnServer?.collections?.entries ?: Long.MAX_VALUE) > lastLoaded) {
                     val sgvs: List<NSSgvV3>

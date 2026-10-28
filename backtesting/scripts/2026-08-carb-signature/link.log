@@ -1,0 +1,35 @@
+commits: 2505, low rate 0.174
+
+==============================================================================
+1. ARE THE TWO DESCRIBING THE SAME THING
+==============================================================================
+  correlation between interval to peak and excursion size: +0.416
+
+  smaller excursion -> low   AUC 0.599 [0.557, 0.643]
+  shorter interval  -> low   AUC 0.582 [0.548, 0.631]
+
+  The excursion is the better of the two, which is what would be expected if the
+  interval is a consequence of the size rather than a cause of the outcome.
+
+==============================================================================
+2. THE CELLS
+==============================================================================
+
+  cell                                          n  low rate  median rise  median BG
+  short interval and small excursion          318     0.270            6        152
+  short interval, large excursion               3  (empty, which is itself informative)
+  long interval, small excursion              928     0.196           26        130
+  long interval, large excursion             1256     0.134           72        121
+
+==============================================================================
+3. THE EXCURSION BY SIZE BAND
+==============================================================================
+
+         excursion      n  low rate  median dose
+              <=10    325     0.243         0.40
+          10 to 25    436     0.206         0.85
+          25 to 50    633     0.202         0.95
+          50 to 80    578     0.152         0.90
+         80 to 999    533     0.096         0.75
+
+wrote link.json

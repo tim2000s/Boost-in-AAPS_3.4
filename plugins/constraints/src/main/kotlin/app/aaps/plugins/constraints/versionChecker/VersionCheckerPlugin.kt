@@ -10,8 +10,6 @@ import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.versionChecker.VersionCheckerUtils
-import app.aaps.core.keys.BooleanKey
-import app.aaps.core.keys.LongComposedKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.plugins.constraints.R
 import app.aaps.plugins.constraints.versionChecker.keys.VersionCheckerLongKey
@@ -39,12 +37,7 @@ class VersionCheckerPlugin @Inject constructor(
 
     override fun applyMaxIOBConstraints(maxIob: Constraint<Double>): Constraint<Double> {
         versionCheckerUtils.triggerCheckVersion()
-        // Boost: allow user to bypass expired-version constraint
-        if (preferences.get(BooleanKey.ApsBoostBypassVersionCheck)) return maxIob
-        val endDate = preferences.get(LongComposedKey.AppExpiration, config.VERSION_NAME)
-        return if (endDate != 0L && dateUtil.now() > endDate)
-            maxIob.set(0.0, rh.gs(R.string.application_expired), this)
-        else
-            maxIob
+        // Boost: expired-version constraint permanently bypassed (forced on; user toggle removed).
+        return maxIob
     }
 }

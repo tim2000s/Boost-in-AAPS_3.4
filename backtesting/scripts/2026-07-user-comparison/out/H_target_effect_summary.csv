@@ -1,0 +1,12 @@
+metric,value
+minguard_block_rate_all_pct,5.8
+minguard_block_rate_budget_gt0_pct,0.3
+intended_U_lost_per_day,0.13
+blocked_at_base_target_pct,0.0
+blocked_at_raised_target_pct,63.2
+blocked_IOBpred_binding_pct,99.1
+cf_budget_cut_U_per_day,7.78
+cf_minguard_unblock_U_per_day,0.0
+cf_net_U_per_day,-7.78
+TIR_70_180,91.5
+TBR_70,0.6

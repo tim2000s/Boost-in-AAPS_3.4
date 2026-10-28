@@ -15,7 +15,8 @@ import javax.inject.Singleton
 /**
  * Glucodynamic model for Lyumjev U200 (2x concentrated).
  * Automatically adjusts DIA based on bolus size.
- * Uses raw dose in peak time calculation (concentration already accounted for).
+ * The peak-time dose is twice the bolus amount: with basals halved and ISFs doubled the amounts are
+ * pump units of U200, and each carries two units of insulin.
  *
  * NOTE: You must halve your basals and double your ISFs before use with U200 insulin.
  */
@@ -38,8 +39,8 @@ class InsulinLyumjevU200PDPlugin @Inject constructor(
 
     override fun commentStandardText(): String = rh.gs(R.string.description_insulin_lyumjev_u200_pd)
 
-    // U200: use raw dose (concentration effect already present in the insulin)
-    override fun effectiveDose(bolusAmount: Double): Double = bolusAmount
+    // U200: each pump unit carries two units of insulin, so the peak-time dose is twice the amount.
+    override fun effectiveDose(bolusAmount: Double): Double = 2 * bolusAmount
 
     init {
         pluginDescription

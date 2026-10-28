@@ -1,0 +1,22 @@
+2061 participants across 7 studies, 7 workers
+  200/2061, 99,639 rises, 4s
+  400/2061, 265,405 rises, 9s
+  600/2061, 336,378 rises, 11s
+  800/2061, 399,014 rises, 14s
+  1000/2061, 639,363 rises, 23s
+  1200/2061, 924,418 rises, 33s
+  1400/2061, 1,185,664 rises, 43s
+  1600/2061, 1,455,252 rises, 53s
+  1800/2061, 1,721,296 rises, 62s
+  2000/2061, 1,928,530 rises, 69s
+
+1,986,123 rise onsets from 1807 participants -> /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out/rise_outcomes.parquet
+             rises  subjects  excursion_rate  absolute_rate
+study                                                      
+DCLP3        75515       112           0.839          0.665
+DCLP5        86183       100           0.851          0.698
+Flair       108777       113           0.833          0.714
+IOBP2       142047       337           0.855          0.722
+Loop       1251245       850           0.837          0.566
+PEDAP       140422        99           0.859          0.645
+ReplaceBG   181934       196           0.846          0.690

@@ -1,0 +1,39 @@
+{
+  "user": "tim",
+  "days": 30,
+  "n": 84,
+  "reps": 3000,
+  "lo": 0.4,
+  "hi": 1.0,
+  "obs_low": 25.0,
+  "obs_severe": 12.0,
+  "committed": 165.93941515480225,
+  "attribution": {
+    "own_at_nadir": 0.1487785286797701,
+    "impact": 163.04389946869208,
+    "covered": 1.343519884954938
+  },
+  "trial": {
+    "0.5": {
+      "lows": 8.0,
+      "severe": 2.0,
+      "new_highs": 13.0
+    },
+    "1.0": {
+      "lows": 4.0,
+      "severe": 1.0,
+      "new_highs": 19.0
+    },
+    "2.0": {
+      "lows": 2.0,
+      "severe": 0.0,
+      "new_highs": 23.0
+    }
+  },
+  "severity": {
+    "nadir_gain": 34.965611639534686,
+    "below_gain": 95.03176665703452,
+    "peak_gain": 23.599432327892828,
+    "above_gain": 1406.8124158167575
+  }
+}

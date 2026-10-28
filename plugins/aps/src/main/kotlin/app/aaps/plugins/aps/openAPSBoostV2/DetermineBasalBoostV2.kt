@@ -176,16 +176,33 @@ class DetermineBasalBoostV2 @Inject constructor(
     // =====================================================================
     fun determine_basal(
         glucose_status: GlucoseStatus, currenttemp: CurrentTemp, iob_data_array: Array<IobTotal>, profile: OapsProfileBoost, autosens_data: AutosensResult, meal_data: MealData,
-        microBolusAllowed: Boolean, currentTime: Long, flatBGsDetected: Boolean
+        microBolusAllowed: Boolean, currentTime: Long, flatBGsDetected: Boolean,
+        riskModel: app.aaps.plugins.aps.openAPSBoostV3ML.BoostRiskModel? = null
     ): RT {
         consoleError.clear()
         consoleLog.clear()
+        // Even on the early-bailout path (invalid BG / stale data) we want the
+        // Boost-specific markers present in the Nightscout upload so downstream
+        // analysis can distinguish "field genuinely missing" from "decision skipped
+        // before the algorithm got that far". We set the markers that are honestly
+        // known at this point and leave the numerics null for fields the algorithm
+        // never computed.
         var rT = RT(
             algorithm = APSResult.Algorithm.BOOST,
             runningDynamicIsf = true, // Boost always uses dynamic ISF
             timestamp = currentTime,
             consoleLog = consoleLog,
-            consoleError = consoleError
+            consoleError = consoleError,
+            // Boost markers — emitted even on the early-return path
+            boostActive = profile.boostActive,
+            boostProfileSwitch = profile.profileSwitch,
+            boostTier = "NONE",
+            fastCarbProtection = false,
+            insulinReqPctEffective = 0.0,
+            // Numerics that the plugin already pre-computed before determine_basal
+            sensNormalTarget = if (profile.sensNormalTarget > 0) round(profile.sensNormalTarget, 1) else null,
+            predictionISF = if (profile.variable_sens > 0) round(profile.variable_sens, 1) else null,
+            tdd = if (profile.TDD > 0) round(profile.TDD, 1) else null
         )
 
         val deliverAt = currentTime
@@ -485,14 +502,26 @@ class DetermineBasalBoostV2 @Inject constructor(
             consoleLog = consoleLog,
             consoleError = consoleError,
             variable_sens = sens,
-            // Boost/DynISF fields for Nightscout upload
+            // Boost/DynISF fields for Nightscout upload — every field below is
+            // emitted on every decision so the downstream analysis pipeline can
+            // count records uniformly and detect "neutral" states explicitly.
             boostActive = profile.boostActive,
             predictionISF = round(profile.variable_sens, 1),
             sensNormalTarget = round(profile.sensNormalTarget, 1),
             tdd = if (profile.TDD > 0) round(profile.TDD, 1) else null,
-            tddRatio = if (sensitivityRatio != null && sensitivityRatio != 1.0) sensitivityRatio else null,
+            // tddRatio: emit even when neutral (1.0). Previously skipped via
+            // `if (sensitivityRatio != null && sensitivityRatio != 1.0) ... else null`,
+            // which made the field present in only ~60% of records.
+            tddRatio = sensitivityRatio,
             deltaAcceleration = delta_accl,
-            boostProfileSwitch = if (profile.profileSwitch != 100) profile.profileSwitch else null
+            // boostProfileSwitch: emit on every decision, including 100% (no override).
+            // Previously emitted only when != 100 which made it present in ~30% of records.
+            boostProfileSwitch = profile.profileSwitch,
+            // Initial defaults for fields populated later in the SMB block — these
+            // ensure the field is always present even when SMB isn't allowed.
+            boostTier = "NONE",
+            fastCarbProtection = false,
+            insulinReqPctEffective = 0.0
         )
 
         // =====================================================================
@@ -1033,6 +1062,41 @@ class DetermineBasalBoostV2 @Inject constructor(
 
             val lastBolusAge = round((systemTime - iob_data.lastBolusTime) / 60000.0, 1)
 
+            // ── ML Hypo Risk Model ──────────────────────────────
+            val mlHypoRisk = riskModel?.predictHypoRisk(
+                cgmMgdl = bg,
+                iobTotal = iob_data.iob,
+                iobBasal = iob_data.basaliob,
+                bgAboveTarget = bg - target_bg,
+                directionNum = if (abs(glucose_status.shortAvgDelta) > 0.001)
+                    (glucose_status.delta - glucose_status.shortAvgDelta) / abs(glucose_status.shortAvgDelta)
+                    .coerceIn(-2.0, 2.0)
+                else 0.0,
+                hour = java.time.LocalTime.now().hour,
+                iobActivity = iob_data.activity,
+                insulinReq = insulinReq
+            )
+            if (mlHypoRisk != null) {
+                rT.mlHypoRisk = round(mlHypoRisk, 3)
+                consoleError.add("── ML Risk Model ───────────────────────────")
+                consoleError.add("ML hypo risk: ${round(mlHypoRisk * 100, 1)}%")
+            }
+
+            val riskScale = if (mlHypoRisk != null && mlHypoRisk > 0.3) {
+                val scale = Math.max(0.0, 1.0 - (mlHypoRisk - 0.3) / 0.7)
+                rT.mlRiskScale = round(scale, 2)
+                consoleError.add("Risk scale: ${round(scale * 100, 0)}% (risk ${round(mlHypoRisk * 100, 0)}% > 30% threshold)")
+                scale
+            } else {
+                rT.mlRiskScale = 1.0
+                1.0
+            }
+
+            val mlTierDowngrade = mlHypoRisk != null && mlHypoRisk > 0.6
+            if (mlTierDowngrade) {
+                consoleError.add("⚠ ML risk ${round(mlHypoRisk!! * 100, 0)}% > 60% — tier downgrade active (skip tiers 3-6)")
+            }
+
             if (microBolusAllowed && enableSMB && bg > threshold) {
                 val mealInsulinReq = round(meal_data.mealCOB / profile.carb_ratio, 3)
                 var maxBolus: Double
@@ -1154,7 +1218,7 @@ class DetermineBasalBoostV2 @Inject constructor(
                     consoleError.add("Insulin required % (${(1.0 / insulinReqPCT) * 100}%) applied.")
                 }
                 // ----- Tier 3: UAM Boost (strong acceleration with positive delta) -----
-                else if (!fastCarbRebound && glucose_status.delta >= 5 && glucose_status.shortAvgDelta >= 3 && uamBoost1 > 1.2 && uamBoost2 > 2 && boostActive && iob_data.iob < boostMaxIOB && boost_scale < 3 && eventualBG > target_bg && bg > 80 && insulinReq > 0) {
+                else if (!mlTierDowngrade && !fastCarbRebound && glucose_status.delta >= 5 && glucose_status.shortAvgDelta >= 3 && uamBoost1 > 1.2 && uamBoost2 > 2 && boostActive && iob_data.iob < boostMaxIOB && boost_scale < 3 && eventualBG > target_bg && bg > 80 && insulinReq > 0) {
                     consoleError.add(">>> TIER 3: UAM Boost <<<")
                     rT.boostTier = "UAM_BOOST"
                     consoleError.add("Insulin required pre-boost is $insulinReq")
@@ -1176,7 +1240,7 @@ class DetermineBasalBoostV2 @Inject constructor(
                     rT.reason.append("UAM Boost enacted; SMB equals $boostInsulinReq; ")
                 }
                 // ----- Tier 4: UAM High Boost (high BG > 180 with acceleration) -----
-                else if (delta_accl > 5 && bg > 180 && boostActive && iob_data.iob < boostMaxIOB && boost_scale < 3 && eventualBG > target_bg && bg > 80 && insulinReq > 0) {
+                else if (!mlTierDowngrade && delta_accl > 5 && bg > 180 && boostActive && iob_data.iob < boostMaxIOB && boost_scale < 3 && eventualBG > target_bg && bg > 80 && insulinReq > 0) {
                     consoleError.add(">>> TIER 4: UAM High Boost <<<")
                     rT.boostTier = "UAM_HIGH_BOOST"
                     consoleError.add("Insulin required pre-boost is $insulinReq")
@@ -1194,7 +1258,7 @@ class DetermineBasalBoostV2 @Inject constructor(
                     consoleError.add("UAM High Boost enacted; SMB equals $boostInsulinReq; Original insulin requirement was $insulinReq")
                 }
                 // ----- Tier 5: Percent scale (BG 98-180, delta > 3, accelerating) -----
-                else if (!fastCarbRebound && bg > 98 && bg < 181 && glucose_status.delta > 3 && delta_accl > 0 && eventualBG > target_bg && iob_data.iob < boostMaxIOB && boostActive) {
+                else if (!mlTierDowngrade && !fastCarbRebound && bg > 98 && bg < 181 && glucose_status.delta > 3 && delta_accl > 0 && eventualBG > target_bg && iob_data.iob < boostMaxIOB && boostActive) {
                     consoleError.add(">>> TIER 5: Percent Scale <<<")
                     rT.boostTier = "PERCENT_SCALE"
                     if (insulinReq > boostMaxIOB - iob_data.iob) {
@@ -1211,7 +1275,7 @@ class DetermineBasalBoostV2 @Inject constructor(
                     consoleError.add("Post percent scale trigger state: $iTimeActive")
                 }
                 // ----- Tier 6: Acceleration bolus (delta_accl > 25) -----
-                else if (!fastCarbRebound && delta_accl > 25 && glucose_status.delta > 4 && iob_data.iob < boostMaxIOB && boostActive && eventualBG > target_bg) {
+                else if (!mlTierDowngrade && !fastCarbRebound && delta_accl > 25 && glucose_status.delta > 4 && iob_data.iob < boostMaxIOB && boostActive && eventualBG > target_bg) {
                     consoleError.add(">>> TIER 6: Acceleration Bolus <<<")
                     rT.boostTier = "ACCELERATION"
                     boostInsulinReq = min(boost_scale * boostInsulinReq, boost_max)
@@ -1238,6 +1302,13 @@ class DetermineBasalBoostV2 @Inject constructor(
                     rT.boostTier = "REGULAR_OREF1"
                     microBolus = Math.floor(min(insulinReq / insulinReqPCT, maxBolus) * roundSMBTo) / roundSMBTo
                     rT.reason.append("Regular oref1 triggered; SMB equals $microBolus; ")
+                }
+
+                // ── ML Risk: Graduated SMB scaling ──
+                if (riskScale < 1.0 && microBolus > 0) {
+                    val preSMB = microBolus
+                    microBolus = Math.floor(microBolus * riskScale * roundSMBTo) / roundSMBTo
+                    consoleError.add("ML risk scale applied: SMB ${round(preSMB, 2)} → ${round(microBolus, 2)} (×${round(riskScale, 2)})")
                 }
 
                 // Zero temp calculation for SMB

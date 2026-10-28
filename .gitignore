@@ -33,3 +33,13 @@ wear/pumpcontrol/*
 /buildSrc/.kotlin
 .claude/settings.local.json
 .claude/CLAUDE_COMMANDS.md
+keystore.properties
+backtesting/__pycache__/
+
+# Local-only Claude operational notes (personal specifics — never commit)
+CLAUDE.local.md
+
+# Python bytecode from backtesting scripts
+__pycache__/
+*.pyc
+backtesting/scripts/2026-09-meal-clock/out_merged/

@@ -15,7 +15,7 @@ import javax.inject.Singleton
 /**
  * Glucodynamic model for Lyumjev U100 (standard concentration).
  * Automatically adjusts DIA based on bolus size.
- * Uses doubled dose in peak time calculation to account for U100 concentration.
+ * The peak-time dose is the bolus amount as it stands: on U100 one pump unit is one unit of insulin.
  */
 @Singleton
 class InsulinLyumjevU100PDPlugin @Inject constructor(
@@ -36,8 +36,8 @@ class InsulinLyumjevU100PDPlugin @Inject constructor(
 
     override fun commentStandardText(): String = rh.gs(R.string.description_insulin_lyumjev_u100_pd)
 
-    // U100: double the dose for peak time calculation (concentration effect)
-    override fun effectiveDose(bolusAmount: Double): Double = 2 * bolusAmount
+    // U100: one pump unit is one unit of insulin, so the peak-time dose is the amount itself.
+    override fun effectiveDose(bolusAmount: Double): Double = bolusAmount
 
     init {
         pluginDescription

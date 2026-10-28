@@ -15,13 +15,22 @@ class ConfigImpl @Inject constructor(
     private val fileListProvider: Lazy<FileListProvider>
 ) : Config {
 
+    private companion object {
+        val FULL_FLAVORS = setOf("full", "fullb", "fullc", "fulld")
+    }
+
+
     override val SUPPORTED_NS_VERSION = 150000 // 15.0.0
-    override val APS = BuildConfig.FLAVOR == "full"
+    // The full application, in any of its instances. fullb and fullc are the same build with a
+    // different application id so that several can coexist on one handset; they are not reduced
+    // variants and must have the loop, or an instance meant to run an arm of a study would quietly
+    // have no algorithm at all.
+    override val APS = BuildConfig.FLAVOR in FULL_FLAVORS
     override val AAPSCLIENT = BuildConfig.FLAVOR == "aapsclient" || BuildConfig.FLAVOR == "aapsclient2"
     override val AAPSCLIENT1 = BuildConfig.FLAVOR == "aapsclient"
     override val AAPSCLIENT2 = BuildConfig.FLAVOR == "aapsclient2"
     override val PUMPCONTROL = BuildConfig.FLAVOR == "pumpcontrol"
-    override val PUMPDRIVERS = BuildConfig.FLAVOR == "full" || BuildConfig.FLAVOR == "pumpcontrol"
+    override val PUMPDRIVERS = BuildConfig.FLAVOR in FULL_FLAVORS || BuildConfig.FLAVOR == "pumpcontrol"
     override val FLAVOR = BuildConfig.FLAVOR
     override val VERSION_NAME = BuildConfig.VERSION_NAME
     override val HEAD = BuildConfig.HEAD
@@ -44,6 +53,7 @@ class ConfigImpl @Inject constructor(
     private var ignoreNightscoutV3Errors: Boolean? = null
     private var doNotSendSmsOnProfileChange: Boolean? = null
     private var enableAutotune: Boolean? = null
+    private var enableOmnipodDriftCompensation: Boolean? = null
     private var disableLeakCanary: Boolean? = null
 
     override fun isEngineeringModeOrRelease(): Boolean = if (!APS) true else isEngineeringMode() || !isDev()
@@ -54,5 +64,6 @@ class ConfigImpl @Inject constructor(
     override fun ignoreNightscoutV3Errors(): Boolean = ignoreNightscoutV3Errors ?: (fileListProvider.get().ensureExtraDirExists()?.findFile("ignore_nightscout_v3_errors") != null).also { ignoreNightscoutV3Errors = it }
     override fun doNotSendSmsOnProfileChange(): Boolean = doNotSendSmsOnProfileChange ?: (fileListProvider.get().ensureExtraDirExists()?.findFile("do_not_send_sms_on_profile_change") != null).also { doNotSendSmsOnProfileChange = it }
     override fun enableAutotune(): Boolean = enableAutotune ?: (fileListProvider.get().ensureExtraDirExists()?.findFile("enable_autotune") != null).also { enableAutotune = it }
+    override fun enableOmnipodDriftCompensation(): Boolean = enableOmnipodDriftCompensation ?: (fileListProvider.get().ensureExtraDirExists()?.findFile("omnipod_drift_compensation") != null).also { enableOmnipodDriftCompensation = it }
     override fun disableLeakCanary(): Boolean = disableLeakCanary ?: (fileListProvider.get().ensureExtraDirExists()?.findFile("disable_leakcanary") != null).also { disableLeakCanary = it }
 }

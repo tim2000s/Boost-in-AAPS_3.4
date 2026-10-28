@@ -1,0 +1,110 @@
+era: start to 2026-06-29
+
+==============================================================================
+COVERAGE AND THRESHOLD CROSSING
+==============================================================================
+user     cycles   scored   cov%  risk>.30  risk>.60  meal>.50
+A         91861     3802    4.1    74.88%     1.21%    19.52%
+B         48301     4635    9.6    83.19%     2.93%    23.73%
+C         14717     2293   15.6    91.06%     3.84%    43.09%
+D         83500     2550    3.1    94.27%    11.02%    29.84%
+E         48813     5112   10.5    93.25%     3.03%    21.54%
+F         81854     3729    4.6    68.81%     1.34%    27.65%
+tim       91091     7288    8.0    36.32%     1.88%    17.77%
+
+==============================================================================
+FIELD DISCRIMINATION (on policy — see the note in the docstring)
+==============================================================================
+
+### hypo risk
+  user          n    base     AUC
+  A          3802   0.004   0.727
+  B          4635   0.015   0.558
+  C          2293   0.048   0.706
+  D          2550   0.103   0.609
+  E          5112   0.002   0.763
+  F          3729   0.026   0.583
+  tim        7288   0.047   0.635
+  pooled AUC 0.606  95% CI [0.493, 0.729]  (7 users)  -> NOT distinguishable from chance
+
+### meal likelihood
+  user          n    base     AUC
+  A          3802   0.198   0.726
+  B          4633   0.219   0.760
+  C          2292   0.134   0.752
+  D          2550   0.066   0.788
+  E          5112   0.031   0.807
+  F          3729   0.164   0.806
+  tim        6916   0.200   0.768
+  pooled AUC 0.740  95% CI [0.718, 0.774]  (7 users)  -> distinguishable from chance
+
+==============================================================================
+LABEL MISMATCH — the model's own target vs the one its documentation claims
+==============================================================================
+  v12 meta: sustained >=15min within 90min     base 0.031  AUC 0.606 [0.493, 0.729]
+  KDoc claim: 2 readings <70 within 4h         base 0.164  AUC 0.509 [0.428, 0.637]
+
+==============================================================================
+MATCHED BASELINES — same rows, same label, trivial predictors
+==============================================================================
+
+### hypo risk
+  the shipped model       0.606  [0.493, 0.729]
+  low glucose (-BG)       0.605  [0.486, 0.709]
+  eventualBG (-)          0.477  [0.389, 0.559]
+  IOB                     0.512  [0.434, 0.631]
+  -> model minus 'low glucose (-BG)': +0.018 [-0.037, +0.113] — the model is indistinguishable from the baseline
+
+### meal likelihood
+  the shipped model       0.740  [0.718, 0.774]
+  glucose (BG)            0.397  [0.367, 0.424]
+  eventualBG              0.612  [0.572, 0.665]
+  -> model minus 'eventualBG': +0.129 [+0.094, +0.162] — the model beats the baseline
+
+==============================================================================
+HORIZON SWEEP — is the null about the model or about how far ahead it looks?
+==============================================================================
+  The shipped model is trained and scored at +4h. Re-scoring the SAME scores
+  against nearer horizons separates 'the model is weak' from '4h is too far'.
+  The -BG column is the baseline at the same horizon: at short range 'glucose is
+  already low' predicts a low trivially, and the model has to beat that to count.
+
+   horizon    base   model            95% CI     -BG          model - (-BG)
+      30m   0.003   0.754  [ 0.687, 0.869]   0.824   -0.051 [-0.132,+0.015]
+      60m   0.015   0.647  [ 0.527, 0.792]   0.688   -0.024 [-0.093,+0.059]
+      90m   0.031   0.606  [ 0.493, 0.729]   0.605   +0.018 [-0.037,+0.113]
+     120m   0.048   0.574  [ 0.473, 0.703]   0.557   +0.034 [-0.032,+0.133]
+     180m   0.081   0.548  [ 0.461, 0.677]   0.495   +0.071 [+0.003,+0.188]  (adds)
+     240m   0.116   0.537  [ 0.454, 0.661]   0.467   +0.087 [+0.013,+0.205]  (adds)
+
+==============================================================================
+CALIBRATION — observed rate by predicted decile
+==============================================================================
+
+### hypo risk   (n=29409, base rate 0.031)
+  decile        n    pred  observed   damper
+       0     3250   0.075     0.025    1.000
+       1     2695   0.244     0.014    1.000
+       2     2921   0.284     0.032    1.000
+       3     2943   0.319     0.022    0.986
+       4     2939   0.347     0.032    0.967
+       5     2933   0.371     0.017    0.949
+       6     2916   0.408     0.026    0.923
+       7     2987   0.451     0.023    0.892
+       8     2920   0.491     0.035    0.863
+       9     2905   0.594     0.083    0.790
+
+### meal likelihood   (n=29034, base rate 0.151)
+  decile        n    pred  observed
+       0     2955   0.209     0.019
+       1     2933   0.258     0.040
+       2     2925   0.286     0.056
+       3     2900   0.309     0.102
+       4     2849   0.340     0.104
+       5     2895   0.385     0.154
+       6     2884   0.434     0.165
+       7     2904   0.494     0.202
+       8     2912   0.565     0.282
+       9     2877   0.674     0.396
+
+wrote results_legacy.json

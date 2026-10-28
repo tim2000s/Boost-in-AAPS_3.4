@@ -58,9 +58,63 @@ enum class DoubleKey(
     ApsBoostInsulinReqPct("boost_insulin_req_pct", 50.0, 30.0, 100.0, defaultedBySM = true),
     ApsBoostScale("boost_scale_value", 1.0, 0.1, 3.0, defaultedBySM = true),
     ApsBoostPercentScale("boost_percent_scale_factor", 200.0, 50.0, 500.0, defaultedBySM = true),
-    ApsBoostDynIsfVelocity("boost_dynisf_velocity", 100.0, 0.0, 100.0, defaultedBySM = true),
+    // BG impact on ISF. Set to 0 and treated as 0 whenever TDD-based ISF is off, so profile ISF is used as is;
+    // set back to the default when TDD-based ISF is switched on.
+    ApsBoostDynIsfVelocity("boost_dynisf_velocity", 100.0, 0.0, 100.0, defaultedBySM = true, dependency = BooleanKey.ApsBoostUseTdd),
     ApsBoostSleepInHours("boost_sleep_in_hrs", 2.0, 0.0, 18.0, defaultedBySM = true),
     ApsBoostInactivityPct("boost_inactivity_pct", 130.0, 100.0, 200.0, defaultedBySM = true),
     ApsBoostActivityPct("boost_activity_pct", 80.0, 30.0, 150.0, defaultedBySM = true),
+    ApsBoostPostExerciseRecoveryHours("boost_post_exercise_recovery_hours", 2.0, 0.5, 8.0, defaultedBySM = true),
+    ApsBoostPostExerciseRecoveryScale("boost_post_exercise_recovery_scale", 0.5, 0.0, 1.0, defaultedBySM = true),
+    // Default is permissive (10 = the max, effectively off) on purpose: auto-config LOWERS it to the
+    // per-user value on first V6 activation; until then a conservative default would needlessly throttle.
+    ApsBoostCumulativeSmbCap60Min("boost_cumulative_smb_cap_60min", 10.0, 0.0, 10.0, defaultedBySM = true),
+
+    // Boost V5 — three (and only three) user-facing knobs per the minimal-settings tenet
+    // 2026-07-17: range max 1.3 → 1.6 (default UNCHANGED at 1.0). Widened the same way the cap
+    // ranges were (see the confirmed/committed comment below) so a high-headroom user who wants a
+    // firmer meal response can push the CONFIRMED catch-up shot harder — the knob scales the
+    // CONFIRMED multiplier only (MealActionMultiplier.kt), still bounded above by the Phase-3 gates.
+    // Auto-config still never auto-raises above 1.0 (BoostV5AutoConfig.kt); this only affects a
+    // user who deliberately raises the slider. Field driver: user H pinned at the old 1.3 ceiling.
+    ApsBoostV5Aggression("boost_v5_aggression", 1.0, 0.7, 1.6, defaultedBySM = true),
+    // Boost V5 active-dosing alpha (2026-06-11) — user-adjustable dose caps so the operator can
+    // tune V5's commit/holding doses live. 2026-06-26: defaults raised to match the developer's
+    // running build (confirmed 1.0→2.5, committed 0.25→0.5) and ranges widened (confirmed 5.0→7.5,
+    // committed 1.0→2.5) so higher-insulin-need users and big meals aren't clipped.
+    ApsBoostV5ConfirmedCapU("boost_v5_confirmed_cap_u", 2.5, 0.0, 7.5, defaultedBySM = true),
+    ApsBoostV5CommittedCapU("boost_v5_committed_cap_u", 0.5, 0.0, 2.5, defaultedBySM = true),
+
+    // 2026-08-27 confirm tranche. Fraction delivered at the confirming cycle; the remainder is held
+    // for ten minutes and released only if the release rule clears the threshold. A fraction of 1.0
+    // makes the whole thing inert. The fraction is a user setting and auto-config does not touch it.
+    // Threshold: population median 0.48, per-participant best 0.30 to 0.65, uninferable from anything
+    // cheap (r = -0.32 against a participant's own share of large excursions). Auto-config derives it
+    // from the person's own confirm episodes over 45 days (TrancheThresholdDeriver) on onboarding and
+    // on every weekly re-derivation. Raising it withholds more, a tightening, and applies on its own.
+    // Auto-config does not lower it while TRANCHE_ALLOW_LOWERING is false, because the derivation is
+    // biased down once the tranche runs (BoostV5AutoConfigApply.resolveTrancheThreshold). A value set by hand is kept.
+    ApsBoostV5TrancheFraction("boost_v5_tranche_fraction", 0.5, 0.3, 1.0, defaultedBySM = true),
+    ApsBoostV5TrancheThreshold("boost_v5_tranche_threshold", 0.48, 0.20, 0.80, defaultedBySM = true),
+    // 2026-07-20 V1-acceleration early primer: the per-user fizzle-safe base (additive allowance,
+    // net-extra insulin over a confirmed meal). 0.0 = primer OFF (default until auto-config/user
+    // enables). Auto-config-managed + insulin-adding (strict-TBR raise-guarded). See
+    // backtesting/scripts/2026-07-v1-acceleration/. U200 users get a scaled-down cap.
+    // 2026-07-30: max raised 1.0 -> 2.5 to match ApsBoostV5CommittedCapU. Since the sizing rework this
+    // value is the primer's hard CEILING (no multiplier above it), and the primer is an advance on the
+    // CONFIRMED commit-shot — so one commit-shot is the natural bound, and 1.0 was clipping high-need
+    // users: a well-controlled user with committedCap 2.5 derives 2.5 x 0.75 = 1.875. Default stays 0.0
+    // (primer off until auto-config or the user sets it).
+    ApsBoostV5PrimerCapU("boost_v5_primer_cap_u", 0.0, 0.0, 2.5, defaultedBySM = true),
+    ApsBoostV5HypoCaution("boost_v5_hypo_caution", 1.0, 1.0, 2.0, defaultedBySM = true),
+    ApsBoostV5Sensitivity("boost_v5_sensitivity", 1.0, 0.8, 1.2, defaultedBySM = true),
+
+    // Boost V6 — anticipatory pre-meal low target (2026-06-15).
+    // PreMealTargetMgdl: the low target applied during the learned pre-meal window (default 72
+    // mg/dL = 4.0 mmol — an "eating-soon" target that raises insulinReq before carbs land).
+    // PreMealLeadMin: window OPENS this many minutes before the learned meal mode; it CLOSES at
+    // PRE_MEAL_LEAD_MIN_FLOOR (45 min, a MealTimeLearner constant) before the meal.
+    ApsBoostV6PreMealTargetMgdl("boost_v6_pre_meal_target_mgdl", 72.0, 65.0, 90.0, defaultedBySM = true),
+    ApsBoostV6PreMealLeadMin("boost_v6_pre_meal_lead_min", 60.0, 30.0, 90.0, defaultedBySM = true),
 
 }

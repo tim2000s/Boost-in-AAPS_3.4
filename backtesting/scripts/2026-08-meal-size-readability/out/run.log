@@ -1,0 +1,265 @@
+=== 2026-08-25 10:04:45 start; 14 cores, 7 workers, need 7 free ===
+10:04:45 load 2.58, ~11.4 cores free, pass 1/3
+10:05:45 load 2.40, ~11.6 cores free, pass 2/3
+10:06:45 load 2.93, ~11.1 cores free, pass 3/3
+=== 10:06:45 running ===
+--- python3 /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/extract_meals.py --workers 7 --out /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out ---
+[Loop] 919 subjects, 7 workers
+[Loop] 100/919 subjects, 56,015 meals, 4s
+[Loop] 200/919 subjects, 114,528 meals, 6s
+[Loop] 300/919 subjects, 171,012 meals, 9s
+[Loop] 400/919 subjects, 223,184 meals, 11s
+[Loop] 500/919 subjects, 271,899 meals, 14s
+[Loop] 600/919 subjects, 319,898 meals, 16s
+[Loop] 700/919 subjects, 373,215 meals, 19s
+[Loop] 800/919 subjects, 422,948 meals, 22s
+[Loop] 900/919 subjects, 481,782 meals, 25s
+[Loop] wrote 492,440 meals from 839 subjects -> /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out/meals_Loop.parquet
+bolus_stratum
+at_meal      419242
+pre           24542
+none          21527
+late_gt15     16898
+late_5_15     10231
+[ReplaceBG] 196 subjects, 7 workers
+[ReplaceBG] 100/196 subjects, 36,860 meals, 28s
+[ReplaceBG] wrote 71,761 meals from 189 subjects -> /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out/meals_ReplaceBG.parquet
+bolus_stratum
+at_meal      71737
+none            21
+pre              2
+late_gt15        1
+done in 30s
+--- python3 /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/size_readability.py --study Loop --workers 7 --data /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out ---
+492,440 meals, 839 subjects, Loop, 7 workers
+arm1    at_meal h 10  n= 294,205  AUC 0.597 [0.589, 0.604]  raw 0.488  d +0.109  (106s)
+arm1        all h 10  n= 346,609  AUC 0.594 [0.586, 0.601]  raw 0.490  d +0.104  (123s)
+arm1        all h 15  n= 346,609  AUC 0.595 [0.587, 0.603]  raw 0.494  d +0.101  (127s)
+arm1        all h 20  n= 346,609  AUC 0.597 [0.590, 0.604]  raw 0.498  d +0.099  (128s)
+arm1        all h 30  n= 346,609  AUC 0.605 [0.598, 0.612]  raw 0.508  d +0.097  (130s)
+arm1        all h 45  n= 346,609  AUC 0.622 [0.615, 0.629]  raw 0.530  d +0.092  (133s)
+arm1        all h 60  n= 346,609  AUC 0.639 [0.631, 0.648]  raw 0.547  d +0.092  (135s)
+arm1       none h 10  n=  16,003  AUC 0.605 [0.585, 0.625]  raw 0.525  d +0.080  (138s)
+arm1       none h 15  n=  16,003  AUC 0.605 [0.584, 0.625]  raw 0.530  d +0.075  (140s)
+arm1       none h 20  n=  16,003  AUC 0.607 [0.586, 0.627]  raw 0.533  d +0.073  (143s)
+arm1       none h 30  n=  16,003  AUC 0.616 [0.595, 0.638]  raw 0.545  d +0.072  (145s)
+arm1       none h 45  n=  16,003  AUC 0.639 [0.617, 0.662]  raw 0.566  d +0.073  (148s)
+arm1       none h 60  n=  16,003  AUC 0.662 [0.638, 0.686]  raw 0.589  d +0.072  (150s)
+arm1        pre h 10  n=  16,709  AUC 0.557 [0.534, 0.580]  raw 0.487  d +0.071  (153s)
+arm1        pre h 15  n=  16,709  AUC 0.562 [0.540, 0.585]  raw 0.480  d +0.083  (156s)
+arm1        pre h 20  n=  16,709  AUC 0.566 [0.544, 0.588]  raw 0.476  d +0.091  (159s)
+arm1        pre h 30  n=  16,709  AUC 0.574 [0.551, 0.596]  raw 0.478  d +0.096  (161s)
+arm1        pre h 45  n=  16,709  AUC 0.594 [0.571, 0.617]  raw 0.498  d +0.096  (164s)
+arm1        pre h 60  n=  16,709  AUC 0.614 [0.590, 0.638]  raw 0.520  d +0.094  (167s)
+arm1  late_gt15 h 10  n=  12,331  AUC 0.571 [0.557, 0.585]  raw 0.514  d +0.057  (168s)
+arm1  late_gt15 h 15  n=  12,331  AUC 0.569 [0.555, 0.583]  raw 0.514  d +0.055  (171s)
+arm1  late_gt15 h 20  n=  12,331  AUC 0.573 [0.559, 0.587]  raw 0.517  d +0.056  (172s)
+arm1  late_gt15 h 30  n=  12,331  AUC 0.585 [0.572, 0.598]  raw 0.530  d +0.055  (175s)
+arm1  late_gt15 h 45  n=  12,331  AUC 0.625 [0.610, 0.640]  raw 0.562  d +0.062  (176s)
+arm1  late_gt15 h 60  n=  12,331  AUC 0.657 [0.640, 0.673]  raw 0.596  d +0.061  (179s)
+arm1    at_meal h 15  n= 294,205  AUC 0.598 [0.591, 0.605]  raw 0.493  d +0.106  (209s)
+arm1    at_meal h 20  n= 294,205  AUC 0.600 [0.593, 0.607]  raw 0.497  d +0.103  (228s)
+arm1    at_meal h 30  n= 294,205  AUC 0.608 [0.601, 0.614]  raw 0.509  d +0.099  (234s)
+arm1    at_meal h 45  n= 294,205  AUC 0.624 [0.616, 0.630]  raw 0.531  d +0.092  (236s)
+arm1    at_meal h 60  n= 294,205  AUC 0.641 [0.632, 0.648]  raw 0.548  d +0.092  (239s)
+arm2        all h 10  n= 346,569  AUC 0.711 [0.693, 0.729]  raw 0.490  d +0.220  (284s)
+arm2        all h 15  n= 346,569  AUC 0.708 [0.690, 0.726]  raw 0.494  d +0.214  (291s)
+arm2        all h 20  n= 346,569  AUC 0.710 [0.692, 0.728]  raw 0.498  d +0.212  (322s)
+arm2    at_meal h 10  n= 294,189  AUC 0.713 [0.695, 0.730]  raw 0.488  d +0.224  (332s)
+arm2        all h 30  n= 346,569  AUC 0.711 [0.693, 0.729]  raw 0.508  d +0.203  (344s)
+arm2        all h 45  n= 346,569  AUC 0.716 [0.699, 0.734]  raw 0.530  d +0.186  (355s)
+arm2        all h 60  n= 346,569  AUC 0.724 [0.707, 0.741]  raw 0.547  d +0.177  (357s)
+arm2       none h 10  n=  15,979  AUC 0.728 [0.686, 0.769]  raw 0.526  d +0.203  (359s)
+arm2       none h 15  n=  15,979  AUC 0.723 [0.681, 0.764]  raw 0.530  d +0.193  (362s)
+arm2       none h 20  n=  15,979  AUC 0.723 [0.680, 0.762]  raw 0.534  d +0.189  (364s)
+arm2       none h 30  n=  15,979  AUC 0.723 [0.680, 0.764]  raw 0.545  d +0.178  (367s)
+arm2       none h 45  n=  15,979  AUC 0.734 [0.693, 0.773]  raw 0.567  d +0.167  (369s)
+arm2       none h 60  n=  15,979  AUC 0.740 [0.700, 0.778]  raw 0.589  d +0.150  (372s)
+arm2        pre h 10  n=  16,709  AUC 0.724 [0.677, 0.770]  raw 0.487  d +0.237  (374s)
+arm2        pre h 15  n=  16,709  AUC 0.729 [0.684, 0.775]  raw 0.480  d +0.250  (377s)
+arm2    at_meal h 15  n= 294,189  AUC 0.713 [0.695, 0.731]  raw 0.493  d +0.221  (379s)
+arm2        pre h 20  n=  16,709  AUC 0.727 [0.680, 0.772]  raw 0.476  d +0.251  (379s)
+arm2        pre h 30  n=  16,709  AUC 0.728 [0.681, 0.773]  raw 0.478  d +0.250  (382s)
+arm2        pre h 45  n=  16,709  AUC 0.733 [0.687, 0.776]  raw 0.498  d +0.234  (384s)
+arm2        pre h 60  n=  16,709  AUC 0.740 [0.695, 0.782]  raw 0.520  d +0.219  (384s)
+arm2  late_gt15 h 10  n=  12,331  AUC 0.714 [0.679, 0.749]  raw 0.514  d +0.200  (386s)
+arm2  late_gt15 h 15  n=  12,331  AUC 0.710 [0.674, 0.745]  raw 0.514  d +0.196  (388s)
+arm2  late_gt15 h 20  n=  12,331  AUC 0.707 [0.670, 0.744]  raw 0.517  d +0.190  (388s)
+arm2    at_meal h 20  n= 294,189  AUC 0.714 [0.696, 0.730]  raw 0.497  d +0.217  (388s)
+arm2  late_gt15 h 30  n=  12,331  AUC 0.712 [0.677, 0.747]  raw 0.530  d +0.181  (390s)
+arm2  late_gt15 h 45  n=  12,331  AUC 0.727 [0.696, 0.758]  raw 0.562  d +0.165  (392s)
+arm2  late_gt15 h 60  n=  12,331  AUC 0.737 [0.707, 0.767]  raw 0.596  d +0.141  (392s)
+arm2    at_meal h 30  n= 294,189  AUC 0.715 [0.697, 0.732]  raw 0.509  d +0.206  (421s)
+arm2    at_meal h 45  n= 294,189  AUC 0.718 [0.701, 0.736]  raw 0.531  d +0.187  (433s)
+arm2    at_meal h 60  n= 294,189  AUC 0.723 [0.706, 0.740]  raw 0.548  d +0.174  (448s)
+arm3        all h 10  n= 346,569  AUC 0.833 [0.822, 0.843]  raw 0.490  d +0.342  (499s)
+arm3        all h 15  n= 346,569  AUC 0.833 [0.822, 0.843]  raw 0.494  d +0.339  (501s)
+arm3        all h 20  n= 346,569  AUC 0.833 [0.822, 0.843]  raw 0.498  d +0.335  (506s)
+arm3        all h 30  n= 346,569  AUC 0.833 [0.822, 0.843]  raw 0.508  d +0.325  (510s)
+arm3        all h 45  n= 346,569  AUC 0.835 [0.824, 0.845]  raw 0.530  d +0.305  (540s)
+arm3    at_meal h 10  n= 294,189  AUC 0.832 [0.821, 0.842]  raw 0.488  d +0.344  (542s)
+arm3       none h 10  n=  15,979  AUC 0.840 [0.813, 0.863]  raw 0.526  d +0.314  (546s)
+arm3       none h 15  n=  15,979  AUC 0.840 [0.814, 0.862]  raw 0.530  d +0.310  (551s)
+arm3        all h 60  n= 346,569  AUC 0.838 [0.827, 0.848]  raw 0.547  d +0.291  (554s)
+arm3       none h 20  n=  15,979  AUC 0.840 [0.814, 0.862]  raw 0.534  d +0.307  (556s)
+arm3       none h 30  n=  15,979  AUC 0.839 [0.812, 0.862]  raw 0.545  d +0.294  (559s)
+arm3       none h 45  n=  15,979  AUC 0.844 [0.818, 0.865]  raw 0.567  d +0.277  (561s)
+arm3       none h 60  n=  15,979  AUC 0.848 [0.822, 0.870]  raw 0.589  d +0.258  (564s)
+arm3        pre h 10  n=  16,709  AUC 0.840 [0.812, 0.866]  raw 0.487  d +0.354  (566s)
+arm3        pre h 15  n=  16,709  AUC 0.842 [0.815, 0.867]  raw 0.480  d +0.362  (569s)
+arm3        pre h 20  n=  16,709  AUC 0.841 [0.813, 0.866]  raw 0.476  d +0.365  (571s)
+arm3        pre h 30  n=  16,709  AUC 0.843 [0.815, 0.868]  raw 0.478  d +0.366  (575s)
+arm3        pre h 45  n=  16,709  AUC 0.844 [0.816, 0.868]  raw 0.498  d +0.345  (576s)
+arm3        pre h 60  n=  16,709  AUC 0.845 [0.817, 0.869]  raw 0.520  d +0.324  (580s)
+arm3  late_gt15 h 10  n=  12,331  AUC 0.838 [0.818, 0.856]  raw 0.514  d +0.324  (580s)
+arm3  late_gt15 h 15  n=  12,331  AUC 0.840 [0.820, 0.857]  raw 0.514  d +0.325  (584s)
+arm3  late_gt15 h 20  n=  12,331  AUC 0.840 [0.820, 0.858]  raw 0.517  d +0.323  (584s)
+arm3  late_gt15 h 30  n=  12,331  AUC 0.841 [0.822, 0.859]  raw 0.530  d +0.311  (588s)
+arm3  late_gt15 h 45  n=  12,331  AUC 0.845 [0.826, 0.863]  raw 0.562  d +0.283  (588s)
+arm3  late_gt15 h 60  n=  12,331  AUC 0.853 [0.835, 0.869]  raw 0.596  d +0.257  (592s)
+arm3    at_meal h 15  n= 294,189  AUC 0.832 [0.821, 0.843]  raw 0.493  d +0.340  (594s)
+arm3    at_meal h 20  n= 294,189  AUC 0.832 [0.822, 0.843]  raw 0.497  d +0.335  (598s)
+arm3    at_meal h 30  n= 294,189  AUC 0.833 [0.822, 0.843]  raw 0.509  d +0.324  (604s)
+arm3    at_meal h 45  n= 294,189  AUC 0.835 [0.824, 0.845]  raw 0.531  d +0.304  (611s)
+arm3    at_meal h 60  n= 294,189  AUC 0.838 [0.827, 0.847]  raw 0.548  d +0.289  (641s)
+arm1 quantity h 20  MAE 16.0 g  median 15.7  subj-median 13.0  r +0.145
+arm1 quantity h 10  MAE 16.0 g  median 15.7  subj-median 13.0  r +0.140
+arm1 quantity h 30  MAE 15.9 g  median 15.7  subj-median 13.0  r +0.158
+arm1 quantity h 15  MAE 16.0 g  median 15.7  subj-median 13.0  r +0.142
+arm1 quantity h 60  MAE 15.7 g  median 15.7  subj-median 13.0  r +0.204
+arm1 quantity h 45  MAE 15.8 g  median 15.7  subj-median 13.0  r +0.183
+arm2 quantity h 10  MAE 15.1 g  median 15.7  subj-median 13.0  r +0.337
+arm2 quantity h 15  MAE 15.1 g  median 15.7  subj-median 13.0  r +0.334
+arm2 quantity h 30  MAE 15.1 g  median 15.7  subj-median 13.0  r +0.340
+arm2 quantity h 20  MAE 15.1 g  median 15.7  subj-median 13.0  r +0.335
+arm2 quantity h 45  MAE 15.0 g  median 15.7  subj-median 13.0  r +0.351
+arm2 quantity h 60  MAE 14.9 g  median 15.7  subj-median 13.0  r +0.357
+arm3 quantity h 10  MAE 13.1 g  median 15.7  subj-median 13.0  r +0.547
+arm3 quantity h 15  MAE 13.1 g  median 15.7  subj-median 13.0  r +0.548
+arm3 quantity h 20  MAE 13.1 g  median 15.7  subj-median 13.0  r +0.548
+arm3 quantity h 30  MAE 13.1 g  median 15.7  subj-median 13.0  r +0.549
+arm3 quantity h 45  MAE 13.1 g  median 15.7  subj-median 13.0  r +0.553
+arm3 quantity h 60  MAE 13.0 g  median 15.7  subj-median 13.0  r +0.558
+wrote /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out/results_Loop.json in 672s
+--- python3 /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/slope_heterogeneity.py --study Loop --data /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out ---
+492,440 meals, 839 subjects
+       all h 10  k= 829  slope -0.0070 [-0.0096, -0.0043]  tau 0.0283  I2 69%  true-neg 60%  sig-neg 16%
+       all h 15  k= 829  slope -0.0082 [-0.0123, -0.0042]  tau 0.0453  I2 72%  true-neg 57%  sig-neg 16%
+       all h 20  k= 829  slope -0.0073 [-0.0131, -0.0015]  tau 0.0673  I2 76%  true-neg 54%  sig-neg 16%
+       all h 30  k= 829  slope +0.0084 [-0.0011, +0.0180]  tau 0.1148  I2 82%  true-neg 47%  sig-neg 15%
+       all h 45  k= 829  slope +0.0714 [+0.0577, +0.0851]  tau 0.1675  I2 83%  true-neg 33%  sig-neg 11%
+       all h 60  k= 829  slope +0.1512 [+0.1345, +0.1680]  tau 0.2047  I2 83%  true-neg 23%  sig-neg 8%
+   at_meal h 10  k= 825  slope -0.0067 [-0.0094, -0.0040]  tau 0.0285  I2 65%  true-neg 59%  sig-neg 14%
+   at_meal h 15  k= 825  slope -0.0067 [-0.0109, -0.0026]  tau 0.0451  I2 69%  true-neg 56%  sig-neg 15%
+   at_meal h 20  k= 825  slope -0.0042 [-0.0102, +0.0017]  tau 0.0666  I2 73%  true-neg 53%  sig-neg 13%
+   at_meal h 30  k= 825  slope +0.0143 [+0.0046, +0.0241]  tau 0.1140  I2 79%  true-neg 45%  sig-neg 13%
+   at_meal h 45  k= 825  slope +0.0796 [+0.0656, +0.0937]  tau 0.1673  I2 80%  true-neg 32%  sig-neg 10%
+   at_meal h 60  k= 825  slope +0.1618 [+0.1448, +0.1789]  tau 0.2031  I2 80%  true-neg 21%  sig-neg 6%
+      none h 10  k= 203  slope +0.0209 [+0.0113, +0.0304]  tau 0.0273  I2 23%  true-neg 22%  sig-neg 2%
+      none h 15  k= 203  slope +0.0342 [+0.0200, +0.0484]  tau 0.0426  I2 26%  true-neg 21%  sig-neg 2%
+      none h 20  k= 203  slope +0.0505 [+0.0306, +0.0704]  tau 0.0663  I2 33%  true-neg 22%  sig-neg 1%
+      none h 30  k= 203  slope +0.0904 [+0.0602, +0.1206]  tau 0.1086  I2 36%  true-neg 20%  sig-neg 1%
+      none h 45  k= 203  slope +0.1856 [+0.1413, +0.2299]  tau 0.1756  I2 45%  true-neg 15%  sig-neg 1%
+      none h 60  k= 203  slope +0.3089 [+0.2503, +0.3676]  tau 0.2538  I2 63%  true-neg 11%  sig-neg 2%
+       pre h 10  k= 180  slope -0.0083 [-0.0165, -0.0001]  tau 0.0197  I2 16%  true-neg 66%  sig-neg 4%
+       pre h 15  k= 180  slope -0.0171 [-0.0297, -0.0044]  tau 0.0340  I2 21%  true-neg 69%  sig-neg 4%
+       pre h 20  k= 180  slope -0.0245 [-0.0427, -0.0063]  tau 0.0572  I2 30%  true-neg 67%  sig-neg 6%
+       pre h 30  k= 180  slope -0.0231 [-0.0503, +0.0041]  tau 0.0928  I2 36%  true-neg 60%  sig-neg 6%
+       pre h 45  k= 180  slope +0.0275 [-0.0098, +0.0648]  tau 0.1359  I2 42%  true-neg 42%  sig-neg 5%
+       pre h 60  k= 180  slope +0.0905 [+0.0413, +0.1397]  tau 0.1999  I2 52%  true-neg 33%  sig-neg 5%
+ late_gt15 h 10  k= 173  slope +0.0059 [-0.0044, +0.0162]  tau 0.0345  I2 32%  true-neg 43%  sig-neg 2%
+ late_gt15 h 15  k= 173  slope +0.0134 [-0.0024, +0.0293]  tau 0.0559  I2 35%  true-neg 40%  sig-neg 4%
+ late_gt15 h 20  k= 173  slope +0.0234 [+0.0020, +0.0448]  tau 0.0769  I2 36%  true-neg 38%  sig-neg 3%
+ late_gt15 h 30  k= 173  slope +0.0584 [+0.0260, +0.0907]  tau 0.1194  I2 39%  true-neg 31%  sig-neg 3%
+ late_gt15 h 45  k= 173  slope +0.1760 [+0.1273, +0.2247]  tau 0.1944  I2 46%  true-neg 18%  sig-neg 1%
+ late_gt15 h 60  k= 173  slope +0.3355 [+0.2717, +0.3992]  tau 0.2701  I2 51%  true-neg 11%  sig-neg 1%
+
+within-participant, unbolused minus bolused slope
+h 10  n= 561  diff +0.0175 [+0.0038, +0.0317]  unbolused +0.0118 vs bolused -0.0056  share+ 57%
+h 15  n= 561  diff +0.0246 [+0.0035, +0.0458]  unbolused +0.0187 vs bolused -0.0059  share+ 57%
+h 20  n= 561  diff +0.0322 [+0.0045, +0.0595]  unbolused +0.0290 vs bolused -0.0032  share+ 55%
+h 30  n= 561  diff +0.0577 [+0.0193, +0.0956]  unbolused +0.0735 vs bolused +0.0158  share+ 57%
+h 45  n= 561  diff +0.1290 [+0.0771, +0.1781]  unbolused +0.2133 vs bolused +0.0844  share+ 60%
+h 60  n= 561  diff +0.1946 [+0.1324, +0.2554]  unbolused +0.3687 vs bolused +0.1741  share+ 62%
+wrote /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out/slopes_Loop.json
+--- python3 /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/size_readability.py --study ReplaceBG --workers 7 --data /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out ---
+71,761 meals, 189 subjects, ReplaceBG, 7 workers
+arm1    at_meal h 10  n=  47,922  AUC 0.629 [0.610, 0.647]  raw 0.460  d +0.169  (14s)
+arm1        all h 10  n=  47,939  AUC 0.634 [0.615, 0.653]  raw 0.459  d +0.174  (14s)
+arm1        all h 15  n=  47,939  AUC 0.635 [0.616, 0.654]  raw 0.458  d +0.177  (14s)
+arm1        all h 20  n=  47,939  AUC 0.635 [0.616, 0.655]  raw 0.456  d +0.179  (14s)
+arm1        all h 30  n=  47,939  AUC 0.639 [0.621, 0.657]  raw 0.461  d +0.178  (14s)
+arm1        all h 45  n=  47,939  AUC 0.648 [0.630, 0.665]  raw 0.481  d +0.167  (15s)
+arm1        all h 60  n=  47,939  AUC 0.653 [0.636, 0.669]  raw 0.496  d +0.157  (15s)
+arm1    at_meal h 15  n=  47,922  AUC 0.631 [0.612, 0.649]  raw 0.458  d +0.173  (27s)
+arm2        all h 10  n=  47,939  AUC 0.659 [0.618, 0.698]  raw 0.459  d +0.199  (27s)
+arm2        all h 15  n=  47,939  AUC 0.654 [0.612, 0.695]  raw 0.458  d +0.196  (27s)
+arm1    at_meal h 20  n=  47,922  AUC 0.631 [0.612, 0.650]  raw 0.456  d +0.175  (27s)
+arm1    at_meal h 30  n=  47,922  AUC 0.635 [0.617, 0.652]  raw 0.461  d +0.174  (27s)
+arm1    at_meal h 45  n=  47,922  AUC 0.642 [0.624, 0.659]  raw 0.481  d +0.162  (28s)
+arm1    at_meal h 60  n=  47,922  AUC 0.648 [0.630, 0.664]  raw 0.496  d +0.152  (28s)
+arm2        all h 20  n=  47,939  AUC 0.655 [0.613, 0.696]  raw 0.456  d +0.199  (39s)
+arm2    at_meal h 10  n=  47,922  AUC 0.647 [0.608, 0.684]  raw 0.460  d +0.188  (40s)
+arm2        all h 30  n=  47,939  AUC 0.663 [0.620, 0.703]  raw 0.461  d +0.201  (40s)
+arm2        all h 45  n=  47,939  AUC 0.664 [0.623, 0.703]  raw 0.481  d +0.183  (40s)
+arm2    at_meal h 15  n=  47,922  AUC 0.646 [0.607, 0.682]  raw 0.458  d +0.188  (40s)
+arm2        all h 60  n=  47,939  AUC 0.664 [0.624, 0.703]  raw 0.496  d +0.168  (41s)
+arm2    at_meal h 20  n=  47,922  AUC 0.643 [0.606, 0.680]  raw 0.456  d +0.187  (41s)
+arm2    at_meal h 30  n=  47,922  AUC 0.645 [0.605, 0.683]  raw 0.461  d +0.184  (52s)
+arm3        all h 10  n=  47,939  AUC 0.835 [0.813, 0.855]  raw 0.459  d +0.376  (53s)
+arm2    at_meal h 45  n=  47,922  AUC 0.653 [0.615, 0.689]  raw 0.481  d +0.172  (53s)
+arm3        all h 15  n=  47,939  AUC 0.836 [0.814, 0.856]  raw 0.458  d +0.379  (53s)
+arm2    at_meal h 60  n=  47,922  AUC 0.655 [0.617, 0.690]  raw 0.496  d +0.159  (53s)
+arm3        all h 20  n=  47,939  AUC 0.837 [0.815, 0.857]  raw 0.456  d +0.381  (54s)
+arm3        all h 30  n=  47,939  AUC 0.836 [0.814, 0.856]  raw 0.461  d +0.375  (54s)
+arm3    at_meal h 10  n=  47,922  AUC 0.834 [0.811, 0.854]  raw 0.460  d +0.374  (65s)
+arm3        all h 45  n=  47,939  AUC 0.838 [0.816, 0.858]  raw 0.481  d +0.357  (66s)
+arm3    at_meal h 15  n=  47,922  AUC 0.835 [0.812, 0.855]  raw 0.458  d +0.377  (66s)
+arm3        all h 60  n=  47,939  AUC 0.839 [0.817, 0.858]  raw 0.496  d +0.343  (66s)
+arm3    at_meal h 20  n=  47,922  AUC 0.833 [0.810, 0.853]  raw 0.456  d +0.377  (66s)
+arm3    at_meal h 30  n=  47,922  AUC 0.835 [0.813, 0.855]  raw 0.461  d +0.374  (67s)
+arm3    at_meal h 45  n=  47,922  AUC 0.836 [0.813, 0.855]  raw 0.481  d +0.355  (67s)
+arm3    at_meal h 60  n=  47,922  AUC 0.837 [0.815, 0.857]  raw 0.496  d +0.341  (79s)
+arm1 quantity h 20  MAE 18.1 g  median 18.0  subj-median 14.1  r +0.175
+arm1 quantity h 30  MAE 18.1 g  median 18.0  subj-median 14.1  r +0.179
+arm1 quantity h 10  MAE 18.1 g  median 18.0  subj-median 14.1  r +0.170
+arm1 quantity h 60  MAE 18.0 g  median 18.0  subj-median 14.1  r +0.195
+arm1 quantity h 45  MAE 18.1 g  median 18.0  subj-median 14.1  r +0.189
+arm1 quantity h 15  MAE 18.1 g  median 18.0  subj-median 14.1  r +0.173
+arm2 quantity h 10  MAE 19.5 g  median 18.0  subj-median 14.1  r +0.163
+arm2 quantity h 15  MAE 19.4 g  median 18.0  subj-median 14.1  r +0.166
+arm2 quantity h 30  MAE 19.4 g  median 18.0  subj-median 14.1  r +0.166
+arm2 quantity h 20  MAE 19.5 g  median 18.0  subj-median 14.1  r +0.157
+arm2 quantity h 45  MAE 19.4 g  median 18.0  subj-median 14.1  r +0.172
+arm2 quantity h 60  MAE 19.4 g  median 18.0  subj-median 14.1  r +0.168
+arm3 quantity h 10  MAE 14.3 g  median 18.0  subj-median 14.1  r +0.620
+arm3 quantity h 15  MAE 14.3 g  median 18.0  subj-median 14.1  r +0.622
+arm3 quantity h 20  MAE 14.3 g  median 18.0  subj-median 14.1  r +0.620
+arm3 quantity h 30  MAE 14.3 g  median 18.0  subj-median 14.1  r +0.620
+arm3 quantity h 45  MAE 14.2 g  median 18.0  subj-median 14.1  r +0.625
+arm3 quantity h 60  MAE 14.2 g  median 18.0  subj-median 14.1  r +0.624
+wrote /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out/results_ReplaceBG.json in 84s
+--- python3 /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/slope_heterogeneity.py --study ReplaceBG --data /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out ---
+71,761 meals, 189 subjects
+       all h 10  k= 185  slope -0.0133 [-0.0196, -0.0071]  tau 0.0297  I2 58%  true-neg 67%  sig-neg 16%
+       all h 15  k= 185  slope -0.0191 [-0.0285, -0.0097]  tau 0.0474  I2 65%  true-neg 66%  sig-neg 17%
+       all h 20  k= 185  slope -0.0233 [-0.0362, -0.0104]  tau 0.0670  I2 69%  true-neg 64%  sig-neg 19%
+       all h 30  k= 185  slope -0.0180 [-0.0380, +0.0019]  tau 0.1082  I2 74%  true-neg 57%  sig-neg 17%
+       all h 45  k= 185  slope +0.0308 [+0.0017, +0.0599]  tau 0.1611  I2 76%  true-neg 42%  sig-neg 10%
+       all h 60  k= 185  slope +0.0861 [+0.0465, +0.1258]  tau 0.2273  I2 81%  true-neg 35%  sig-neg 11%
+   at_meal h 10  k= 185  slope -0.0133 [-0.0196, -0.0070]  tau 0.0297  I2 58%  true-neg 67%  sig-neg 16%
+   at_meal h 15  k= 185  slope -0.0191 [-0.0285, -0.0096]  tau 0.0474  I2 65%  true-neg 66%  sig-neg 17%
+   at_meal h 20  k= 185  slope -0.0232 [-0.0361, -0.0103]  tau 0.0671  I2 69%  true-neg 64%  sig-neg 19%
+   at_meal h 30  k= 185  slope -0.0179 [-0.0379, +0.0021]  tau 0.1084  I2 74%  true-neg 57%  sig-neg 17%
+   at_meal h 45  k= 185  slope +0.0311 [+0.0019, +0.0602]  tau 0.1613  I2 77%  true-neg 42%  sig-neg 10%
+   at_meal h 60  k= 185  slope +0.0864 [+0.0467, +0.1261]  tau 0.2275  I2 81%  true-neg 35%  sig-neg 11%
+
+within-participant, unbolused minus bolused slope
+h 10  n=   1  diff -0.1910 [-0.1910, -0.1910]  unbolused -0.1677 vs bolused +0.0233  share+ 0%
+h 15  n=   1  diff -0.2285 [-0.2285, -0.2285]  unbolused -0.1748 vs bolused +0.0537  share+ 0%
+h 20  n=   1  diff -0.3842 [-0.3842, -0.3842]  unbolused -0.3045 vs bolused +0.0798  share+ 0%
+h 30  n=   1  diff -0.9299 [-0.9299, -0.9299]  unbolused -0.7675 vs bolused +0.1625  share+ 0%
+h 45  n=   1  diff -1.0976 [-1.0976, -1.0976]  unbolused -0.7419 vs bolused +0.3558  share+ 0%
+h 60  n=   1  diff -1.0861 [-1.0861, -1.0861]  unbolused -0.5381 vs bolused +0.5481  share+ 0%
+wrote /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-08-meal-size-readability/out/slopes_ReplaceBG.json
+=== 10:20:01 done ===

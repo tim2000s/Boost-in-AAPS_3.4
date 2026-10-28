@@ -7,9 +7,10 @@ import android.provider.Telephony
 import androidx.work.OneTimeWorkRequest
 import app.aaps.core.interfaces.receivers.Intents
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
+import app.aaps.core.utils.receivers.DataInbox
 import app.aaps.core.utils.receivers.DataWorkerStorage
-import app.aaps.plugins.main.general.smsCommunicator.SmsCommunicatorPlugin
-import app.aaps.plugins.source.DexcomPlugin
+import app.aaps.plugins.main.general.smsCommunicator.SmsInbox
+import app.aaps.plugins.source.DexcomInbox
 import app.aaps.plugins.source.GlimpPlugin
 import app.aaps.plugins.source.MM640gPlugin
 import app.aaps.plugins.source.PatchedSiAppPlugin
@@ -17,16 +18,18 @@ import app.aaps.plugins.source.PatchedSinoAppPlugin
 import app.aaps.plugins.source.PoctechPlugin
 import app.aaps.plugins.source.SyaiPlugin
 import app.aaps.plugins.source.TomatoPlugin
-import app.aaps.plugins.source.XdripSourcePlugin
+import app.aaps.plugins.source.XdripInbox
 import app.aaps.shared.tests.TestBase
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import kotlin.reflect.KClass
 
@@ -37,6 +40,7 @@ class DataReceiverTest : TestBase() {
 
     // Mocks for dependencies
     @Mock private lateinit var dataWorkerStorage: DataWorkerStorage
+    @Mock private lateinit var dataInbox: DataInbox
     @Mock private lateinit var fabricPrivacy: FabricPrivacy
     @Mock private lateinit var context: Context
     @Mock private lateinit var bundle: Bundle
@@ -50,6 +54,7 @@ class DataReceiverTest : TestBase() {
         dataReceiver = DataReceiver().also {
             it.aapsLogger = aapsLogger
             it.dataWorkerStorage = dataWorkerStorage
+            it.dataInbox = dataInbox
             it.fabricPrivacy = fabricPrivacy
         }
     }
@@ -68,16 +73,14 @@ class DataReceiverTest : TestBase() {
     }
 
     @Test
-    fun `processIntent enqueues XdripSourceWorker for ACTION_NEW_BG_ESTIMATE`() {
-        // Arrange
+    fun `processIntent puts xDrip into its inbox, not the shared chain`() {
         val intent = createIntent(Intents.ACTION_NEW_BG_ESTIMATE)
-        whenever(dataWorkerStorage.storeInputData(any(), any())).thenReturn(androidx.work.Data.EMPTY)
 
-        // Act
         dataReceiver.processIntent(context, intent)
 
-        // Assert
-        assertWorkerEnqueued(XdripSourcePlugin.XdripSourceWorker::class)
+        verify(dataInbox).putAndEnqueue(eq(XdripInbox), eq(bundle))
+        verify(dataWorkerStorage, never()).enqueue(any())
+        verify(dataWorkerStorage, never()).storeInputData(any(), any())
     }
 
     @Test
@@ -177,29 +180,25 @@ class DataReceiverTest : TestBase() {
     }
 
     @Test
-    fun `processIntent enqueues SmsCommunicatorWorker for SMS_RECEIVED_ACTION`() {
-        // Arrange
+    fun `processIntent puts an SMS into its inbox, not the shared chain`() {
         val intent = createIntent(Telephony.Sms.Intents.SMS_RECEIVED_ACTION)
-        whenever(dataWorkerStorage.storeInputData(any(), any())).thenReturn(androidx.work.Data.EMPTY)
 
-        // Act
         dataReceiver.processIntent(context, intent)
 
-        // Assert
-        assertWorkerEnqueued(SmsCommunicatorPlugin.SmsCommunicatorWorker::class)
+        verify(dataInbox).putAndEnqueue(eq(SmsInbox), eq(bundle))
+        verify(dataWorkerStorage, never()).enqueue(any())
+        verify(dataWorkerStorage, never()).storeInputData(any(), any())
     }
 
     @Test
-    fun `processIntent enqueues DexcomWorker for DEXCOM_BG`() {
-        // Arrange
+    fun `processIntent puts Dexcom into its inbox, not the shared chain`() {
         val intent = createIntent(Intents.DEXCOM_BG)
-        whenever(dataWorkerStorage.storeInputData(any(), any())).thenReturn(androidx.work.Data.EMPTY)
 
-        // Act
         dataReceiver.processIntent(context, intent)
 
-        // Assert
-        assertWorkerEnqueued(DexcomPlugin.DexcomWorker::class)
+        verify(dataInbox).putAndEnqueue(eq(DexcomInbox), eq(bundle))
+        verify(dataWorkerStorage, never()).enqueue(any())
+        verify(dataWorkerStorage, never()).storeInputData(any(), any())
     }
 
     @Test
@@ -212,6 +211,7 @@ class DataReceiverTest : TestBase() {
 
         // Assert
         verify(dataWorkerStorage, never()).enqueue(any())
+        verifyNoInteractions(dataInbox)
     }
 
     @Test

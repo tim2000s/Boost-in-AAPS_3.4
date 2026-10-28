@@ -22,4 +22,10 @@ enum class NsclientLongKey(
     EffectiveProfileSwitchLastSyncedId("ns_effective_profile_switch_last_synced_id", 0L),
     RunningModeLastSyncedId("ns_running_mode_last_synced_id", 0L),
     ProfileStoreLastSyncedId("ns_profile_store_last_synced_timestamp", 0L),
+
+    // DOWNLOAD direction (2026-07-30), unlike every key above. Lower bound of an in-flight bounded
+    // history backfill requested via NsClient.requestHistoryBackfill — see NSClientV3Plugin
+    // .historyBackfillFrom. 0 = none. Persisted so an app restart part-way through cannot widen a
+    // deliberate window back out to the 100-day first-load ceiling.
+    HistoryBackfillFrom("ns_history_backfill_from", 0L),
 }

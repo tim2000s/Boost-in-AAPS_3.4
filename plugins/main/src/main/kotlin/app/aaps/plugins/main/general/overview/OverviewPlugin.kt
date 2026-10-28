@@ -44,6 +44,7 @@ import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.plugins.main.general.overview.boost.BoostOverviewFragment
+import app.aaps.plugins.main.general.overview.boost.BoostOverviewV2Fragment
 import app.aaps.core.objects.extensions.put
 import app.aaps.core.objects.extensions.store
 import app.aaps.core.validators.preferences.AdaptiveClickPreference
@@ -152,10 +153,11 @@ class OverviewPlugin @Inject constructor(
      * which fragment to instantiate, so changing it here is sufficient.
      */
     private fun updateFragmentClass() {
-        pluginDescription.fragmentClass = if (preferences.get(BooleanKey.OverviewUseBoostOverview))
-            BoostOverviewFragment::class.qualifiedName
-        else
-            OverviewFragment::class.qualifiedName
+        pluginDescription.fragmentClass = when {
+            preferences.get(BooleanKey.OverviewUseBoostOverviewV2) -> BoostOverviewV2Fragment::class.qualifiedName
+            preferences.get(BooleanKey.OverviewUseBoostOverview)   -> BoostOverviewFragment::class.qualifiedName
+            else                                                    -> OverviewFragment::class.qualifiedName
+        }
     }
 
     override fun onStop() {
@@ -338,6 +340,7 @@ class OverviewPlugin @Inject constructor(
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.OverviewUseBolusAdvisor, summary = R.string.enable_bolus_advisor_summary, title = R.string.enable_bolus_advisor))
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.OverviewUseBolusReminder, summary = R.string.enablebolusreminder_summary, title = R.string.enablebolusreminder))
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.OverviewUseBoostOverview, summary = R.string.use_boost_overview_summary, title = R.string.use_boost_overview_title))
+            addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.OverviewUseBoostOverviewV2, summary = R.string.use_boost_overview_v2_summary, title = R.string.use_boost_overview_v2_title))
             addPreference(preferenceManager.createPreferenceScreen(context).apply {
                 key = "overview_advanced_settings"
                 title = rh.gs(app.aaps.core.ui.R.string.advanced_settings_title)

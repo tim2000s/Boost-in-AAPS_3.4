@@ -1,0 +1,109 @@
+  commons: 147,709 onsets / 183 participants
+  boost: 15,961 onsets / 16 participants
+  corpora (training source): 359,419 onsets / 1807 participants
+    commons/low/h10 within_clock               AUC 0.7923 [0.7810, 0.8038]
+    commons/low/h10 external_clock             AUC 0.7924 [0.7813, 0.8032]
+    commons/low/h10 external_clock_logistic    AUC 0.7908 [0.7798, 0.8016]
+    commons/low/h10 within_shape               AUC 0.8132 [0.8039, 0.8223]
+    commons/low/h10 external_shape             AUC 0.8116 [0.8023, 0.8203]
+    commons/low/h10 external_shape_logistic    AUC 0.7964 [0.7863, 0.8061]
+    commons/low/h10 external_shape_over_clock    +0.0192 [+0.0160, +0.0227] ahead on 156/183 participants -- distinguishable, positive
+    commons/low/h10 within_shape_over_clock      +0.0209 [+0.0171, +0.0250] ahead on 153/183 participants -- distinguishable, positive
+    commons/low/h10 transfer_cost_clock          +0.0001 [-0.0027, +0.0026] ahead on 80/183 participants -- UNPROVEN
+    commons/low/h10 transfer_cost_shape          -0.0017 [-0.0040, +0.0005] ahead on 74/183 participants -- UNPROVEN
+    commons/low/h10 logistic_cost_clock          -0.0016 [-0.0026, -0.0006] ahead on 73/183 participants -- distinguishable, negative
+    commons/low/h10 logistic_cost_shape          -0.0152 [-0.0176, -0.0127] ahead on 27/183 participants -- distinguishable, negative
+    commons/low/h10 shipping_shape_over_clock    +0.0056 [+0.0035, +0.0078] ahead on 121/183 participants -- distinguishable, positive
+    boost/low/h10 within_clock               AUC 0.7234 [0.6993, 0.7450]
+    boost/low/h10 external_clock             AUC 0.7467 [0.7167, 0.7745]
+    boost/low/h10 external_clock_logistic    AUC 0.7412 [0.7125, 0.7660]
+    boost/low/h10 within_shape               AUC 0.7600 [0.7392, 0.7808]
+    boost/low/h10 external_shape             AUC 0.7705 [0.7426, 0.7956]
+    boost/low/h10 external_shape_logistic    AUC 0.7529 [0.7262, 0.7760]
+    boost/low/h10 external_shape_over_clock    +0.0238 [+0.0167, +0.0335] ahead on 16/16 participants -- distinguishable, positive
+    boost/low/h10 within_shape_over_clock      +0.0366 [+0.0257, +0.0518] ahead on 15/16 participants -- distinguishable, positive
+    boost/low/h10 transfer_cost_clock          +0.0233 [+0.0149, +0.0309] ahead on 15/16 participants -- distinguishable, positive
+    boost/low/h10 transfer_cost_shape          +0.0105 [+0.0011, +0.0184] ahead on 11/16 participants -- distinguishable, positive
+    boost/low/h10 logistic_cost_clock          -0.0055 [-0.0102, -0.0025] ahead on 2/16 participants -- distinguishable, negative
+    boost/low/h10 logistic_cost_shape          -0.0176 [-0.0237, -0.0131] ahead on 1/16 participants -- distinguishable, negative
+    boost/low/h10 shipping_shape_over_clock    +0.0117 [+0.0076, +0.0170] ahead on 15/16 participants -- distinguishable, positive
+    commons/low/h20 within_clock               AUC 0.7888 [0.7774, 0.8004]
+    commons/low/h20 external_clock             AUC 0.7888 [0.7775, 0.7997]
+    commons/low/h20 external_clock_logistic    AUC 0.7871 [0.7759, 0.7979]
+    commons/low/h20 within_shape               AUC 0.8170 [0.8079, 0.8260]
+    commons/low/h20 external_shape             AUC 0.8153 [0.8063, 0.8239]
+    commons/low/h20 external_shape_logistic    AUC 0.7965 [0.7862, 0.8065]
+    commons/low/h20 external_shape_over_clock    +0.0264 [+0.0228, +0.0303] ahead on 161/183 participants -- distinguishable, positive
+    commons/low/h20 within_shape_over_clock      +0.0282 [+0.0238, +0.0326] ahead on 159/183 participants -- distinguishable, positive
+    commons/low/h20 transfer_cost_clock          +0.0000 [-0.0028, +0.0025] ahead on 83/183 participants -- UNPROVEN
+    commons/low/h20 transfer_cost_shape          -0.0018 [-0.0040, +0.0001] ahead on 76/183 participants -- UNPROVEN
+    commons/low/h20 logistic_cost_clock          -0.0017 [-0.0027, -0.0007] ahead on 75/183 participants -- distinguishable, negative
+    commons/low/h20 logistic_cost_shape          -0.0188 [-0.0213, -0.0161] ahead on 21/183 participants -- distinguishable, negative
+    commons/low/h20 shipping_shape_over_clock    +0.0093 [+0.0072, +0.0118] ahead on 128/183 participants -- distinguishable, positive
+    boost/low/h20 within_clock               AUC 0.7232 [0.6994, 0.7450]
+    boost/low/h20 external_clock             AUC 0.7456 [0.7153, 0.7733]
+    boost/low/h20 external_clock_logistic    AUC 0.7398 [0.7110, 0.7648]
+    boost/low/h20 within_shape               AUC 0.7642 [0.7425, 0.7850]
+    boost/low/h20 external_shape             AUC 0.7775 [0.7493, 0.8040]
+    boost/low/h20 external_shape_logistic    AUC 0.7538 [0.7272, 0.7770]
+    boost/low/h20 external_shape_over_clock    +0.0319 [+0.0234, +0.0441] ahead on 16/16 participants -- distinguishable, positive
+    boost/low/h20 within_shape_over_clock      +0.0409 [+0.0287, +0.0573] ahead on 16/16 participants -- distinguishable, positive
+    boost/low/h20 transfer_cost_clock          +0.0224 [+0.0141, +0.0301] ahead on 15/16 participants -- distinguishable, positive
+    boost/low/h20 transfer_cost_shape          +0.0133 [+0.0036, +0.0226] ahead on 11/16 participants -- distinguishable, positive
+    boost/low/h20 logistic_cost_clock          -0.0058 [-0.0103, -0.0028] ahead on 1/16 participants -- distinguishable, negative
+    boost/low/h20 logistic_cost_shape          -0.0236 [-0.0317, -0.0177] ahead on 1/16 participants -- distinguishable, negative
+    boost/low/h20 shipping_shape_over_clock    +0.0140 [+0.0098, +0.0194] ahead on 12/16 participants -- distinguishable, positive
+    commons/severe/h10 within_clock               AUC 0.7711 [0.7578, 0.7842]
+    commons/severe/h10 external_clock             AUC 0.7740 [0.7601, 0.7867]
+    commons/severe/h10 external_clock_logistic    AUC 0.7766 [0.7629, 0.7894]
+    commons/severe/h10 within_shape               AUC 0.8039 [0.7937, 0.8142]
+    commons/severe/h10 external_shape             AUC 0.8040 [0.7934, 0.8141]
+    commons/severe/h10 external_shape_logistic    AUC 0.7864 [0.7744, 0.7979]
+    commons/severe/h10 external_shape_over_clock    +0.0301 [+0.0246, +0.0367] ahead on 134/183 participants -- distinguishable, positive
+    commons/severe/h10 within_shape_over_clock      +0.0328 [+0.0266, +0.0397] ahead on 134/183 participants -- distinguishable, positive
+    commons/severe/h10 transfer_cost_clock          +0.0028 [-0.0011, +0.0059] ahead on 84/183 participants -- UNPROVEN
+    commons/severe/h10 transfer_cost_shape          +0.0001 [-0.0027, +0.0023] ahead on 72/183 participants -- UNPROVEN
+    commons/severe/h10 logistic_cost_clock          +0.0026 [+0.0010, +0.0045] ahead on 90/183 participants -- distinguishable, positive
+    commons/severe/h10 logistic_cost_shape          -0.0177 [-0.0217, -0.0137] ahead on 41/183 participants -- distinguishable, negative
+    commons/severe/h10 shipping_shape_over_clock    +0.0098 [+0.0065, +0.0135] ahead on 107/183 participants -- distinguishable, positive
+    boost/severe/h10 within_clock               AUC 0.6905 [0.6707, 0.7081]
+    boost/severe/h10 external_clock             AUC 0.7198 [0.6925, 0.7448]
+    boost/severe/h10 external_clock_logistic    AUC 0.7188 [0.6899, 0.7455]
+    boost/severe/h10 within_shape               AUC 0.7363 [0.7197, 0.7532]
+    boost/severe/h10 external_shape             AUC 0.7601 [0.7340, 0.7864]
+    boost/severe/h10 external_shape_logistic    AUC 0.7386 [0.7126, 0.7624]
+    boost/severe/h10 external_shape_over_clock    +0.0403 [+0.0293, +0.0615] ahead on 16/16 participants -- distinguishable, positive
+    boost/severe/h10 within_shape_over_clock      +0.0458 [+0.0315, +0.0708] ahead on 14/16 participants -- distinguishable, positive
+    boost/severe/h10 transfer_cost_clock          +0.0293 [+0.0166, +0.0418] ahead on 13/16 participants -- distinguishable, positive
+    boost/severe/h10 transfer_cost_shape          +0.0238 [+0.0122, +0.0371] ahead on 13/16 participants -- distinguishable, positive
+    boost/severe/h10 logistic_cost_clock          -0.0010 [-0.0061, +0.0023] ahead on 5/16 participants -- UNPROVEN
+    boost/severe/h10 logistic_cost_shape          -0.0215 [-0.0353, -0.0143] ahead on 1/16 participants -- distinguishable, negative
+    boost/severe/h10 shipping_shape_over_clock    +0.0198 [+0.0119, +0.0341] ahead on 15/16 participants -- distinguishable, positive
+    commons/severe/h20 within_clock               AUC 0.7672 [0.7539, 0.7805]
+    commons/severe/h20 external_clock             AUC 0.7705 [0.7563, 0.7833]
+    commons/severe/h20 external_clock_logistic    AUC 0.7729 [0.7590, 0.7860]
+    commons/severe/h20 within_shape               AUC 0.8100 [0.7997, 0.8201]
+    commons/severe/h20 external_shape             AUC 0.8091 [0.7983, 0.8192]
+    commons/severe/h20 external_shape_logistic    AUC 0.7863 [0.7737, 0.7984]
+    commons/severe/h20 external_shape_over_clock    +0.0386 [+0.0331, +0.0453] ahead on 141/183 participants -- distinguishable, positive
+    commons/severe/h20 within_shape_over_clock      +0.0428 [+0.0365, +0.0500] ahead on 138/183 participants -- distinguishable, positive
+    commons/severe/h20 transfer_cost_clock          +0.0033 [-0.0007, +0.0064] ahead on 84/183 participants -- UNPROVEN
+    commons/severe/h20 transfer_cost_shape          -0.0009 [-0.0040, +0.0015] ahead on 67/183 participants -- UNPROVEN
+    commons/severe/h20 logistic_cost_clock          +0.0024 [+0.0009, +0.0042] ahead on 89/183 participants -- distinguishable, positive
+    commons/severe/h20 logistic_cost_shape          -0.0228 [-0.0273, -0.0182] ahead on 36/183 participants -- distinguishable, negative
+    commons/severe/h20 shipping_shape_over_clock    +0.0134 [+0.0098, +0.0176] ahead on 120/183 participants -- distinguishable, positive
+    boost/severe/h20 within_clock               AUC 0.6871 [0.6666, 0.7053]
+    boost/severe/h20 external_clock             AUC 0.7164 [0.6885, 0.7425]
+    boost/severe/h20 external_clock_logistic    AUC 0.7154 [0.6855, 0.7435]
+    boost/severe/h20 within_shape               AUC 0.7478 [0.7336, 0.7642]
+    boost/severe/h20 external_shape             AUC 0.7671 [0.7427, 0.7934]
+    boost/severe/h20 external_shape_logistic    AUC 0.7372 [0.7139, 0.7596]
+    boost/severe/h20 external_shape_over_clock    +0.0507 [+0.0384, +0.0738] ahead on 16/16 participants -- distinguishable, positive
+    boost/severe/h20 within_shape_over_clock      +0.0607 [+0.0439, +0.0858] ahead on 16/16 participants -- distinguishable, positive
+    boost/severe/h20 transfer_cost_clock          +0.0293 [+0.0160, +0.0421] ahead on 13/16 participants -- distinguishable, positive
+    boost/severe/h20 transfer_cost_shape          +0.0193 [+0.0044, +0.0352] ahead on 10/16 participants -- distinguishable, positive
+    boost/severe/h20 logistic_cost_clock          -0.0009 [-0.0062, +0.0023] ahead on 5/16 participants -- UNPROVEN
+    boost/severe/h20 logistic_cost_shape          -0.0299 [-0.0452, -0.0225] ahead on 0/16 participants -- distinguishable, negative
+    boost/severe/h20 shipping_shape_over_clock    +0.0218 [+0.0124, +0.0356] ahead on 14/16 participants -- distinguishable, positive
+written c4_fall_prior_ship.json
+C4_EXIT=0

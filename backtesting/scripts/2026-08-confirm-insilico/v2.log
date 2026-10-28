@@ -1,0 +1,59 @@
+tim, last 30 days: 84 confirms with a 4h window and a delivered dose
+  committed 165.9 U, median 1.70 U
+  sensitivity at confirm: median 111 mg/dL/U
+  windows containing a low: 42 of 84, severe 12
+
+================================================================================
+1. RANDOMISED ASSIGNMENT, MULTIPLIER DRAWN PER CONFIRM
+================================================================================
+  Counting windows rather than time-weighted percentages, so no masking is involved.
+
+         range           lows         severe    new highs  U withheld
+  [0.85,1.00]     25 [21,30]        5 [3,8]     7 [4,10]        12.5
+  [0.70,1.00]     18 [14,23]        3 [1,6]    12 [8,15]        24.8
+  [0.50,1.00]      13 [9,18]        2 [0,5]   17 [13,21]        41.2
+  [0.50,0.90]       8 [6,11]        1 [0,2]   20 [16,23]        49.7
+
+  observed: 42 lows, 12 severe, 0 new highs, 0 U withheld
+
+================================================================================
+2. FIXED MULTIPLIER, AND HOW MUCH IT DEPENDS ON THE ASSUMED INSULIN EFFECT
+================================================================================
+  The record cannot calibrate the insulin effect, so it is scaled from half to double.
+  A conclusion that survives the whole row is robust to that; one that does not is not.
+
+    mult   U off                   x0.5                  x1.0                  x2.0
+                 lows / severe / new hilows / severe / new hilows / severe / new hi
+    0.95     8.3      38 /  10 /    4       29 /   8 /    5       20 /   3 /    9  
+    0.90    16.6      29 /   8 /    5       20 /   3 /    9       11 /   1 /   16  
+    0.85    24.9      20 /   3 /    7       15 /   3 /   13        8 /   0 /   22  
+    0.80    33.2      20 /   3 /    9       11 /   1 /   16        5 /   0 /   24  
+    0.70    49.8      15 /   3 /   13        8 /   0 /   22        0 /   0 /   26  
+    0.50    83.0       9 /   0 /   18        4 /   0 /   25        0 /   0 /   26  
+    1.00     0.0      42 /  12 /    0       42 /  12 /    0       42 /  12 /    0  
+
+================================================================================
+3. THE CONFIRMS THAT CARRY IT
+================================================================================
+  Halved individually at the recorded sensitivity. Ranked by how far the nadir moves.
+
+              when  dose  ISF   BG   IOB  nadir     ->  peak    ->  saved
+      Thu 23 14:45  1.45  198  136 -0.09     62    183   279   290    yes
+      Mon 03 09:26  1.95  147  148  0.27     51    150   179   274    yes
+      Mon 20 16:17  3.00   95  142  0.72     56    153   260   315    yes
+      Mon 10 17:46  3.75   68  137  0.96     59    154   183   214    yes
+      Sat 25 19:30  1.55  126  164  0.17     67    161   247   276    yes
+      Thu 30 09:55  1.30  179  165  0.61     65    158   221   248    yes
+      Thu 16 15:07  1.90  141  159  0.35     61    152   216   306    yes
+      Mon 10 10:06  4.50   59  204  2.41     63    152   266   322    yes
+      Fri 31 11:15  1.65  142  191  0.86     68    148   195   308    yes
+      Tue 04 14:06  2.25   78  122  0.24     66    135   175   218    yes
+      Tue 21 14:05  2.20   98  144  0.78     44    112   180   202    yes
+      Sun 26 10:50  2.18  154  124  0.11     45    110   201   303    yes
+      Sun 02 15:51  2.25   81  266  2.50     55    120   291   309    yes
+      Sun 26 18:15  1.55  107  172  0.40     63    127   188   189    yes
+
+  halving every confirm individually rescues 38 of the 42 windows containing a low
+  and creates 25 windows newly above 180
+
+wrote v2.json

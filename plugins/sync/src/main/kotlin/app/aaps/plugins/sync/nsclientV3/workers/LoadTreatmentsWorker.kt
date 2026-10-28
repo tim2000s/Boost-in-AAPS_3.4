@@ -38,7 +38,8 @@ class LoadTreatmentsWorker(
             while (continueLoading) {
                 val isFirstLoad = nsClientV3Plugin.isFirstLoad(NsClient.Collection.TREATMENTS)
                 val lastLoaded =
-                    if (isFirstLoad) max(nsClientV3Plugin.firstLoadContinueTimestamp.collections.treatments, dateUtil.now() - nsClientV3Plugin.maxAge)
+                    // See LoadBgWorker: bounded-backfill floor, inert unless one is in flight.
+                    if (isFirstLoad) max(nsClientV3Plugin.firstLoadContinueTimestamp.collections.treatments, nsClientV3Plugin.firstLoadFloor())
                     else max(nsClientV3Plugin.lastLoadedSrvModified.collections.treatments, dateUtil.now() - nsClientV3Plugin.maxAge)
                 if ((nsClientV3Plugin.newestDataOnServer?.collections?.treatments ?: Long.MAX_VALUE) > lastLoaded) {
                     val treatments: List<NSTreatment>

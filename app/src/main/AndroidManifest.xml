@@ -28,6 +28,18 @@
     <!-- To receive data from Aidex -->
     <uses-permission android:name="com.microtechmd.cgms.aidex.permissions.RECEIVE_BG_ESTIMATE" />
 
+    <!-- Health Connect — read heart rate for Boost sleep detection (2026-06-03).
+         Garmin Connect / Wear OS can sync HR to Health Connect; AAPS polls
+         continuously regardless of which device collected it. -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <!-- Boost activity-load shadow (2026-06-16): single-source daily step volume from Health Connect. -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+
+    <!-- Required intent query for Health Connect <SDK 34 installations -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+
     <application
         android:name="app.aaps.MainApp"
         android:allowBackup="true"

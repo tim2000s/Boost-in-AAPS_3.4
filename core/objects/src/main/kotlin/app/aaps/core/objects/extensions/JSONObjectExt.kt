@@ -43,7 +43,19 @@ fun JSONObject.store(key: DoublePreferenceKey, preferences: Preferences): JSONOb
 }
 
 fun JSONObject.store(key: UnitDoublePreferenceKey, preferences: Preferences): JSONObject {
-    if (has(key.key)) preferences.put(key, getDouble(key.key))
+    if (has(key.key)) {
+        // The JSON value comes from the main phone's configuration upload and is in
+        // the user's display units (e.g., mmol/L). But preferences.put() stores the
+        // raw value, and preferences.get() applies fromMgdlToUnits() on read — so if
+        // we store a mmol/L value, it gets double-converted on read (÷18 twice).
+        // Fix: convert the incoming user-unit value to mg/dL before storing, so that
+        // preferences.get() converts it back correctly.
+        val valueInUserUnits = getDouble(key.key)
+        // Heuristic: if the value is < 36, it's likely in mmol/L; convert to mg/dL.
+        // Values >= 36 are already in mg/dL (the lowest meaningful BG in mg/dL is ~40).
+        val valueInMgdl = if (valueInUserUnits < 36) valueInUserUnits * 18.0 else valueInUserUnits
+        preferences.put(key, valueInMgdl)
+    }
     return this
 }
 

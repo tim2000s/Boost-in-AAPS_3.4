@@ -1,0 +1,1144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    boost_overview_v2_fragment.xml — Boost Overview V2 dark-theme home screen.
+    Alternative overview layout with modern card-based design.
+    All view IDs prefixed with v2_ to avoid conflicts with the existing layout.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0d0f14">
+
+    <!-- ═══ Top Nav Bar ═══ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp">
+
+        <!-- BOOST badge -->
+        <TextView
+            android:id="@+id/v2_boost_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BOOST"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="#00d4ff"
+            android:background="#1a00d4ff"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            tools:ignore="HardcodedText" />
+
+        <!-- Tab row -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <!-- Sub-tabs (HOME/AUTO/STATS/HISTORY) removed 2026-06-27: they were non-functional
+                 placeholders (no click handlers, no destination screens). This LinearLayout now
+                 acts as a centred spacer balancing the BOOST badge and the AID-ON indicator. -->
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <!-- AID ON indicator -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/v2_aid_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AID ON"
+                android:textSize="11sp"
+                android:textColor="#e8eaf0"
+                tools:ignore="HardcodedText" />
+
+            <View
+                android:id="@+id/v2_aid_dot"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:layout_marginStart="4dp"
+                android:background="#4caf50" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Notifications -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/v2_notifications"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/v2_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp">
+
+            <!-- ═══ Hero Section (three columns) ═══ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="12dp"
+                android:paddingBottom="8dp">
+
+                <!-- Left column: Pump info -->
+                <LinearLayout
+                    android:id="@+id/v2_pump_section"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal"
+                    android:focusable="true"
+                    android:importantForAccessibility="yes">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="PUMP"
+                        android:textSize="10sp"
+                        android:textColor="#9aa0ad"
+                        android:letterSpacing="0.1"
+                        tools:ignore="HardcodedText" />
+
+                    <TextView
+                        android:id="@+id/v2_pump_reservoir"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="#e8eaf0"
+                        tools:text="87U" />
+
+                    <!-- pump battery: level, else age of the last battery change; hidden for patch pumps -->
+                    <LinearLayout
+                        android:id="@+id/v2_pump_battery_row"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="4dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            app:srcCompat="@drawable/ic_cp_age_battery"
+                            app:tint="#ffffff"
+                            android:importantForAccessibility="no"
+                            tools:ignore="ContentDescription" />
+
+                        <TextView
+                            android:id="@+id/v2_pump_battery"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="12sp"
+                            android:textColor="#aaaaaa"
+                            android:layout_marginStart="4dp"
+                            tools:text="72%" />
+                    </LinearLayout>
+
+                    <!-- main phone (uploader) battery from Nightscout device status; AAPSClient only -->
+                    <LinearLayout
+                        android:id="@+id/v2_phone_battery_row"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="2dp"
+                        android:visibility="gone"
+                        tools:visibility="visible">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            app:srcCompat="@drawable/ic_smartphone"
+                            app:tint="#ffffff"
+                            android:importantForAccessibility="no"
+                            tools:ignore="ContentDescription" />
+
+                        <TextView
+                            android:id="@+id/v2_phone_battery"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="11sp"
+                            android:textColor="#aaaaaa"
+                            android:layout_marginStart="4dp"
+                            tools:text="64%" />
+                    </LinearLayout>
+
+                    <!-- cannula age -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="2dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            app:srcCompat="@drawable/ic_cp_age_cannula"
+                            app:tint="#ffffff"
+                            android:importantForAccessibility="no"
+                            tools:ignore="ContentDescription" />
+
+                        <TextView
+                            android:id="@+id/v2_pump_cannula_age"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="11sp"
+                            android:textColor="#aaaaaa"
+                            android:layout_marginStart="4dp"
+                            tools:text="1d 4h" />
+                    </LinearLayout>
+
+                    <!-- sensor age -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="2dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            app:srcCompat="@drawable/ic_cp_age_sensor"
+                            app:tint="#ffffff"
+                            android:importantForAccessibility="no"
+                            tools:ignore="ContentDescription" />
+
+                        <TextView
+                            android:id="@+id/v2_pump_sensor_age"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="11sp"
+                            android:textColor="#aaaaaa"
+                            android:layout_marginStart="4dp"
+                            tools:text="4d 2h" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Centre column: BG Bobble -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal">
+
+                    <app.aaps.plugins.main.general.overview.boost.BgBobbleView
+                        android:id="@+id/v2_bg_bobble"
+                        android:layout_width="140dp"
+                        android:layout_height="140dp"
+                        android:layout_gravity="center" />
+
+                    <!-- Delta text below the ring -->
+                    <TextView
+                        android:id="@+id/v2_delta_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textSize="12sp"
+                        android:textColor="#aaaaaa"
+                        android:layout_marginTop="4dp"
+                        tools:text="-0.8 Falling slowly" />
+                </LinearLayout>
+
+                <!-- Right column: Reading age, Target, Exercise -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="READING"
+                        android:textSize="10sp"
+                        android:textColor="#9aa0ad"
+                        android:letterSpacing="0.1"
+                        tools:ignore="HardcodedText" />
+
+                    <TextView
+                        android:id="@+id/v2_time_ago"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#e8eaf0"
+                        tools:text="3m ago" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TARGET"
+                        android:textSize="10sp"
+                        android:textColor="#9aa0ad"
+                        android:letterSpacing="0.1"
+                        android:layout_marginTop="8dp"
+                        tools:ignore="HardcodedText" />
+
+                    <TextView
+                        android:id="@+id/v2_target_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#e8eaf0"
+                        tools:text="5.5" />
+
+                    <TextView
+                        android:id="@+id/v2_exercise_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="11sp"
+                        android:textColor="#aaaaaa"
+                        android:layout_marginTop="4dp"
+                        tools:text="Normal" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ═══ Stat Pills Row (4 columns) ═══ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="8dp"
+                android:baselineAligned="false">
+
+                <!-- IOB pill -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/v2_pill_iob"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    app:cardBackgroundColor="#10121a"
+                    app:cardCornerRadius="10dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#1a1d28"
+                    app:strokeWidth="1dp"
+                    android:foreground="?attr/selectableItemBackground">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center_horizontal"
+                        android:padding="8dp"
+                        android:minHeight="48dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="IOB"
+                            android:textSize="10sp"
+                            android:textColor="#9aa0ad"
+                            android:letterSpacing="0.1"
+                            tools:ignore="HardcodedText" />
+
+                        <TextView
+                            android:id="@+id/v2_pill_iob_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="#60a5fa"
+                            tools:text="3.21u" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- DynISF pill -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/v2_pill_dynisf"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    app:cardBackgroundColor="#10121a"
+                    app:cardCornerRadius="10dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#1a1d28"
+                    app:strokeWidth="1dp"
+                    android:foreground="?attr/selectableItemBackground">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center_horizontal"
+                        android:padding="8dp"
+                        android:minHeight="48dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="DYNISF"
+                            android:textSize="10sp"
+                            android:textColor="#9aa0ad"
+                            android:letterSpacing="0.1"
+                            tools:ignore="HardcodedText" />
+
+                        <TextView
+                            android:id="@+id/v2_pill_dynisf_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="#c084fc"
+                            tools:text="71" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- TDD pill -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/v2_pill_tdd"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    app:cardBackgroundColor="#10121a"
+                    app:cardCornerRadius="10dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#1a1d28"
+                    app:strokeWidth="1dp"
+                    android:foreground="?attr/selectableItemBackground">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center_horizontal"
+                        android:padding="8dp"
+                        android:minHeight="48dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="TDD"
+                            android:textSize="10sp"
+                            android:textColor="#9aa0ad"
+                            android:letterSpacing="0.1"
+                            tools:ignore="HardcodedText" />
+
+                        <TextView
+                            android:id="@+id/v2_pill_tdd_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="#fb923c"
+                            tools:text="48.3u" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- PROFILE pill -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/v2_pill_profile"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    app:cardBackgroundColor="#10121a"
+                    app:cardCornerRadius="10dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#1a1d28"
+                    app:strokeWidth="1dp"
+                    android:foreground="?attr/selectableItemBackground">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center_horizontal"
+                        android:padding="8dp"
+                        android:minHeight="48dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="PROFILE"
+                            android:textSize="10sp"
+                            android:textColor="#9aa0ad"
+                            android:letterSpacing="0.1"
+                            tools:ignore="HardcodedText" />
+
+                        <TextView
+                            android:id="@+id/v2_pill_profile_tier"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#00d4ff"
+                            tools:text="Pct Scale" />
+
+                        <TextView
+                            android:id="@+id/v2_pill_profile_pct"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="#00d4ff"
+                            tools:text="140%" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- ═══ Boost V5 state strip (shown only when V5 is the active APS) ═══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/v2_v5_strip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="4dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="#10121a"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#1a1d28"
+                app:strokeWidth="1dp"
+                android:foreground="?attr/selectableItemBackground"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <!-- Row 1: state chip + dose/budget -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/v2_v5_state"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05"
+                            android:textColor="#ff6e40"
+                            tools:text="CONFIRMED  ×1.8 · 2c" />
+
+                        <TextView
+                            android:id="@+id/v2_v5_dose"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="12sp"
+                            android:gravity="end"
+                            android:textColor="#aaaaaa"
+                            tools:text="dose 0.45U · budget 0.78U" />
+                    </LinearLayout>
+
+                    <!-- Row 2: meal score gauge -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="SCORE"
+                            android:textSize="9sp"
+                            android:textColor="#9aa0ad"
+                            android:letterSpacing="0.1"
+                            android:layout_marginEnd="8dp"
+                            tools:ignore="HardcodedText" />
+
+                        <ProgressBar
+                            android:id="@+id/v2_v5_score_bar"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="0dp"
+                            android:layout_height="6dp"
+                            android:layout_weight="1"
+                            android:max="100"
+                            tools:progress="62" />
+
+                        <TextView
+                            android:id="@+id/v2_v5_score_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="#e8eaf0"
+                            android:layout_marginStart="8dp"
+                            android:minWidth="36dp"
+                            android:gravity="end"
+                            tools:text="0.62" />
+                    </LinearLayout>
+
+                    <!-- Row 3: active brakes (hidden when none) -->
+                    <TextView
+                        android:id="@+id/v2_v5_brakes"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textSize="11sp"
+                        android:visibility="gone"
+                        android:textColor="#fb923c"
+                        tools:visibility="visible"
+                        tools:text="⛔ min_guard_bg · iob 0.85 · decel 0.50" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══ BG Chart Card ═══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/v2_graph_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                app:cardBackgroundColor="#10121a"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#1a1d28"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Time range selector row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="4dp">
+
+                        <TextView
+                            android:id="@+id/v2_range_3h"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="3h"
+                            android:textSize="12sp"
+                            android:textColor="#aaaaaa"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:background="#1a1d28"
+                            android:minWidth="38dp"
+                            android:gravity="center"
+                            tools:ignore="HardcodedText" />
+
+                        <TextView
+                            android:id="@+id/v2_range_6h"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="6h"
+                            android:textSize="12sp"
+                            android:textColor="#00d4ff"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:layout_marginStart="6dp"
+                            android:minWidth="38dp"
+                            android:gravity="center"
+                            tools:ignore="HardcodedText" />
+
+                        <TextView
+                            android:id="@+id/v2_range_12h"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="12h"
+                            android:textSize="12sp"
+                            android:textColor="#aaaaaa"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:layout_marginStart="6dp"
+                            android:minWidth="38dp"
+                            android:gravity="center"
+                            tools:ignore="HardcodedText" />
+
+                        <TextView
+                            android:id="@+id/v2_range_24h"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="24h"
+                            android:textSize="12sp"
+                            android:textColor="#aaaaaa"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:layout_marginStart="6dp"
+                            android:minWidth="38dp"
+                            android:gravity="center"
+                            tools:ignore="HardcodedText" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <!-- Hidden scale button required by setupChartMenu API -->
+                        <Button
+                            android:id="@+id/v2_scale_button"
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:visibility="gone"
+                            tools:ignore="HardcodedText" />
+
+                        <ImageButton
+                            android:id="@+id/v2_chart_menu_button"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:contentDescription="@string/chart_menu"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:paddingTop="4dp"
+                            app:srcCompat="@drawable/ic_arrow_drop_down_white_24dp"
+                            app:tint="#aaaaaa" />
+                    </LinearLayout>
+
+                    <!-- Primary BG graph -->
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <com.jjoe64.graphview.GraphView
+                            android:id="@+id/v2_bg_graph"
+                            android:layout_width="match_parent"
+                            android:layout_height="260dp"
+                            android:contentDescription="@string/a11y_graph" />
+                    </RelativeLayout>
+
+                    <!-- Thin divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="#1a1d28" />
+
+                    <!-- IOB sub-chart -->
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <com.jjoe64.graphview.GraphView
+                            android:id="@+id/v2_iob_graph"
+                            android:layout_width="match_parent"
+                            android:layout_height="100dp"
+                            android:contentDescription="@string/iob" />
+
+                        <TextView
+                            android:id="@+id/v2_iob_graph_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentTop="true"
+                            android:layout_alignParentStart="true"
+                            android:layout_marginStart="30dp"
+                            android:layout_marginTop="6dp"
+                            android:text="IOB"
+                            android:textSize="10sp"
+                            android:textColor="#9aa0ad"
+                            android:letterSpacing="0.05"
+                            android:importantForAccessibility="no"
+                            tools:ignore="HardcodedText" />
+                    </RelativeLayout>
+
+                    <!-- Sensitivity graph container (hidden unless data available) -->
+                    <RelativeLayout
+                        android:id="@+id/v2_sensitivity_graph_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone">
+
+                        <com.jjoe64.graphview.GraphView
+                            android:id="@+id/v2_sensitivity_graph"
+                            android:layout_width="match_parent"
+                            android:layout_height="100dp"
+                            android:contentDescription="Sensitivity ratio over time"
+                            tools:ignore="HardcodedText" />
+
+                        <TextView
+                            android:id="@+id/v2_sensitivity_graph_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentTop="true"
+                            android:layout_alignParentStart="true"
+                            android:layout_marginStart="30dp"
+                            android:layout_marginTop="4dp"
+                            android:text="Sensitivity"
+                            android:textSize="10sp"
+                            android:textColor="#9aa0ad"
+                            android:letterSpacing="0.05"
+                            android:importantForAccessibility="no"
+                            tools:ignore="HardcodedText" />
+                    </RelativeLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- ═══ Pump status bar ═══ -->
+    <LinearLayout
+        android:id="@+id/v2_pump_status_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/v2_pump_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:background="#10121a"
+            android:textColor="#e8eaf0"
+            android:textAppearance="?android:attr/textAppearanceSmall" />
+    </LinearLayout>
+
+    <!-- ═══ Progress bar ═══ -->
+    <ProgressBar
+        android:id="@+id/v2_progress_bar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:max="100"
+        android:progress="100"
+        android:indeterminate="false" />
+
+    <!-- ═══ Action buttons (included from standard layout for full compatibility) ═══ -->
+    <include
+        android:id="@+id/v2_buttons_layout"
+        layout="@layout/overview_buttons_layout"
+        android:visibility="gone" />
+
+    <!-- ═══ Action buttons, pinned below the scrolling content ═══
+         Rows of at most three are built at runtime by ButtonGrid from whichever cards are visible,
+         so the XML order below is the order of the grid. -->
+    <LinearLayout
+        android:id="@+id/v2_action_buttons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="12dp"
+        android:background="#0d0f14">
+
+        <!-- INSULIN button -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/v2_btn_insulin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#1a00d4ff"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#2600d4ff"
+            app:strokeWidth="1dp"
+            android:foreground="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    app:srcCompat="@drawable/ic_cp_age_insulin"
+                    app:tint="#00d4ff"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="INSULIN"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#00d4ff"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- CALCULATOR button -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/v2_btn_calculator"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#1a00d4ff"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#2600d4ff"
+            app:strokeWidth="1dp"
+            android:foreground="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    app:srcCompat="@drawable/ic_calculator"
+                    app:tint="#00d4ff"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="CALCULATOR"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#00d4ff"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- CARBS button (pref: show_carbs_button) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/v2_btn_carbs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:cardBackgroundColor="#1a00d4ff"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#2600d4ff"
+            app:strokeWidth="1dp"
+            android:foreground="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    app:srcCompat="@drawable/ic_cp_bolus_carbs"
+                    app:tint="#00d4ff"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="CARBS"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#00d4ff"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- TREATMENT button (pref: show_treatment_button) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/v2_btn_treatment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:cardBackgroundColor="#1a00d4ff"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#2600d4ff"
+            app:strokeWidth="1dp"
+            android:foreground="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    app:srcCompat="@drawable/icon_insulin_carbs"
+                    app:tint="#00d4ff"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="TREAT"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#00d4ff"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- CALIBRATION button (pref: show_calibration_button) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/v2_btn_calibration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:cardBackgroundColor="#1a00d4ff"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#2600d4ff"
+            app:strokeWidth="1dp"
+            android:foreground="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    app:srcCompat="@drawable/ic_calibration"
+                    app:tint="#00d4ff"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="CALIB"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#00d4ff"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- CGM button (pref: show_cgm_button) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/v2_btn_cgm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:cardBackgroundColor="#1a00d4ff"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#2600d4ff"
+            app:strokeWidth="1dp"
+            android:foreground="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    app:srcCompat="@drawable/ic_xdrip"
+                    app:tint="#00d4ff"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="CGM"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#00d4ff"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+</LinearLayout>

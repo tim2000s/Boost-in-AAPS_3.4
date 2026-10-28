@@ -1,0 +1,17 @@
+{
+  "scenario": "06_stress_suppressed",
+  "description": "Low steps + zone 2 HR + stressDetection disabled → not STRESS (falls to else RESTING)",
+  "type": "hr_classification",
+  "input": {
+    "avgBpm": 100,
+    "hrMax": 180,
+    "hrResting": 60,
+    "stepsLast15Min": 5,
+    "stressDetection": false
+  },
+  "expected": {
+    "exerciseState": "RESTING",
+    "hrZone": "zone2",
+    "confidence": "MEDIUM"
+  }
+}

@@ -51,6 +51,19 @@ android {
             isDefault = true
             dimension = "standard"
         }
+        // Further instances of the full application, so that several can be installed on one
+        // handset. Library modules must declare every flavour the app declares, because Gradle
+        // matches the flavour dimension across projects and will not resolve a dependency for a
+        // flavour a library does not know about.
+        create("fullb") {
+            dimension = "standard"
+        }
+        create("fullc") {
+            dimension = "standard"
+        }
+        create("fulld") {
+            dimension = "standard"
+        }
         create("pumpcontrol") {
             dimension = "standard"
         }

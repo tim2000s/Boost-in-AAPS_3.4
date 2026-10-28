@@ -1,0 +1,17 @@
+{
+  "scenario": "07_no_hr_data",
+  "description": "Empty HR readings → NONE zone, falls back to RESTING",
+  "type": "hr_classification",
+  "input": {
+    "avgBpm": null,
+    "hrMax": 180,
+    "hrResting": 60,
+    "stepsLast15Min": 0,
+    "stressDetection": false
+  },
+  "expected": {
+    "exerciseState": "RESTING",
+    "hrZone": "none",
+    "confidence": "LOW"
+  }
+}

@@ -1,0 +1,52 @@
+== horizon 4h ==
+  table: 542,492 rows, 183 participants, base rate 0.203
+  fold 0: 61,863 test rows, 35 participants
+  fold 1: 117,592 test rows, 33 participants
+  fold 2: 128,395 test rows, 43 participants
+  fold 3: 128,309 test rows, 44 participants
+  fold 4: 106,333 test rows, 28 participants
+  4h base_clock   AUC 0.6636 [0.6482, 0.6806]
+  4h base_loop    AUC 0.7112 [0.6923, 0.7341]
+  4h eventualbg   AUC 0.5700 [0.5456, 0.5934]
+  4h n112         AUC 0.7450 [0.7221, 0.7702] seeds 0.7423-0.7450
+  4h n14          AUC 0.7257 [0.6991, 0.7556] seeds 0.7034-0.7257
+  4h n28          AUC 0.7289 [0.7076, 0.7519] seeds 0.7215-0.7289
+  4h n56          AUC 0.7386 [0.7157, 0.7655] seeds 0.7289-0.7402
+  4h n7           AUC 0.6833 [0.6581, 0.7103] seeds 0.6833-0.7073
+  4h nall         AUC 0.7450 [0.7229, 0.7703] seeds 0.7449-0.7450
+  4h scale_183_vs_28              +0.0161 [+0.0054, +0.0261] ahead on 122/183 participants -- distinguishable, positive
+  4h scale_28_vs_7                +0.0455 [+0.0244, +0.0674] ahead on 101/183 participants -- distinguishable, positive
+  4h scale_183_vs_112             -0.0001 [-0.0056, +0.0042] ahead on 99/183 participants -- UNPROVEN
+  4h scale_112_vs_28              +0.0162 [+0.0067, +0.0257] ahead on 120/183 participants -- distinguishable, positive
+  4h full_vs_clock                +0.0814 [+0.0619, +0.1038] ahead on 149/183 participants -- distinguishable, positive
+  4h full_vs_loopstate            +0.0337 [+0.0240, +0.0419] ahead on 138/183 participants -- distinguishable, positive
+  4h loopstate_vs_eventualbg      +0.1413 [+0.1151, +0.1727] ahead on 172/183 participants -- distinguishable, positive
+  4h clock_vs_eventualbg          +0.0937 [+0.0643, +0.1264] ahead on 156/183 participants -- distinguishable, positive
+== horizon 1h ==
+/Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-09-ml-features/common.py:211: RuntimeWarning: All-NaN slice encountered
+  r = np.where(allnan, np.nan, red(np.where(np.isnan(valid), np.nan, valid), axis=1))
+  table: 561,715 rows, 183 participants, base rate 0.081
+  fold 0: 64,178 test rows, 35 participants
+  fold 1: 121,257 test rows, 33 participants
+  fold 2: 133,809 test rows, 43 participants
+  fold 3: 132,984 test rows, 44 participants
+  fold 4: 109,487 test rows, 28 participants
+  1h base_clock   AUC 0.8689 [0.8564, 0.8802]
+  1h base_loop    AUC 0.8916 [0.8797, 0.9035]
+  1h eventualbg   AUC 0.6329 [0.5947, 0.6680]
+  1h n112         AUC 0.9105 [0.8997, 0.9211] seeds 0.9104-0.9114
+  1h n14          AUC 0.9019 [0.8902, 0.9132] seeds 0.8950-0.9019
+  1h n28          AUC 0.9049 [0.8945, 0.9150] seeds 0.9039-0.9054
+  1h n56          AUC 0.9082 [0.8976, 0.9188] seeds 0.9078-0.9082
+  1h n7           AUC 0.8844 [0.8693, 0.8984] seeds 0.8844-0.8947
+  1h nall         AUC 0.9115 [0.9007, 0.9218] seeds 0.9113-0.9115
+  1h scale_183_vs_28              +0.0066 [+0.0050, +0.0084] ahead on 131/183 participants -- distinguishable, positive
+  1h scale_28_vs_7                +0.0204 [+0.0136, +0.0275] ahead on 130/183 participants -- distinguishable, positive
+  1h scale_183_vs_112             +0.0010 [+0.0004, +0.0016] ahead on 96/183 participants -- distinguishable, positive
+  1h scale_112_vs_28              +0.0056 [+0.0038, +0.0077] ahead on 126/183 participants -- distinguishable, positive
+  1h full_vs_clock                +0.0426 [+0.0370, +0.0482] ahead on 171/183 participants -- distinguishable, positive
+  1h full_vs_loopstate            +0.0199 [+0.0173, +0.0224] ahead on 163/183 participants -- distinguishable, positive
+  1h loopstate_vs_eventualbg      +0.2587 [+0.2239, +0.3004] ahead on 180/183 participants -- distinguishable, positive
+  1h clock_vs_eventualbg          +0.2360 [+0.1991, +0.2789] ahead on 172/183 participants -- distinguishable, positive
+written /Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-09-ml-features/out/c1_hypo_scale.json
+C1_EXIT=0

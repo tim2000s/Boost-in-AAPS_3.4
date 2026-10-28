@@ -146,6 +146,9 @@ open class Notification {
         const val EQUIL_ALARM_INSULIN = 94
 
         const val USER_MESSAGE = 1000
+        // Boost insulin-need watch (2026-10-20). Its own id, because NotificationStore keeps the text of
+        // an existing notification with the same id and USER_MESSAGE is shared by several Boost notices.
+        const val BOOST_NEED_WATCH = 1001
 
         const val IMPORTANCE_HIGH = 2
         const val CATEGORY_ALARM = "alarm"

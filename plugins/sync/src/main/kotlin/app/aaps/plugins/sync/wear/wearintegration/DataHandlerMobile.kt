@@ -1520,6 +1520,39 @@ class DataHandlerMobile @Inject constructor(
             reservoir <= resWarn   -> 1
             else                   -> 0
         }
+        // Current DynISF / variable sensitivity (from the last APS run), formatted in profile units.
+        // Display-only: this never influences dosing. Empty when no APS result or value is unavailable.
+        val variableSensString = (if (config.APS) loop.lastRun?.constraintsProcessed?.variableSens
+        else processedDeviceStatusData.getAPSResult()?.variableSens)?.let { sensMgdl ->
+            if (sensMgdl > 0) {
+                if (units == GlucoseUnit.MGDL) decimalFormatter.to0Decimal(sensMgdl)
+                else decimalFormatter.to1Decimal(profileUtil.fromMgdlToUnits(sensMgdl, GlucoseUnit.MMOL))
+            } else null
+        } ?: ""
+
+        // Last-24h Time-In-Range distribution as 5 percentages for the watch's TIR pie ring.
+        // Fixed AGP bands (mg/dl): <54 very low | 54-69 low | 70-180 in range | 181-250 high | >250 very high.
+        // Display-only; never influences dosing.
+        val tirWeightsString = run {
+            val nowMs = dateUtil.now()
+            val readings = persistenceLayer.getBgReadingsDataFromTimeToTime(nowMs - 24 * 60 * 60 * 1000L, nowMs, true)
+            var vLow = 0; var low = 0; var inRange = 0; var high = 0; var vHigh = 0; var total = 0
+            for (bg in readings) {
+                val v = bg.value
+                when {
+                    v < 39   -> {}            // sensor error, ignore
+                    v < 54   -> { vLow++; total++ }
+                    v < 70   -> { low++; total++ }
+                    v > 250  -> { vHigh++; total++ }
+                    v > 180  -> { high++; total++ }
+                    else     -> { inRange++; total++ }
+                }
+            }
+            if (total > 0) {
+                fun pct(n: Int) = Math.round(n * 100.0 / total).toInt()
+                "${pct(vLow)},${pct(low)},${pct(inRange)},${pct(high)},${pct(vHigh)}"
+            } else ""
+        }
 
         rxBus.send(
             EventMobileToWear(
@@ -1540,7 +1573,9 @@ class DataHandlerMobile @Inject constructor(
                     tempTargetLevel = tempTargetLevel,
                     reservoirString = reservoirString,
                     reservoir = reservoir,
-                    reservoirLevel = reservoirLevel
+                    reservoirLevel = reservoirLevel,
+                    variableSens = variableSensString,
+                    tirWeights = tirWeightsString
                 )
             )
         )

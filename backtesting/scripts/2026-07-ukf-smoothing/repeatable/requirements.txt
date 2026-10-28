@@ -1,0 +1,10 @@
+# Four-way CGM smoother benchmark -- dependencies
+#
+# Mode A (synthetic, the DEFAULT) needs ONLY numpy. It runs with zero private data
+# and is fully seeded/reproducible.
+numpy>=1.24
+
+# Mode B (bring-your-own real CGM) extras -- OPTIONAL. The benchmark runs fully
+# without these; they are only imported when you pass --db or --csv (csv needs no
+# extra deps at all; only the local TimescaleDB path needs psycopg2).
+psycopg2-binary>=2.9 ; extra == "db"

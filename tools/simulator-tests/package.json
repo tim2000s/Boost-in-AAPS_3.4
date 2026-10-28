@@ -1,0 +1,11 @@
+{
+  "name": "boost-simulator-tests",
+  "private": true,
+  "description": "Unit-display checks for boost_simulator.html",
+  "scripts": {
+    "test": "node run.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}

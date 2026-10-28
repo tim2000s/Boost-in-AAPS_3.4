@@ -1,0 +1,82 @@
+== OpenAPS Data Commons ==
+  137,582 fall onsets, 183 participants (10127 dropped for an implausible forward projection)
+    commons/low/h10 base_only    AUC 0.7936 [0.7812, 0.8063]
+    commons/low/h10 clock        AUC 0.7940 [0.7819, 0.8061]
+    commons/low/h10 shape        AUC 0.8112 [0.8008, 0.8212]
+    commons/low/h10 loopstate    AUC 0.8052 [0.7914, 0.8192]
+    commons/low/h10 shape_loop   AUC 0.8149 [0.8021, 0.8276]
+    commons/low/h10 eventualbg   AUC 0.5438 [0.5223, 0.5663]
+    commons/low/h10 shape_vs_clock         +0.0172 [+0.0137, +0.0209] ahead on 142/183 participants -- distinguishable, positive
+    commons/low/h10 clock_vs_bgonly        +0.0004 [-0.0008, +0.0015] ahead on 85/183 participants -- UNPROVEN
+    commons/low/h10 loopstate_vs_clock     +0.0112 [+0.0058, +0.0165] ahead on 123/183 participants -- distinguishable, positive
+    commons/low/h10 loopstate_over_shape   +0.0037 [-0.0004, +0.0078] ahead on 99/183 participants -- UNPROVEN
+    commons/low/h10 clock_vs_eventualbg    +0.2502 [+0.2270, +0.2735] ahead on 176/183 participants -- distinguishable, positive
+    commons/low/h20 base_only    AUC 0.7904 [0.7779, 0.8029]
+    commons/low/h20 clock        AUC 0.7908 [0.7785, 0.8029]
+    commons/low/h20 shape        AUC 0.8141 [0.8039, 0.8241]
+    commons/low/h20 loopstate    AUC 0.8015 [0.7870, 0.8157]
+    commons/low/h20 shape_loop   AUC 0.8175 [0.8048, 0.8298]
+    commons/low/h20 eventualbg   AUC 0.5447 [0.5209, 0.5690]
+    commons/low/h20 shape_vs_clock         +0.0233 [+0.0194, +0.0273] ahead on 154/183 participants -- distinguishable, positive
+    commons/low/h20 clock_vs_bgonly        +0.0004 [-0.0008, +0.0015] ahead on 82/183 participants -- UNPROVEN
+    commons/low/h20 loopstate_vs_clock     +0.0107 [+0.0053, +0.0161] ahead on 117/183 participants -- distinguishable, positive
+    commons/low/h20 loopstate_over_shape   +0.0034 [-0.0004, +0.0073] ahead on 100/183 participants -- UNPROVEN
+    commons/low/h20 clock_vs_eventualbg    +0.2461 [+0.2212, +0.2740] ahead on 177/183 participants -- distinguishable, positive
+    commons/severe/h10 base_only    AUC 0.7738 [0.7591, 0.7882]
+    commons/severe/h10 clock        AUC 0.7726 [0.7578, 0.7863]
+    commons/severe/h10 shape        AUC 0.8009 [0.7888, 0.8125]
+    commons/severe/h10 loopstate    AUC 0.7947 [0.7767, 0.8117]
+    commons/severe/h10 shape_loop   AUC 0.8073 [0.7916, 0.8226]
+    commons/severe/h10 eventualbg   AUC 0.5344 [0.5037, 0.5637]
+    commons/severe/h10 shape_vs_clock         +0.0284 [+0.0228, +0.0350] ahead on 129/183 participants -- distinguishable, positive
+    commons/severe/h10 clock_vs_bgonly        -0.0012 [-0.0034, +0.0009] ahead on 69/183 participants -- UNPROVEN
+    commons/severe/h10 loopstate_vs_clock     +0.0222 [+0.0132, +0.0308] ahead on 110/183 participants -- distinguishable, positive
+    commons/severe/h10 loopstate_over_shape   +0.0064 [+0.0002, +0.0124] ahead on 79/183 participants -- distinguishable, positive
+    commons/severe/h10 clock_vs_eventualbg    +0.2382 [+0.2063, +0.2754] ahead on 153/183 participants -- distinguishable, positive
+    commons/severe/h20 base_only    AUC 0.7705 [0.7558, 0.7850]
+    commons/severe/h20 clock        AUC 0.7693 [0.7545, 0.7830]
+    commons/severe/h20 shape        AUC 0.8056 [0.7935, 0.8170]
+    commons/severe/h20 loopstate    AUC 0.7915 [0.7728, 0.8090]
+    commons/severe/h20 shape_loop   AUC 0.8111 [0.7947, 0.8265]
+    commons/severe/h20 eventualbg   AUC 0.5330 [0.4961, 0.5654]
+    commons/severe/h20 shape_vs_clock         +0.0364 [+0.0304, +0.0434] ahead on 131/183 participants -- distinguishable, positive
+    commons/severe/h20 clock_vs_bgonly        -0.0013 [-0.0034, +0.0008] ahead on 73/183 participants -- UNPROVEN
+    commons/severe/h20 loopstate_vs_clock     +0.0222 [+0.0128, +0.0314] ahead on 105/183 participants -- distinguishable, positive
+    commons/severe/h20 loopstate_over_shape   +0.0054 [-0.0010, +0.0116] ahead on 81/183 participants -- UNPROVEN
+    commons/severe/h20 clock_vs_eventualbg    +0.2362 [+0.1995, +0.2801] ahead on 155/183 participants -- distinguishable, positive
+== seven research corpora ==
+/Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-09-ml-features/common.py:50: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql_query(sql, conn, params=params)
+    200/2061 subjects
+    400/2061 subjects
+    600/2061 subjects
+    800/2061 subjects
+    1000/2061 subjects
+    1200/2061 subjects
+    1400/2061 subjects
+    1600/2061 subjects
+    1800/2061 subjects
+    2000/2061 subjects
+  359,419 fall onsets of 2,511,899, 1807 participants (capped at 200 each)
+    studies/low/h10 base_only    AUC 0.8052 [0.8017, 0.8086]
+    studies/low/h10 clock        AUC 0.8142 [0.8110, 0.8174]
+    studies/low/h10 shape        AUC 0.8344 [0.8316, 0.8370]
+    studies/low/h10 shape_vs_clock         +0.0202 [+0.0190, +0.0213] ahead on 1404/1807 participants -- distinguishable, positive
+    studies/low/h10 clock_vs_bgonly        +0.0090 [+0.0082, +0.0098] ahead on 1241/1807 participants -- distinguishable, positive
+    studies/low/h20 base_only    AUC 0.8032 [0.7996, 0.8066]
+    studies/low/h20 clock        AUC 0.8123 [0.8091, 0.8156]
+    studies/low/h20 shape        AUC 0.8401 [0.8373, 0.8426]
+    studies/low/h20 shape_vs_clock         +0.0278 [+0.0264, +0.0291] ahead on 1528/1807 participants -- distinguishable, positive
+    studies/low/h20 clock_vs_bgonly        +0.0091 [+0.0084, +0.0100] ahead on 1243/1807 participants -- distinguishable, positive
+    studies/severe/h10 base_only    AUC 0.7790 [0.7740, 0.7840]
+    studies/severe/h10 clock        AUC 0.7856 [0.7807, 0.7903]
+    studies/severe/h10 shape        AUC 0.8175 [0.8138, 0.8213]
+    studies/severe/h10 shape_vs_clock         +0.0320 [+0.0295, +0.0344] ahead on 1224/1807 participants -- distinguishable, positive
+    studies/severe/h10 clock_vs_bgonly        +0.0066 [+0.0055, +0.0079] ahead on 1071/1807 participants -- distinguishable, positive
+    studies/severe/h20 base_only    AUC 0.7759 [0.7707, 0.7810]
+    studies/severe/h20 clock        AUC 0.7825 [0.7775, 0.7874]
+    studies/severe/h20 shape        AUC 0.8244 [0.8206, 0.8280]
+    studies/severe/h20 shape_vs_clock         +0.0419 [+0.0391, +0.0446] ahead on 1308/1807 participants -- distinguishable, positive
+    studies/severe/h20 clock_vs_bgonly        +0.0066 [+0.0054, +0.0079] ahead on 1065/1807 participants -- distinguishable, positive
+written c2_fall_consequence.json
+C2_EXIT=0

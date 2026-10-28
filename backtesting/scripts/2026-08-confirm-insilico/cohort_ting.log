@@ -1,0 +1,78 @@
+============================================================================================
+1. THE RECORD, WHICH DEPENDS ON NO MODELLING
+============================================================================================
+
+  user    confirms  U committed  median U   ISF  with a low   severe  low rate
+  A             72        192.7      2.67    30          10        3      0.14
+  B            123        268.5      2.35    25          16       10      0.13
+  C            113        170.7      1.75    48          39       10      0.35
+  D             75        130.2      1.50    33          24       13      0.32
+  E             20         33.0      1.89    39           4        0      0.20
+  F             64        147.0      2.12    47          12        6      0.19
+  H             24         40.1      1.30    46           4        0      0.17
+  I             16         15.8      0.85    59           4        2      0.25
+  tim           84        165.9      1.70   111          25       12      0.30
+
+  cohort       591                                      138       56      0.23
+
+============================================================================================
+2. CAN THE MODEL EXPLAIN THE FALL, PER PARTICIPANT
+============================================================================================
+  Attributed deficit by the nadir over the fall observed from the peak. At or above
+  one the confirm can account for the whole fall; below one it cannot.
+
+  user    median ratio  explained  lows there  unexplained  lows there
+  A               0.60         20           0           52          10
+  B               0.44         18           0          105          16
+  C               0.74         36           8           77          31
+  D               0.65         26           6           49          18
+  E               0.67          6           2           14           2
+  F               1.13         36           7           28           5
+  H               0.89         10           0           14           4
+  I               0.28          3           0           13           4
+  tim             1.34         59          13           25          12
+
+  cohort                      214          36          377         102
+  102 of the 138 lows sit after a confirm the model cannot account for,
+  and no reduction of that confirm would have prevented them.
+
+============================================================================================
+3. THE TRIAL ON THE CONFIRMS THE MODEL CAN EXPLAIN
+============================================================================================
+  Multiplier uniform on [0.4, 1.0], 3000 replicates, at the
+  recorded sensitivity. Counts are per replicate.
+
+  user    confirms  observed            lows        severe     new highs   U off
+  A             20         0         0 [0,0]       0 [0,0]       2 [1,3]    23.5
+  B             18         0         0 [0,0]       0 [0,0]       3 [2,5]    16.6
+  C             36         8         1 [0,3]       0 [0,1]    15 [10,19]    18.7
+  D             26         6         1 [0,3]       0 [0,1]       2 [0,4]    19.2
+  E              6         2         0 [0,1]       0 [0,0]       2 [1,4]     4.2
+  F             36         7         1 [0,2]       0 [0,1]     10 [7,13]    32.7
+  H             10         0         0 [0,0]       0 [0,0]       3 [1,4]     6.6
+  I              3         0         0 [0,0]       0 [0,0]       0 [0,0]     1.4
+  tim           59        13         1 [0,3]       0 [0,2]    17 [13,20]    37.9
+
+  cohort       214        36         4 [1,8]       1 [0,3]    54 [47,62]   160.7
+
+============================================================================================
+4. THE SAME AT HALF AND DOUBLE THE ASSUMED INSULIN EFFECT
+============================================================================================
+
+    effect             lows         severe      new highs  nadir gain  peak cost
+      x0.5         8 [4,13]        2 [0,5]     31 [26,37]       20.6        8.9
+      x1.0          4 [1,8]        1 [0,3]     54 [47,62]       39.2       22.4
+      x2.0          2 [0,5]        0 [0,2]     82 [73,90]       63.5       55.8
+  observed               36             16              0
+
+============================================================================================
+5. AND ON THE CONFIRMS IT CANNOT EXPLAIN, WHICH IS THE CONTROL
+============================================================================================
+  If the reduction looks as effective here, the model is crediting itself with
+  events it could not have altered.
+
+           set  confirms  observed lows           after  share removed
+     explained       214             36         4 [1,8]           0.89
+   unexplained       377            102      37 [30,45]           0.64
+
+  wrote 3 charts to figs_cohort_ting/ and cohort_summary.json

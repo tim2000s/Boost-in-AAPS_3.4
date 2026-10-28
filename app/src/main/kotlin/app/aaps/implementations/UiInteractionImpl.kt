@@ -13,6 +13,7 @@ import app.aaps.activities.PreferencesActivity
 import app.aaps.core.interfaces.notifications.Notification
 import app.aaps.core.interfaces.nsclient.NSAlarm
 import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.plugins.main.general.overview.boost.widget.BoostWidget
 import app.aaps.core.interfaces.rx.events.EventDismissNotification
 import app.aaps.core.interfaces.rx.events.EventNewNotification
 import app.aaps.core.interfaces.ui.UiInteraction
@@ -80,6 +81,7 @@ class UiInteractionImpl @Inject constructor(
 
     override fun updateWidget(context: Context, from: String) {
         Widget.updateWidget(context, from)
+        BoostWidget.updateWidget(context, from)
     }
 
     override fun runWizardDialog(fragmentManager: FragmentManager, carbs: Int?, name: String?) {

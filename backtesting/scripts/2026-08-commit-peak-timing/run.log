@@ -1,0 +1,66 @@
+commits: 2505 across 9 participants, low within 3h 0.174
+
+==============================================================================
+1. HOW LONG AFTER THE COMMIT DOES GLUCOSE PEAK
+==============================================================================
+  quantiles (min): p10 9  p25 24  median 54  p75 114  p90 169
+  at or before the commit: 4.2%   within 10 min: 12.8%
+
+        interval      n  low rate  median dose  median BG
+             <=0    104     0.288         0.28        166
+            0-10    217     0.258         1.00        149
+           10-20    288     0.274         1.00        136
+           20-40    449     0.163         1.00        132
+           40-80    527     0.114         0.70        127
+          80-999    920     0.150         0.65        117
+
+==============================================================================
+2. PRIMARY COMPARISON, FIXED BEFORE RUNNING
+==============================================================================
+  peak at or within 10 min of the commit, against later.
+
+  peak within 10 min : n=  321  low rate 0.268
+  peak later            : n= 2184  low rate 0.160
+  difference +0.108 [+0.055, +0.147]  -> distinguishable
+
+==============================================================================
+3. THE CONTINUOUS INTERVAL AS A PREDICTOR, AND WHAT IT ADDS
+==============================================================================
+  Negated so that a shorter interval scores higher, and compared against the two
+  quantities already available at the commit.
+
+  shorter interval                   0.582 [0.548, 0.631]  clear of chance
+  committed dose                     0.492 [0.458, 0.529]  not clear of chance
+  glucose at commit                  0.422 [0.361, 0.499]  clear of chance
+  insulin on board                   0.435 [0.403, 0.515]  not clear of chance
+  delta_accl (the retired metric)    0.498 [0.449, 0.543]  not clear of chance
+
+==============================================================================
+4. EVERY OTHER VARIANT EXAMINED
+==============================================================================
+  peak at or before the commit                     n=  104  +0.119 [+0.039, +0.211]   <== clears zero
+  peak within 5 min                                n=  206  +0.112 [+0.055, +0.159]   <== clears zero
+  peak within 15 min                               n=  464  +0.138 [+0.086, +0.191]   <== clears zero
+  peak within 20 min                               n=  609  +0.128 [+0.089, +0.164]   <== clears zero
+  peak within 30 min                               n=  851  +0.121 [+0.096, +0.139]   <== clears zero
+  last increment was the largest of the approach   n= 1426  -0.030 [-0.053, +0.007]
+  peak within 10 min AND dose >= 2 U               n=   68  +0.139 [+0.039, +0.261]   <== clears zero
+  peak within 10 min AND glucose >= 180            n=   93  +0.031 [-0.092, +0.159]
+  peak rise over the commit < 20 mg/dL             n=  593  +0.072 [+0.022, +0.116]   <== clears zero
+
+==============================================================================
+5. PER PARTICIPANT, PRIMARY CUT
+==============================================================================
+
+  user    commits  early  rate early  rate late     diff
+  A           352     31       0.161      0.053   +0.108
+  B           424     51       0.275      0.107   +0.167
+  C           377     38       0.263      0.212   +0.051
+  D           272     41       0.463      0.316   +0.147
+  E           127     18       0.000      0.138   -0.138
+  F           375     55       0.218      0.100   +0.118
+  H            78     11       0.182      0.060   +0.122
+  I            19      4       0.250      0.067   +0.183
+  tim         481     72       0.319      0.235   +0.085
+
+wrote results.json

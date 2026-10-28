@@ -1,0 +1,104 @@
+era from 2026-06-29: n = 50933 scored cycles, base rate 0.0361
+
+==============================================================================
+A. WHAT STATE ARE THE HIGH-SCORING CYCLES IN?
+==============================================================================
+  The model probed directly returns 0.44 at 75 mg/dL, 0.17 at 90 and 0.08 at 140.
+  If field cycles scoring high sit at that glucose, the input is being read correctly.
+
+    score band       n  BG mean  BG p10  BG p90    IOB  observed
+  0.00-0.05     35624    144.2   106.0   202.8   1.53    0.0236
+  0.05-0.10      8167    108.3    89.0   136.0   0.45    0.0574
+  0.10-0.30      3633     99.1    77.0   135.8   0.17    0.0782
+  0.30-0.45      1562    122.9    72.0   176.0   1.27    0.0736
+  0.45-0.60      1552    102.6    69.9   130.0   0.20    0.0696
+  0.60-1.01       395     66.4    52.0    82.0  -0.26    0.0532
+
+==============================================================================
+B. IS IT A PRIOR SHIFT? observed rate at the state the model thinks it is in
+==============================================================================
+  Within a narrow glucose band the state is held roughly fixed, so what remains is
+  whether the event rate at that state matches what the score claims.
+
+       glucose       n  mean score  observed   ratio  AUC in band
+     0-70          449       0.612    0.0735     8.3        0.387
+    70-80         1139       0.292    0.0860     3.4        0.632
+    80-90         2347       0.153    0.0656     2.3        0.624
+    90-110       11844       0.089    0.0455     1.9        0.646
+   110-140       19365       0.056    0.0292     1.9        0.675
+   140-400       15757       0.039    0.0284     1.4        0.593
+
+==============================================================================
+C. COLD START: cycles running on a partly-filled ring buffer
+==============================================================================
+  A cycle is cold if fewer than 6 contiguous cycles precede it, taking a
+  break of 30 min as breaking contiguity. Compared within glucose bands so
+  the comparison is not confounded by when gaps happen.
+
+  cold cycles: 16792 of 50933 (33.0%)
+
+       glucose  n cold  n warm  score cold  score warm             difference
+     0-80          847     741       0.358       0.411   -0.053 [-0.073,-0.033]   <== differs
+    80-110        6886    7305       0.121       0.078   +0.043 [+0.039,+0.047]   <== differs
+   110-140        5748   13617       0.078       0.046   +0.032 [+0.029,+0.035]   <== differs
+   140-400        3307   12450       0.049       0.037   +0.013 [+0.010,+0.016]   <== differs
+
+  discrimination on cold cycles 0.654, on warm cycles 0.651
+
+==============================================================================
+D. IS THE FIRING SPREAD A DEFECT OR CORRECT BEHAVIOUR?
+==============================================================================
+  The damper engaging more often for a participant who goes low more often is the
+  intended behaviour, not a fault. Firing rate against each participant's own rate.
+
+  user         n  own hypo rate  fires >0.30     AUC
+  A         5083         0.0065        2.62%   0.520
+  B         6476         0.0327        4.46%   0.627
+  C         4251         0.0790       22.84%   0.538
+  D         4855         0.0735       27.60%   0.569
+  E         5877         0.0083        2.37%   0.609
+  F         5887         0.0053        0.49%   0.607
+  G         8375         0.0591        5.72%   0.635
+  H         2806         0.0103        0.93%   0.707
+  I         1451         0.0145        1.17%   0.640
+  tim       5872         0.0467        0.99%   0.590
+
+  correlation between firing rate and own hypo rate: +0.820 [+0.364, +0.980]  -> tracks the participant's own risk
+
+==============================================================================
+E. WHAT A RE-PLACED THRESHOLD LOOKS LIKE
+==============================================================================
+  The 0.30 cut was set on the previous model. Quantiles of the current distribution
+  say where an equivalently rare cut now sits.
+
+    quantile    score    fires  observed rate above
+       50.0%    0.030   49.89%               0.0521
+       75.0%    0.057   24.84%               0.0688
+       90.0%    0.163    9.98%               0.0726
+       95.0%    0.385    4.99%               0.0700
+       99.0%    0.568    1.00%               0.0609
+       99.5%    0.642    0.50%               0.0510
+
+  at the shipped 0.30 cut: fires 6.83%, observed rate above 0.0687, below 0.0337, base 0.0361
+  lift of the damped population over base: 1.90x
+
+==============================================================================
+F. WHAT THE COLD PATH COSTS AT THE OPERATING POINT
+==============================================================================
+  Restricted to normal glucose, where the model probed directly returns well below
+  the 0.30 cut, so any crossing there is the feature vector rather than the glucose.
+
+    score band       n  cold share  BG mean
+  0.00-0.05     35624       24.0%    144.2
+  0.05-0.10      8167       53.9%    108.3
+  0.10-0.30      3633       56.5%     99.1
+  0.30-0.45      1562       40.2%    122.9
+  0.45-0.60      1552       63.0%    102.6
+  0.60-1.01       395       48.1%     66.4
+
+  glucose 100-160 mg/dL
+    cold cycles cross 0.30 on 8.61% of cycles (n=10304)
+    warm cycles cross 0.30 on 3.92% of cycles (n=22347)
+    difference +4.69 points [+4.11, +5.27], ratio 2.20x
+
+wrote followup.json

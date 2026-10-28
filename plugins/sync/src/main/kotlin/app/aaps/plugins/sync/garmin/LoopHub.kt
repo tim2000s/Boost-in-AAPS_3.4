@@ -35,6 +35,16 @@ interface LoopHub {
     /** Returns the factor by which the basal rate is currently raised (> 1) or lowered (< 1). */
     val temporaryBasal: Double
 
+    /** Short loop status for the watch: CLOSED / LGS / OPEN / SUSPEND / DISCONN / DISABLED / SUPERBOLUS. */
+    val loopStatus: String
+
+    /** Epoch-ms of the last APS run (loop "freshness"), or null if the loop has never run. */
+    val lastLoopEpochMs: Long?
+
+    /** Current DynISF / variable sensitivity in the user's glucose units (mg/dL·U or mmol/L·U), or
+     *  null if unavailable. Falls back to the profile ISF when the APS hasn't produced a value. */
+    val variableSensInUnits: Double?
+
     /** Returns the lower bound of the target glucose range. */
     val lowGlucoseMark: Double
 
@@ -58,6 +68,23 @@ interface LoopHub {
     fun storeHeartRate(
         samplingStart: Instant, samplingEnd: Instant,
         avgHeartRate: Int,
+        device: String?
+    )
+
+    /** Stores a batch of fine-grained (≈1-min) HR samples. Each pair is (endOfMinuteEpochMs, bpm);
+     *  stored with the HR-model convention timestamp = END of a 60 000 ms window, matching the
+     *  Health Connect ingest so per-minute buckets dedupe. Peak preservation is downstream:
+     *  Boost's hrBpmMax5m/Min5m take max/min over these 1-min rows. (2026-07-08, Garmin workstream B.) */
+    fun storeHeartRates(samples: List<Pair<Long, Int>>, device: String?)
+
+    /** Stores a Garmin step-count snapshot as an SC row (the same shape wear uses), so Boost's
+     *  step subsystem (WearStepSource / IntradayStepBank / activity classifier) can consume it via
+     *  the GARMIN source. [timestampMs] = end of the sampling; the six trailing-window counts are
+     *  computed device-side from the cumulative counter. (2026-07-08, Garmin workstream B.) */
+    fun storeSteps(
+        timestampMs: Long,
+        steps5min: Int, steps10min: Int, steps15min: Int,
+        steps30min: Int, steps60min: Int, steps180min: Int,
         device: String?
     )
 }

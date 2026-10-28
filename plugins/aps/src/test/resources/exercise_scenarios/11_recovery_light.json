@@ -1,0 +1,16 @@
+{
+  "scenario": "11_recovery_light",
+  "type": "recovery_parameters",
+  "description": "LIGHT_AEROBIC exercise: shorter window, unchanged target, higher scale (less suppression)",
+  "input": {
+    "exerciseState": "LIGHT_AEROBIC",
+    "baseRecoveryHours": 2.0,
+    "baseTargetMgdl": 144.0,
+    "baseScale": 0.5
+  },
+  "expected": {
+    "windowMinutes": 60,
+    "targetMgdl": 144.0,
+    "scale": 0.7
+  }
+}

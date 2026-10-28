@@ -1,0 +1,38 @@
+[
+ {
+  "fraction": 0.3,
+  "withheld_U": 152.215,
+  "delayed_U": 19.46,
+  "ratio": 7.821942446043165
+ },
+ {
+  "fraction": 0.4,
+  "withheld_U": 130.47,
+  "delayed_U": 16.68,
+  "ratio": 7.821942446043166
+ },
+ {
+  "fraction": 0.5,
+  "withheld_U": 108.725,
+  "delayed_U": 13.899999999999999,
+  "ratio": 7.821942446043166
+ },
+ {
+  "fraction": 0.6,
+  "withheld_U": 86.98000000000002,
+  "delayed_U": 11.120000000000001,
+  "ratio": 7.821942446043167
+ },
+ {
+  "fraction": 0.7,
+  "withheld_U": 65.23500000000001,
+  "delayed_U": 8.340000000000002,
+  "ratio": 7.821942446043166
+ },
+ {
+  "fraction": 1.0,
+  "withheld_U": 0.0,
+  "delayed_U": 0.0,
+  "ratio": 0.0
+ }
+]

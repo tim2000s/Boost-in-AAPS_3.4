@@ -1,0 +1,122 @@
+{
+  "parity_pass": true,
+  "synthetic": {
+    "ground_truth_rmse": {
+      "persistence": 8.637526599039163,
+      "exponential": 8.124544653799523,
+      "tsunami": 8.996062028623939,
+      "v4": 6.120595386397119
+    },
+    "onestep_rmse": {
+      "persistence": 8.6780646503947,
+      "exponential": 9.729827068006948,
+      "tsunami": 9.746682115762363,
+      "v4": 9.415453664657555
+    },
+    "artifact_absorbed": {
+      "persistence": 1.0,
+      "exponential": 0.9033582251621144,
+      "tsunami": 1.111213289485815,
+      "v4": 0.7075670516532043
+    },
+    "artifact_abserr": {
+      "persistence": 36.93870151593586,
+      "exponential": 30.06026114896338,
+      "tsunami": 40.83405414524581,
+      "v4": 23.705336906038042
+    },
+    "lag": {
+      "persistence": 0.6110698115176162,
+      "exponential": 5.416069811517616,
+      "tsunami": 1.649511977330225,
+      "v4": 0.5775159214926866
+    },
+    "jitter_var": {
+      "persistence": 45.34581417049923,
+      "exponential": 31.31355395587549,
+      "tsunami": 47.09075645769841,
+      "v4": 13.323068866596055
+    },
+    "reversals": {
+      "persistence": 3525,
+      "exponential": 1821,
+      "tsunami": 2924,
+      "v4": 1490
+    },
+    "meta": {
+      "seeds": 20,
+      "n_days": 3,
+      "noise_sd": 6.0,
+      "total_samples": 17280,
+      "total_valid": 16999,
+      "total_artifacts": 436
+    }
+  },
+  "real": {
+    "onestep_rmse": {
+      "persistence": 7.833858938309013,
+      "exponential": 9.123419422087911,
+      "tsunami": 8.705352050889605,
+      "v4": 9.02432415581327
+    },
+    "per_series": {
+      "U1": {
+        "persistence": 7.65158902636885,
+        "exponential": 8.419851042667275,
+        "tsunami": 8.082067719694914,
+        "v4": 8.202889460297481
+      },
+      "U2": {
+        "persistence": 6.2886745054367585,
+        "exponential": 7.799635958573087,
+        "tsunami": 6.8267653363809195,
+        "v4": 6.6223935587486125
+      },
+      "U3": {
+        "persistence": 6.412003228736709,
+        "exponential": 7.360474670114913,
+        "tsunami": 7.23043891057459,
+        "v4": 6.990023239627896
+      },
+      "U4": {
+        "persistence": 7.0920050948861775,
+        "exponential": 8.039748573392899,
+        "tsunami": 7.507638153455558,
+        "v4": 7.500284427392358
+      },
+      "U5": {
+        "persistence": 9.429766445268033,
+        "exponential": 11.213328912339009,
+        "tsunami": 10.757281687603262,
+        "v4": 11.564882673567078
+      },
+      "U6": {
+        "persistence": 4.656453114904759,
+        "exponential": 5.3754681036510465,
+        "tsunami": 5.070185777171302,
+        "v4": 4.878770770623259
+      }
+    },
+    "lag": {
+      "persistence": 0.0,
+      "exponential": 5.296467391304348,
+      "tsunami": 1.1088225120524882,
+      "v4": -0.13918271258322204
+    },
+    "jitter_var": {
+      "persistence": 30.754750265749134,
+      "exponential": 35.428492503077095,
+      "tsunami": 31.15523980374917,
+      "v4": 18.810273442663014
+    },
+    "reversals": {
+      "persistence": 23972,
+      "exponential": 14971,
+      "tsunami": 22118,
+      "v4": 14014
+    },
+    "meta": {
+      "source": "local TimescaleDB oref_phase2_sites_v2 sensor=G7 (6 users)"
+    }
+  }
+}

@@ -1,0 +1,140 @@
+{
+ "ablation": [
+  {
+   "horizon": 10,
+   "features": "value_delta",
+   "n_features": 3,
+   "n": 741223,
+   "auc": 0.8085398726268067,
+   "lo": 0.8055245398034182,
+   "hi": 0.8116598749100978
+  },
+  {
+   "horizon": 10,
+   "features": "value_delta_curv",
+   "n_features": 5,
+   "n": 741223,
+   "auc": 0.8209496410810339,
+   "lo": 0.8178043053808055,
+   "hi": 0.8240677758217313
+  },
+  {
+   "horizon": 10,
+   "features": "full_shape",
+   "n_features": 12,
+   "n": 741223,
+   "auc": 0.8434236940817913,
+   "lo": 0.8406489233997667,
+   "hi": 0.8461464232204219
+  },
+  {
+   "horizon": 30,
+   "features": "value_delta",
+   "n_features": 3,
+   "n": 741223,
+   "auc": 0.8149529165211272,
+   "lo": 0.8121941155961122,
+   "hi": 0.8176336140778595
+  },
+  {
+   "horizon": 30,
+   "features": "value_delta_curv",
+   "n_features": 5,
+   "n": 741223,
+   "auc": 0.8506045108683528,
+   "lo": 0.84805301391351,
+   "hi": 0.8531577329776102
+  },
+  {
+   "horizon": 30,
+   "features": "full_shape",
+   "n_features": 12,
+   "n": 741223,
+   "auc": 0.8731969754881234,
+   "lo": 0.8710535296465789,
+   "hi": 0.8754223654747147
+  }
+ ],
+ "operating": [
+  {
+   "sensitivity": 0.7,
+   "fpr": 0.2018188152814613,
+   "false_alarms_per_day": 0.3504576433144937,
+   "detections_per_day": 0.38603247719273087,
+   "horizon": 10
+  },
+  {
+   "sensitivity": 0.8,
+   "fpr": 0.29398077374307635,
+   "false_alarms_per_day": 0.5104965510875925,
+   "detections_per_day": 0.44117732814585087,
+   "horizon": 10
+  },
+  {
+   "sensitivity": 0.9,
+   "fpr": 0.4418039547500373,
+   "false_alarms_per_day": 0.7671909706376321,
+   "detections_per_day": 0.4963252658524527,
+   "horizon": 10
+  },
+  {
+   "sensitivity": 0.7,
+   "fpr": 0.1264673885993416,
+   "false_alarms_per_day": 0.21961016321918128,
+   "detections_per_day": 0.38603247719273087,
+   "horizon": 30
+  },
+  {
+   "sensitivity": 0.8,
+   "fpr": 0.22097041403289225,
+   "false_alarms_per_day": 0.383714325327867,
+   "detections_per_day": 0.4411804148993327,
+   "horizon": 30
+  },
+  {
+   "sensitivity": 0.9,
+   "fpr": 0.409073456531168,
+   "false_alarms_per_day": 0.7103545787764624,
+   "detections_per_day": 0.4963283526059345,
+   "horizon": 30
+  }
+ ],
+ "transfer": [
+  {
+   "horizon": 10,
+   "train": "Loop",
+   "test": "ReplaceBG",
+   "n": 119735,
+   "auc": 0.806765701124537,
+   "lo": 0.8014852699084796,
+   "hi": 0.8129519381320691
+  },
+  {
+   "horizon": 30,
+   "train": "Loop",
+   "test": "ReplaceBG",
+   "n": 119735,
+   "auc": 0.8553707160078704,
+   "lo": 0.8503480701002463,
+   "hi": 0.860729823311569
+  }
+ ],
+ "per_subject": [
+  {
+   "horizon": 10,
+   "k": 815,
+   "p10": 0.7781303513376264,
+   "p50": 0.8388254755996691,
+   "p90": 0.8866607187443568,
+   "below_60": 0.0
+  },
+  {
+   "horizon": 30,
+   "k": 815,
+   "p10": 0.8233332631957845,
+   "p50": 0.8730302193433925,
+   "p90": 0.9069466940641954,
+   "below_60": 0.0
+  }
+ ]
+}

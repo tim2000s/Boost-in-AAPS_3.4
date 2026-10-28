@@ -1,0 +1,68 @@
+commits: 2486 across 8 participants
+  peak within 10 min: 0.128   low within 3h: 0.175
+  features: 29
+
+==============================================================================
+1. CAN THE PEAK TIMING BE PREDICTED AT THE COMMIT?
+==============================================================================
+  GroupKFold with the participant as the group, so no participant is in both sides.
+
+  gradient boosted             AUC 0.731 [0.701, 0.770]  clear of chance
+  logistic (overfit control)   AUC 0.697 [0.640, 0.764]  clear of chance
+
+  single features available at the commit, against the same label:
+    inc1             0.593
+    inc_slope        0.598
+    rise_35min       0.503
+    delta_accl       0.585
+    bg               0.720
+    score            0.599
+    iob              0.610
+
+==============================================================================
+2. DOES THE PREDICTION SEPARATE THE OUTCOME THAT MATTERS?
+==============================================================================
+  The out-of-sample probability of an early peak, scored against the low itself.
+
+  predicted early peak    -> low   AUC 0.448 [0.404, 0.499]  NOT clear of chance
+  the true interval       -> low   AUC 0.581 [0.548, 0.629]   (the ceiling, unavailable at the commit)
+
+  low rate by decile of the predicted probability:
+     decile      n    pred  low rate  true early
+          0    249   0.005     0.249       0.028
+          1    249   0.015     0.205       0.052
+          2    248   0.028     0.169       0.069
+          3    249   0.044     0.189       0.076
+          4    248   0.064     0.153       0.065
+          5    249   0.089     0.153       0.072
+          6    248   0.126     0.161       0.137
+          7    249   0.180     0.169       0.181
+          8    248   0.282     0.181       0.246
+          9    249   0.541     0.116       0.349
+
+  top decile of predicted risk: low rate 0.116 against 0.181 elsewhere, base 0.175
+
+==============================================================================
+3. WHY THE PREDICTION DOES NOT HELP
+==============================================================================
+  glucose alone predicts an early peak at 0.720; the full model reaches 0.731.
+  correlation between the predicted probability and glucose at commit: +0.595
+
+  splitting the commits by whether the peak was early and whether the model saw it:
+
+  cell                                        n  low rate  median BG
+  truly early, model predicted it           172     0.198        166
+  truly early, model missed it              145     0.352        131
+  not early, model predicted early          450     0.133        154
+  not early, model agreed                  1719     0.168        118
+
+  the true interval against the low, within bands of glucose at commit,
+  which shows it is not merely a restatement of the glucose:
+
+       glucose      n     AUC  low rate
+      0-120       994   0.559     0.223
+    120-150       838   0.613     0.147
+    150-180       395   0.694     0.137
+    180-400       259   0.689     0.135
+
+wrote predict.json

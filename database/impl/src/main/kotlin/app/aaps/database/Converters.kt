@@ -118,7 +118,9 @@ class Converters {
     fun fromAlgorithm(algorithm: APSResult.Algorithm?) = algorithm?.name
 
     @TypeConverter
-    fun toAlgorithm(algorithm: String?) = algorithm?.let { APSResult.Algorithm.valueOf(it) }
+    fun toAlgorithm(algorithm: String?) = algorithm?.let {
+        try { APSResult.Algorithm.valueOf(it) } catch (_: IllegalArgumentException) { APSResult.Algorithm.UNKNOWN }
+    }
 
     @TypeConverter
     fun fromListOfBlocks(blocks: List<Block>?): String? {

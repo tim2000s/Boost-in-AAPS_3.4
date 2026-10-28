@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.verifyNoMoreInteractions
@@ -151,6 +152,66 @@ internal class HeartRateListenerTest {
         listener.send(start + d2)
 
         assertThat(heartRates).containsExactly(ActionHeartRate(d2, start + d2, 80.0, device))
+        listener.dispose()
+    }
+
+    // ── F4 sensor-feed watchdog (2026-07-07) ──
+    // Some devices silently stop delivering HR events while the registration stays alive; the 60s
+    // send tick re-registers the listener after >=5 min of silence, and retries at most once per
+    // timeout period. registerListener's boolean is now logged (previously ignored).
+
+    private fun createWithSensor(timestampMillis: Long): Triple<HeartRateListener, SensorManager, Sensor> {
+        val ctx: Context = mock()
+        val sensorManager: SensorManager = mock()
+        val sensor: Sensor = mock()
+        whenever(ctx.getSystemService(Context.SENSOR_SERVICE)).thenReturn(sensorManager)
+        whenever(sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE)).thenReturn(sensor)
+        whenever(sensorManager.registerListener(any(), eq(sensor), eq(SensorManager.SENSOR_DELAY_NORMAL))).thenReturn(true)
+        whenever(
+            aapsSchedulers.io.schedulePeriodicallyDirect(
+                any(), eq(60_000L), eq(60_000L), eq(TimeUnit.MILLISECONDS)
+            )
+        ).thenReturn(schedule)
+        val listener = HeartRateListener(ctx, aapsLogger, sp, aapsSchedulers, timestampMillis)
+        verify(aapsSchedulers.io).schedulePeriodicallyDirect(
+            any(), eq(60_000L), eq(60_000L), eq(TimeUnit.MILLISECONDS)
+        )
+        listener.sendHeartRate = { hr -> heartRates.add(hr) }
+        return Triple(listener, sensorManager, sensor)
+    }
+
+    @Test
+    fun watchdogReregistersAfterFiveSilentMinutes() {
+        whenever(sp.getInt(R.string.key_heart_rate_smoothing, 1)).thenReturn(1)
+        val start = System.currentTimeMillis()
+        val (listener, sensorManager, sensor) = createWithSensor(start)
+        verify(sensorManager, times(1)).registerListener(any(), eq(sensor), eq(SensorManager.SENSOR_DELAY_NORMAL))
+
+        // quiet for less than the timeout -> no re-registration
+        listener.watchdogCheck(start + 4 * 60_000L)
+        verify(sensorManager, times(1)).registerListener(any(), eq(sensor), eq(SensorManager.SENSOR_DELAY_NORMAL))
+
+        // >= 5 min of silence -> unregister + re-register
+        listener.watchdogCheck(start + 5 * 60_000L)
+        verify(sensorManager).unregisterListener(listener)
+        verify(sensorManager, times(2)).registerListener(any(), eq(sensor), eq(SensorManager.SENSOR_DELAY_NORMAL))
+
+        // stamp was reset: the next tick must NOT re-register again
+        listener.watchdogCheck(start + 6 * 60_000L)
+        verify(sensorManager, times(2)).registerListener(any(), eq(sensor), eq(SensorManager.SENSOR_DELAY_NORMAL))
+        listener.dispose()
+    }
+
+    @Test
+    fun watchdogQuiescentWhileEventsFlow() {
+        whenever(sp.getInt(R.string.key_heart_rate_smoothing, 1)).thenReturn(1)
+        val start = System.currentTimeMillis()
+        val (listener, sensorManager, sensor) = createWithSensor(start)
+
+        // events keep arriving -> the stamp advances -> never re-registers
+        sendSensorEvent(listener, start + 4 * 60_000L, 80)
+        listener.watchdogCheck(start + 8 * 60_000L)
+        verify(sensorManager, times(1)).registerListener(any(), eq(sensor), eq(SensorManager.SENSOR_DELAY_NORMAL))
         listener.dispose()
     }
 

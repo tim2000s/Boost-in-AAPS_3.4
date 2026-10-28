@@ -1,0 +1,22 @@
+/Users/timstreet/StudioProjects/Boost-AAPS-core/backtesting/scripts/2026-09-ml-features/common.py:50: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql_query(sql, conn, params=params)
+    200/2061 subjects
+    400/2061 subjects
+    600/2061 subjects
+    800/2061 subjects
+    1000/2061 subjects
+    1200/2061 subjects
+    1400/2061 subjects
+    1600/2061 subjects
+    1800/2061 subjects
+    2000/2061 subjects
+(2512177, 54) 1807
+                 n  subj    low    sev
+study                                 
+DCLP3        91139   112  0.144  0.043
+DCLP5       113300   100  0.158  0.046
+Flair       142835   113  0.142  0.051
+IOBP2       185061   337  0.165  0.056
+Loop       1561990   850  0.227  0.072
+PEDAP       196550    99  0.223  0.072
+ReplaceBG   221302   196  0.195  0.077

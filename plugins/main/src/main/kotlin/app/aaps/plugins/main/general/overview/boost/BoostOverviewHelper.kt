@@ -4,6 +4,7 @@ import app.aaps.core.interfaces.aps.Loop
 import app.aaps.core.interfaces.aps.RT
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.iob.IobCobCalculator
+import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
 import app.aaps.core.interfaces.stats.TddCalculator
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.data.model.TE
@@ -20,6 +21,7 @@ import javax.inject.Singleton
 @Singleton
 class BoostOverviewHelper @Inject constructor(
     private val loop: Loop,
+    private val processedDeviceStatusData: ProcessedDeviceStatusData,
     private val iobCobCalculator: IobCobCalculator,
     private val tddCalculator: TddCalculator,
     private val persistenceLayer: PersistenceLayer,
@@ -52,7 +54,45 @@ class BoostOverviewHelper @Inject constructor(
         val cannulaAgeDays: Double = -1.0,
         val sensorAgeDays: Double = -1.0,
         val fastCarbProtection: Boolean = false,
+        // Deviation-based sensitivity adjustment
+        val deviationSensRatio: Double? = null,
+        val deviationSensSource: String = "none",
+        val deviationSensClean: Int = 0,
+        val deviationSensTotal: Int = 0,
+        val sensNormalTarget: Double = 0.0,
+        // ── Boost V5 state-machine telemetry (populated only when V5 is the active APS) ──
+        val isV5Active: Boolean = false,
+        val v5State: BoostV5State = BoostV5State.IDLE,
+        val v5Age: Int = 0,
+        val v5Score: Double = 0.0,
+        val v5ActionMult: Double = 1.0,
+        val v5Budget: Double = 0.0,
+        val v5FinalDose: Double = 0.0,
+        val v5Brakes: List<BoostV5Brake> = emptyList(),
+        val v5GateRaw: String = "",
     )
+
+    /**
+     * V5 meal-hypothesis state machine. Replaces the tier model for the V5 engine.
+     * `verb` is the one-word action shown on the chip; `colorHex` the chip colour
+     * (grey idle → amber watching → orange-red acting → orange covering → teal easing).
+     * Signed off 2026-06-26.
+     */
+    enum class BoostV5State(val label: String, val verb: String, val short: String, val colorHex: Long) {
+        IDLE("Idle", "idle", "IDLE", 0xFF78909C),                 // blue-grey
+        OBSERVING("Observing", "watching", "OBSERVE", 0xFFFFC107),// amber
+        CONFIRMED("Confirmed", "acting", "CONFIRM", 0xFFFF6E40),  // orange-red
+        COMMITTED("Committed", "covering", "COMMIT", 0xFFFF9800), // orange
+        RECOVERING("Recovering", "easing", "RECOVER", 0xFF26C6DA);// teal
+
+        companion object {
+            fun fromName(text: String?): BoostV5State =
+                entries.firstOrNull { it.name.equals(text?.trim(), ignoreCase = true) } ?: IDLE
+        }
+    }
+
+    /** A single Phase-3 brake/gate that fired this cycle. `isHard` = binary disable (red ⛔). */
+    data class BoostV5Brake(val label: String, val factor: Double, val isHard: Boolean)
 
     enum class BoostTier(val label: String, val colorHex: Long) {
         BOOST_BOLUS("Boost Bolus", 0xFFE040FB),
@@ -112,9 +152,13 @@ class BoostOverviewHelper @Inject constructor(
 
     private fun computeBoostStatus(): BoostStatus {
         val request = loop.lastRun?.request
+        // The live RT is held inside the APSResult wrapper (DetermineBasalResult.rawData()); the
+        // APSResult itself is NOT an RT, so the old `request as? RT` always failed and silently fell
+        // back to NS. Pull rawData() first; AAPSClient fallback = NS-synced suggested RT.
+        val rt: RT? = (request?.rawData() as? RT) ?: (request as? RT) ?: processedDeviceStatusData.openAPSData.suggested
         val json = try { request?.json() } catch (_: Exception) { null }
-        val reason = request?.reason ?: ""
-        val scriptDebug = request?.scriptDebug ?: emptyList()
+        val reason = request?.reason ?: rt?.reason?.toString() ?: ""
+        val scriptDebug = request?.scriptDebug ?: rt?.consoleLog ?: emptyList()
         val debugText = scriptDebug.joinToString("\n")
         // Combine all text sources for parsing — scriptDebug, reason, and JSON reason field
         val allText = "$debugText\n$reason"
@@ -124,14 +168,14 @@ class BoostOverviewHelper @Inject constructor(
         val tier = tierResult.first
         val tierLabel = tierResult.second
 
-        val deltaAccl = json?.optDouble("delta_accl", 0.0) ?: 0.0
+        val deltaAccl = json?.optDouble("delta_accl", 0.0) ?: rt?.deltaAcceleration ?: 0.0
 
         // Parse activity/exercise mode from all text (e.g. "Inactive - 140% profile")
         val activityResult = parseActivityFromText(allText)
         val activityMode = activityResult.first
         val activityDetail = activityResult.second
 
-        val profilePct = json?.optInt("current_profile_percentage", 0) ?: 0
+        val profilePct = json?.optInt("current_profile_percentage", 0) ?: rt?.boostProfileSwitch ?: 0
         // Parse profile % from scriptDebug header: "Boost V2 (...) | Profile: 140%"
         val profileFromDebug = PROFILE_HEADER_REGEX.find(debugText)
             ?.groupValues?.get(1)?.toIntOrNull() ?: 0
@@ -148,23 +192,30 @@ class BoostOverviewHelper @Inject constructor(
 
         val lastBg = iobCobCalculator.ads.actualBg()?.recalculated ?: 0.0
 
-        // Use actual DynISF values from the running APS algorithm
+        // Use actual DynISF values from the running APS algorithm, with NS RT fallback
         val oapsProfile = request?.oapsProfile
-        val variableSens = request?.variableSens ?: 0.0
-        val apsTdd = oapsProfile?.TDD ?: 0.0
+        val variableSens = request?.variableSens ?: rt?.variable_sens ?: 0.0
+        val apsTdd = oapsProfile?.TDD ?: rt?.tdd ?: 0.0
         val apsInsulinDivisor = oapsProfile?.insulinDivisor ?: 0
 
         // Use the algorithm's actual target
-        val targetBgMgdl = request?.targetBG ?: 0.0
+        val targetBgMgdl = request?.targetBG ?: rt?.targetBG ?: 0.0
 
         // Autosens ratio
-        val autosensRatio = request?.autosensResult?.ratio ?: 1.0
+        val autosensRatio = request?.autosensResult?.ratio ?: rt?.sensitivityRatio ?: 1.0
 
-        // Fast-carb protection state — read directly from RT if available
-        val fastCarbProtection = (request as? RT)?.fastCarbProtection ?: false
+        // Fast-carb protection state
+        val fastCarbProtection = rt?.fastCarbProtection ?: false
 
         // Try to parse TDD from scriptDebug (Boost may write "TDD: 48.3" or similar)
         val tddFromDebug = parseTddFromText(allText)
+
+        // ── Boost V5 state machine (active-only; D4 sign-off) ──
+        // The engine stamps rt.boostV5_active=true only when V5 is the selected/active doser (not
+        // shadow). This is R8-safe (a serialized flag, not a class name) and needs no plugin coupling.
+        val v5Active = rt?.boostV5_active == true
+        val v5State = BoostV5State.fromName(rt?.boostV5_state)
+        val v5Brakes = if (v5Active) parseGateReductions(rt?.boostV5_gateReduction) else emptyList()
 
         return BoostStatus(
             tier = tier, tierLabel = tierLabel, tierReason = reason,
@@ -182,9 +233,24 @@ class BoostOverviewHelper @Inject constructor(
             scriptDebugText = debugText,
             cannulaAgeDays = getAgeDays(TE.Type.CANNULA_CHANGE),
             sensorAgeDays = getAgeDays(TE.Type.SENSOR_CHANGE),
-            fastCarbProtection = fastCarbProtection ?: false,
+            fastCarbProtection = fastCarbProtection,
+            deviationSensRatio = rt?.deviationSensRatio,
+            deviationSensSource = rt?.deviationSensSource ?: "none",
+            deviationSensClean = rt?.deviationSensClean ?: 0,
+            deviationSensTotal = rt?.deviationSensTotal ?: 0,
+            sensNormalTarget = rt?.sensNormalTarget ?: 0.0,
+            isV5Active = v5Active,
+            v5State = v5State,
+            v5Age = rt?.boostV5_age ?: 0,
+            v5Score = rt?.boostV5_score ?: 0.0,
+            v5ActionMult = rt?.boostV5_actionMult ?: 1.0,
+            v5Budget = rt?.boostV5_budget ?: 0.0,
+            v5FinalDose = rt?.boostV5_finalDose ?: 0.0,
+            v5Brakes = v5Brakes,
+            v5GateRaw = rt?.boostV5_gateReduction ?: "",
         )
     }
+
 
     /** Parse "Tier N - Label" from combined text. Returns (BoostTier, display label) or null. */
     private fun parseTierFromText(text: String): Pair<BoostTier, String>? {
@@ -265,6 +331,40 @@ class BoostOverviewHelper @Inject constructor(
     companion object {
         /** Cache TTL — getBoostStatus() returns cached result within this window */
         private const val CACHE_TTL_MS = 30_000L  // 30 seconds
+
+        /**
+         * Parse `boostV5_gateReduction` into displayable brakes. Pure/static so it is unit-testable.
+         * Format is a comma-separated list of:
+         *   `HARD:<reason>`         → binary disable (isHard, factor 0)
+         *   `maxIOB` / `spike`      → a hard clamp (isHard, factor 0)
+         *   `<name>:<factor>`       → soft brake; only surfaced when it actually bit (factor < ~1.0)
+         *   `none`                  → ignored
+         * Returns [] for null/empty/"none". Hard gates first, then strongest soft brakes.
+         */
+        fun parseGateReductions(raw: String?): List<BoostV5Brake> {
+            val text = raw?.trim().orEmpty()
+            if (text.isEmpty() || text.equals("none", ignoreCase = true)) return emptyList()
+            val brakes = mutableListOf<BoostV5Brake>()
+            for (tokenRaw in text.split(',')) {
+                val token = tokenRaw.trim()
+                if (token.isEmpty() || token.equals("none", ignoreCase = true)) continue
+                when {
+                    token.startsWith("HARD:", ignoreCase = true) ->
+                        brakes += BoostV5Brake(token.substringAfter(':').trim(), 0.0, isHard = true)
+                    token.equals("maxIOB", ignoreCase = true) ->
+                        brakes += BoostV5Brake("maxIOB", 0.0, isHard = true)
+                    token.equals("spike", ignoreCase = true) ->
+                        brakes += BoostV5Brake("spike", 0.0, isHard = true)
+                    token.contains(':') -> {
+                        val name = token.substringBefore(':').trim()
+                        val factor = token.substringAfter(':').trim().toDoubleOrNull() ?: continue
+                        if (factor < 0.999) brakes += BoostV5Brake(name, factor, isHard = false)
+                    }
+                }
+            }
+            // Hard gates first; among soft brakes, the strongest (lowest factor) first.
+            return brakes.sortedWith(compareByDescending<BoostV5Brake> { it.isHard }.thenBy { it.factor })
+        }
 
         // Pre-compiled regexes (avoid recompilation on every getBoostStatus() call)
         private val TIER_REGEX = Regex("""tier\s+(\d+)\s*[-:]\s*(.+)""", RegexOption.IGNORE_CASE)

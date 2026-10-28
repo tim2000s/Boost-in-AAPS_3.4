@@ -28,7 +28,12 @@ class GlucoseStatusCalculatorSMB @Inject constructor(
         get() = getGlucoseStatusData(false)
 
     override fun getGlucoseStatusData(allowOldData: Boolean): GlucoseStatusSMB? {
-        val data = iobCobCalculator.ads.getBucketedDataTableCopy() ?: return null
+        // Native cadence rather than the five-minute buckets. DeltaCalculator's windows are
+        // expressed in elapsed minutes (2.5-7.5, 2.5-17.5, 17.5-42.5) and each candidate is
+        // change/minutesAgo*5, so the arithmetic is unchanged; it simply averages over every
+        // reading in each window instead of one in five. Identical on a five-minute feed, where
+        // the native series IS the bucketed series. (2026-08-01)
+        val data = iobCobCalculator.ads.getBucketedDataNativeTableCopy() ?: return null
 
         val sizeRecords = data.size
         if (sizeRecords == 0) {

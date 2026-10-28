@@ -1,0 +1,55 @@
+tim: 84 confirms over 30 days, 165.9 U committed
+  windows containing a low 25, severe 12
+  sensitivity median 111 mg/dL/U (41 to 216)
+  multiplier uniform on [0.4, 1.0], 3000 replicates, 14 cores
+
+==============================================================================
+1. WHAT THE CONFIRM ITSELF CONTRIBUTES BY THE TIME OF THE NADIR
+==============================================================================
+  The recorded insulin on board is a NET figure and is negative on a quarter of
+  cycles, so it cannot be the denominator of a share. Reported instead: the
+  confirm's own bolus still present, and the glucose deficit the model attributes
+  to it, against the fall actually observed.
+
+  quantity                                         median          quartiles
+  confirm's own bolus still on board at nadir (U)     0.15     0.00 to 0.58
+  glucose deficit attributed to it by then (mg/dL)   163.04   103.18 to 229.03
+  observed fall, peak to nadir (mg/dL)             123.50    84.75 to 153.25
+  net insulin on board at the nadir (U)              0.35     0.09 to 0.79
+
+  ratio of attributed deficit to observed fall: median 1.34
+  A ratio near or above one means the model already accounts for the whole fall,
+  and the confirm is the plausible cause. Well below one means other insulin,
+  or the meal ending, did most of it and reducing the confirm will not prevent it.
+    ratio 0.0-0.5:   9 confirms,   5 with a low
+    ratio 0.5-1.0:  16 confirms,   7 with a low
+    ratio 1.0-3.1:  59 confirms,  13 with a low
+
+==============================================================================
+2. THE RANDOMISED TRIAL
+==============================================================================
+  Counts are per replicate across all 84 confirms.
+
+   insulin effect             lows          severe     new highs
+             x0.5         8 [5,12]         2 [0,5]    13 [10,17]
+             x1.0          4 [1,7]         1 [0,3]    19 [15,23]
+             x2.0          2 [0,5]         0 [0,2]    23 [19,25]
+         observed               25              12             0
+
+  insulin withheld per replicate: median 49.7 U of 165.9 (30%)
+
+==============================================================================
+3. HOW MUCH LESS BAD, AND HOW MUCH WORSE
+==============================================================================
+  Depth is the area outside range in mg/dL.min within the window. Pooled over
+  replicates and confirms, at the recorded sensitivity.
+
+  windows that contained a low (25):
+    nadir rises by      median   35.0 mg/dL  [6, 92]
+    depth below 70 falls median     95 mg/dL.min  (100% of draws improve it)
+  all windows (84):
+    peak rises by       median   23.6 mg/dL  [1, 95]
+    depth above 180 rises median  1407 mg/dL.min
+
+  wrote 6 charts to figs_ting/
+  wrote trial_summary.json

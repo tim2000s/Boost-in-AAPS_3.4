@@ -1,0 +1,84 @@
+commits with a delivered dose: 1718 across 9 participants
+  observed low within 300 min: 0.338
+  median dose 1.20 U, median sensitivity 40 mg/dL/U
+  scaling to 0.70 of the committed dose
+
+========================================================================================
+WHAT THE REDUCTION BUYS, ON THE INSULIN ARM ONLY
+========================================================================================
+  Lows avoided is a ceiling: the recorded trajectory already contains the
+  counter-regulation the low provoked, which a smaller dose would have provoked less of.
+
+  arm                    commits  obs low  avoided     sev U removed    +mgdl.h U per low
+  uniform                  1718      581      313     132     828.5       19.9      2.65
+  oracle-late               161       67       29      16      74.1        0.5      2.55
+  oracle-small              855      337      170      70     394.7        3.7      2.32
+
+========================================================================================
+SENSITIVITY TO THE INSULIN CURVE AND TO THE SIZE OF THE REDUCTION
+========================================================================================
+
+      peak / DIA   mult  avoided   severe  U per low
+      45 / 360     0.50      424      158       3.26
+      45 / 360     0.70      329      135       2.52
+      45 / 360     0.85      211      107       1.96
+      55 / 360     0.50      403      154       3.43
+      55 / 360     0.70      313      132       2.65
+      55 / 360     0.85      201      101       2.06
+      75 / 360     0.50      374      146       3.69
+      75 / 360     0.70      280      125       2.96
+      75 / 360     0.85      177       94       2.34
+
+========================================================================================
+PER PARTICIPANT, UNIFORM ARM
+========================================================================================
+
+  user    commits  obs lows  avoided   share  U removed
+  A           260        42       24    0.57      183.4
+  B           348        90       51    0.57      194.5
+  C           273       121       59    0.49       98.3
+  D           177        88       21    0.24       72.2
+  E            39        11        7    0.64       14.0
+  F           211        53       30    0.57       99.4
+  H            56        13        9    0.69       35.9
+  I            16         7        3    0.43        4.7
+  tim         338       156      109    0.70      126.0
+
+========================================================================================
+COST IN GLUCOSE EXPOSURE, WHICH IS THE CURRENCY THAT MATTERS
+========================================================================================
+  Insulin removed is not the cost of an arm. The cost is the hyperglycaemia accepted
+  in exchange, and it differs by a factor of forty between these arms because a late
+  commit delivers into a meal that has already peaked.
+
+  arm                       avoided  total mg/dL.h  per low avoided
+  uniform                       313          34142            109.1
+  oracle-late                    29            799             27.6
+  oracle-small                  170           6333             37.3
+
+========================================================================================
+IS THE HARM IN THE LARGE BOLUS AT A LATE COMMIT
+========================================================================================
+  Large is above the cohort median committed dose of 1.20 U.
+
+  cell                                    n  obs low  severe  med dose  med nadir
+  late peak, large dose                  81    0.457   0.136      2.25         74
+  late peak, small dose                  80    0.375   0.163      0.65         77
+  normal peak, large dose               776    0.325   0.107      2.35         83
+  normal peak, small dose               781    0.335   0.104      0.75         82
+
+========================================================================================
+HOW HARD TO CUT THE LATE COMMIT, AND WHAT IT COSTS
+========================================================================================
+  Applied only to commits whose peak arrives within ten minutes, leaving every other
+  commit untouched. The uniform arm at 0.70 is repeated for comparison.
+
+  policy                              avoided  severe   mg/dL.h   per low
+  late commits scaled to 0.85                16      13       160      10.0
+  late commits scaled to 0.70                29      16       799      27.6
+  late commits scaled to 0.50                47      17      3184      67.7
+  late commits scaled to 0.30                52      18      7224     138.9
+  late commits scaled to 0.00                57      20     14937     262.1
+  every commit scaled to 0.70             313     132     34142     109.1
+
+wrote results.json

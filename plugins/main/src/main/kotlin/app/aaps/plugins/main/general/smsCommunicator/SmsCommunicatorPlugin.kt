@@ -2,6 +2,7 @@ package app.aaps.plugins.main.general.smsCommunicator
 
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.telephony.SmsManager
 import android.telephony.SmsMessage
 import android.text.TextUtils
@@ -66,7 +67,8 @@ import app.aaps.core.objects.constraints.ConstraintObject
 import app.aaps.core.objects.extensions.generateCOBString
 import app.aaps.core.objects.extensions.round
 import app.aaps.core.objects.workflow.LoggingWorker
-import app.aaps.core.utils.receivers.DataWorkerStorage
+import app.aaps.core.utils.receivers.DataInbox
+import app.aaps.core.utils.receivers.Inbox
 import app.aaps.core.validators.DefaultEditTextValidator
 import app.aaps.core.validators.EditTextValidator
 import app.aaps.core.validators.preferences.AdaptiveIntPreference
@@ -79,6 +81,7 @@ import app.aaps.plugins.main.general.smsCommunicator.events.EventSmsCommunicator
 import app.aaps.plugins.main.general.smsCommunicator.otp.OneTimePassword
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.plusAssign
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import org.apache.commons.lang3.Strings
 import org.joda.time.DateTime
@@ -214,19 +217,39 @@ class SmsCommunicatorPlugin @Inject constructor(
     ) : LoggingWorker(context, params, Dispatchers.IO) {
 
         @Inject lateinit var smsCommunicatorPlugin: SmsCommunicatorPlugin
-        @Inject lateinit var dataWorkerStorage: DataWorkerStorage
+        @Inject lateinit var dataInbox: DataInbox
 
         override suspend fun doWorkAndLog(): Result {
-            val bundle = dataWorkerStorage.pickupBundle(inputData.getLong(DataWorkerStorage.STORE_KEY, -1))
-                ?: return Result.failure(workDataOf("Error" to "missing input data"))
-            val format = bundle.getString("format")
-                ?: return Result.failure(workDataOf("Error" to "missing format in input data"))
+            val bundles = dataInbox.drain(SmsInbox)
+            if (bundles.isEmpty()) return Result.success(workDataOf("Result" to "no data"))
+            var failed = 0
+            for (bundle in bundles) {
+                try {
+                    processBundle(bundle)
+                } catch (e: CancellationException) {
+                    // Not re-queued, unlike the CGM workers: an SMS carries a remote command, and
+                    // running it twice is worse than dropping it, which the sender can repeat.
+                    throw e
+                } catch (e: Exception) {
+                    aapsLogger.error(LTag.SMS, "Failed processing SMS bundle", e)
+                    failed++
+                }
+            }
+            // Success even when a bundle failed; see XdripSourceWorker for why a FAILED run is avoided.
+            return if (failed > 0) Result.success(workDataOf("Error" to "$failed of ${bundles.size} bundles failed"))
+            else Result.success()
+        }
+
+        private fun processBundle(bundle: Bundle) {
+            val format = bundle.getString("format") ?: run {
+                aapsLogger.warn(LTag.SMS, "Skipping SMS bundle: missing format")
+                return
+            }
             @Suppress("DEPRECATION") val pdus = bundle["pdus"] as Array<*>
             for (pdu in pdus) {
                 val message = SmsMessage.createFromPdu(pdu as ByteArray, format)
                 smsCommunicatorPlugin.processSms(Sms(message))
             }
-            return Result.success()
         }
     }
 
@@ -1343,3 +1366,5 @@ class SmsCommunicatorPlugin @Inject constructor(
         }
     }
 }
+
+object SmsInbox : Inbox<Bundle>("sms-in", SmsCommunicatorPlugin.SmsCommunicatorWorker::class.java)

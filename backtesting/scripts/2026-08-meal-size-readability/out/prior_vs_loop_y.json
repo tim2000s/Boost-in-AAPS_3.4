@@ -1,0 +1,31 @@
+{
+ "target": "y",
+ "n": 27610,
+ "base_rate": 0.5441506700470844,
+ "arms": [
+  {
+   "arm": "loop projection (eventualBG)",
+   "auc": 0.5446826763708074
+  },
+  {
+   "arm": "loop projection and IOB",
+   "auc": 0.5439905135310174
+  },
+  {
+   "arm": "loop delivery (insulin, 30 min)",
+   "auc": 0.42605743887802716
+  },
+  {
+   "arm": "loop projection, IOB and delivery",
+   "auc": 0.5243456013045582
+  },
+  {
+   "arm": "onset glucose and the clock",
+   "auc": 0.6250897393557457
+  },
+  {
+   "arm": "loop record plus onset glucose and clock",
+   "auc": 0.6265338375067925
+  }
+ ]
+}
