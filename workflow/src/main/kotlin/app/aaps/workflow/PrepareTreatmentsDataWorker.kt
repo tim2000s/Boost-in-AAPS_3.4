@@ -73,6 +73,13 @@ class PrepareTreatmentsDataWorker(
                 it.y = getNearestBg(data.overviewData, it.x.toLong())
                 filteredTreatments.add(it)
             }
+        persistenceLayer.getGlucagonDosesFromTime(fromTime, includeInvalid = false).blockingGet()
+            .filter { it.timestamp <= endTime }
+            .map { BolusDataPoint(it, rh, activePlugin.activePump.pumpDescription.bolusStep, preferences, decimalFormatter) }
+            .forEach {
+                it.y = getNearestBg(data.overviewData, it.x.toLong())
+                filteredTreatments.add(it)
+            }
         persistenceLayer.getCarbsFromTimeToTimeExpanded(fromTime, endTime, true)
             .map { CarbsDataPoint(it, rh) }
             .forEach {

@@ -10,6 +10,7 @@ import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.Notification
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
@@ -19,7 +20,7 @@ import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.AapsSchedulers
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventAPSCalculationFinished
-import app.aaps.core.interfaces.rx.events.EventGlucagonDoseDelivered
+import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
@@ -59,7 +60,8 @@ class GlucagonAlgorithmPlugin @Inject constructor(
     private val activePlugin: ActivePlugin,
     private val profileFunction: ProfileFunction,
     private val persistenceLayer: PersistenceLayer,
-    private val dateUtil: DateUtil
+    private val dateUtil: DateUtil,
+    private val uiInteraction: UiInteraction
 ) : PluginBase(
     PluginDescription()
         .mainType(PluginType.GENERAL)
@@ -105,6 +107,8 @@ class GlucagonAlgorithmPlugin @Inject constructor(
             return
         }
 
+        checkReservoir()
+
         val aps: APS = activePlugin.activeAPS
         val apsResult = aps.lastAPSResult ?: return
 
@@ -149,12 +153,13 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         }
 
         // Condition 8: glucagon pump ready
+        // From here a dose is wanted, so a pump that cannot give one raises the alarm
         val glucagonPump = activeGlucagonPump() ?: run {
-            aapsLogger.debug(LTag.APS, "Glucagon blocked: no active glucagon pump")
+            alarmUnavailable(rh.gs(R.string.glucagon_unavailable_no_pump))
             return
         }
         if (!glucagonPump.isGlucagonPumpReady()) {
-            aapsLogger.debug(LTag.APS, "Glucagon blocked: pump not ready")
+            alarmUnavailable(rh.gs(R.string.glucagon_unavailable_not_ready))
             return
         }
 
@@ -180,6 +185,10 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         }
         val reservoirStep = Math.floor(glucagonPump.glucagonReservoirMcg / 25.0) * 25.0
         val finalDoseMcg = minOf(roundedDose, dailyHeadroom, reservoirStep)
+        if (finalDoseMcg < 25.0) {
+            alarmUnavailable(rh.gs(R.string.glucagon_unavailable_reservoir, glucagonPump.glucagonReservoirMcg))
+            return
+        }
 
         // Warn if approaching daily cap
         if (dailyTotal + finalDoseMcg > 600) {
@@ -193,12 +202,29 @@ class GlucagonAlgorithmPlugin @Inject constructor(
                 "gob=${"%.1f".format(currentGob)} dailyTotal=${"%.0f".format(dailyTotal)}"
         )
 
-        val success = glucagonPump.deliverGlucagon(finalDoseMcg)
-        rxBus.send(EventGlucagonDoseDelivered(doseMcg = finalDoseMcg, success = success))
-
-        if (!success) {
+        if (glucagonPump.deliverGlucagon(finalDoseMcg)) {
+            uiInteraction.dismissNotification(Notification.GLUCAGON_UNAVAILABLE)
+            checkReservoir()
+        } else {
             aapsLogger.error(LTag.APS, "Glucagon delivery failed for dose ${"%.0f".format(finalDoseMcg)} mcg")
+            alarmUnavailable(rh.gs(R.string.glucagon_unavailable_delivery_failed, finalDoseMcg))
         }
+    }
+
+    /** Glucagon is wanted and cannot be given. Re-raising the same id while it is shown does not re-sound it. */
+    private fun alarmUnavailable(reason: String) {
+        aapsLogger.warn(LTag.APS, "Glucagon blocked: $reason")
+        uiInteraction.addNotificationWithSound(Notification.GLUCAGON_UNAVAILABLE, rh.gs(R.string.glucagon_unavailable, reason), Notification.URGENT, app.aaps.core.ui.R.raw.alarm)
+    }
+
+    /** Warn while the reservoir holds less than one maximum single dose; clear once it is refilled. */
+    private fun checkReservoir() {
+        val pump = activeGlucagonPump() ?: return
+        val left = pump.glucagonReservoirMcg
+        if (left < preferences.get(IntKey.GlucagonMaxSingleDoseMcg))
+            uiInteraction.addNotification(Notification.GLUCAGON_RESERVOIR_LOW, rh.gs(R.string.glucagon_reservoir_low, left), Notification.NORMAL)
+        else
+            uiInteraction.dismissNotification(Notification.GLUCAGON_RESERVOIR_LOW)
     }
 
     // -------------------------------------------------------------------------

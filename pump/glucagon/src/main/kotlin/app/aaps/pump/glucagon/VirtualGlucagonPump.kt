@@ -48,10 +48,8 @@ class VirtualGlucagonPump @Inject constructor(
 
     // Simulated reservoir, 1000 mcg by default
     private var reservoirMcg: Double = DEFAULT_RESERVOIR_MCG
-    private var lastDeliveryTs: Long = 0L
 
     override val glucagonReservoirMcg: Double get() = reservoirMcg
-    override val lastGlucagonDeliveryTimestamp: Long get() = lastDeliveryTs
 
     override fun isGlucagonPumpReady(): Boolean = isEnabled() && reservoirMcg >= MIN_DOSE_MCG
 
@@ -84,7 +82,6 @@ class VirtualGlucagonPump @Inject constructor(
                 .blockingGet()
             if (result.inserted.isNotEmpty()) {
                 reservoirMcg -= doseMcg
-                lastDeliveryTs = now
                 aapsLogger.debug(LTag.PUMP, "VirtualGlucagonPump: delivered ${"%.0f".format(doseMcg)} mcg, reservoir=${"%.0f".format(reservoirMcg)} mcg")
                 rxBus.send(EventNewHistoryData(now, false))
                 true

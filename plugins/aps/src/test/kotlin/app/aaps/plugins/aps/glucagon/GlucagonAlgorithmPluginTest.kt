@@ -8,10 +8,11 @@ import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.aps.GlucoseStatus
 import app.aaps.core.interfaces.aps.IobTotal
 import app.aaps.core.interfaces.db.PersistenceLayer
+import app.aaps.core.interfaces.notifications.Notification
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.pump.GlucagonPump
-import app.aaps.core.interfaces.rx.events.EventGlucagonDoseDelivered
+import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
@@ -22,6 +23,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyVararg
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -41,6 +44,7 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
     @Mock lateinit var mockApsResult: APSResult
     @Mock lateinit var mockGlucoseStatus: GlucoseStatus
     @Mock lateinit var mockPersistenceLayer: PersistenceLayer
+    @Mock lateinit var uiInteraction: UiInteraction
 
     private lateinit var plugin: GlucagonAlgorithmPlugin
     private lateinit var fakePump: TestGlucagonPlugin
@@ -63,7 +67,6 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
             return deliveryResult
         }
         override var glucagonReservoirMcg: Double = 1000.0
-        override val lastGlucagonDeliveryTimestamp: Long = 0L
     }
 
     // -------------------------------------------------------------------------
@@ -81,10 +84,15 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
             activePlugin = activePlugin,
             profileFunction = profileFunction,
             persistenceLayer = mockPersistenceLayer,
-            dateUtil = dateUtil
+            dateUtil = dateUtil,
+            uiInteraction = uiInteraction
         )
 
         fakePump = TestGlucagonPlugin()
+
+        // Alert texts are built with rh.gs, which the mock would return as null
+        whenever(rh.gs(any<Int>())).thenReturn("text")
+        whenever(rh.gs(any<Int>(), anyVararg<Any>())).thenReturn("text")
 
         // Default: all 8 conditions passing
         whenever(preferences.get(BooleanKey.GlucagonEnabled)).thenReturn(true)
@@ -467,32 +475,86 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
     }
 
     // -------------------------------------------------------------------------
-    // EventGlucagonDoseDelivered
+    // Alerts
     // -------------------------------------------------------------------------
 
+    private fun verifyUnavailableAlarm() =
+        verify(uiInteraction).addNotificationWithSound(eq(Notification.GLUCAGON_UNAVAILABLE), any(), eq(Notification.URGENT), any())
+
     @Test
-    fun `EventGlucagonDoseDelivered with success true is sent on delivery`() {
-        val events = mutableListOf<EventGlucagonDoseDelivered>()
-        rxBus.toObservable(EventGlucagonDoseDelivered::class.java).subscribe { events.add(it) }
+    fun `alarm when a dose is wanted and no pump is enabled`() {
+        whenever(activePlugin.getSpecificPluginsListByInterface(GlucagonPump::class.java)).thenReturn(arrayListOf())
 
         plugin.evaluateAndDoseForTest()
 
-        assertThat(events).hasSize(1)
-        assertThat(events[0].success).isTrue()
-        assertThat(events[0].doseMcg).isGreaterThan(0.0)
+        verifyUnavailableAlarm()
     }
 
     @Test
-    fun `EventGlucagonDoseDelivered with success false is sent when pump fails`() {
-        fakePump.deliveryResult = false
-
-        val events = mutableListOf<EventGlucagonDoseDelivered>()
-        rxBus.toObservable(EventGlucagonDoseDelivered::class.java).subscribe { events.add(it) }
+    fun `alarm when a dose is wanted and the pump is not ready`() {
+        fakePump.ready = false
 
         plugin.evaluateAndDoseForTest()
 
-        assertThat(events).hasSize(1)
-        assertThat(events[0].success).isFalse()
+        verifyUnavailableAlarm()
+    }
+
+    @Test
+    fun `alarm when delivery fails`() {
+        fakePump.deliveryResult = false
+
+        plugin.evaluateAndDoseForTest()
+
+        verifyUnavailableAlarm()
+    }
+
+    @Test
+    fun `alarm when the reservoir holds less than the minimum dose`() {
+        fakePump.glucagonReservoirMcg = 10.0
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(0.0)
+        verifyUnavailableAlarm()
+    }
+
+    @Test
+    fun `successful delivery clears the unavailable alarm`() {
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isGreaterThan(0.0)
+        verify(uiInteraction).dismissNotification(Notification.GLUCAGON_UNAVAILABLE)
+        verify(uiInteraction, never()).addNotificationWithSound(any(), any(), any(), any())
+    }
+
+    @Test
+    fun `no alarm when glucagon is not wanted, even with no pump`() {
+        whenever(activePlugin.getSpecificPluginsListByInterface(GlucagonPump::class.java)).thenReturn(arrayListOf())
+        whenever(mockGlucoseStatus.glucose).thenReturn(120.0)
+
+        plugin.evaluateAndDoseForTest()
+
+        verify(uiInteraction, never()).addNotificationWithSound(any(), any(), any(), any())
+    }
+
+    @Test
+    fun `reservoir below one maximum dose raises the low-reservoir notice`() {
+        fakePump.glucagonReservoirMcg = 100.0   // max single dose is 150
+        whenever(mockGlucoseStatus.glucose).thenReturn(120.0)   // no dose wanted; the notice does not wait for one
+
+        plugin.evaluateAndDoseForTest()
+
+        verify(uiInteraction).addNotification(eq(Notification.GLUCAGON_RESERVOIR_LOW), any(), eq(Notification.NORMAL))
+    }
+
+    @Test
+    fun `full reservoir clears the low-reservoir notice`() {
+        whenever(mockGlucoseStatus.glucose).thenReturn(120.0)
+
+        plugin.evaluateAndDoseForTest()
+
+        verify(uiInteraction).dismissNotification(Notification.GLUCAGON_RESERVOIR_LOW)
+        verify(uiInteraction, never()).addNotification(eq(Notification.GLUCAGON_RESERVOIR_LOW), any(), any())
     }
 
     // -------------------------------------------------------------------------

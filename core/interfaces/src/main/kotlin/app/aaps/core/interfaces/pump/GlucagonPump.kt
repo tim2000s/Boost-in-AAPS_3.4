@@ -23,7 +23,4 @@ interface GlucagonPump {
 
     /** Remaining glucagon in the reservoir, in micrograms. */
     val glucagonReservoirMcg: Double
-
-    /** Timestamp (ms) of the most recent successful delivery, or 0 if never delivered. */
-    val lastGlucagonDeliveryTimestamp: Long
 }

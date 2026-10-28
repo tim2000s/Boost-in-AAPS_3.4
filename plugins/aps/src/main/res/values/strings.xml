@@ -438,6 +438,12 @@
     <string name="glucagon_max_daily_title">Daily hard cap (mcg)</string>
     <string name="glucagon_max_daily_summary">Hard limit on total glucagon per day. Doses are blocked once this is reached. Default: 900 mcg.</string>
     <string name="glucagon_formulation_title">Glucagon formulation</string>
+    <string name="glucagon_unavailable">Glucagon needed but not given: %1$s</string>
+    <string name="glucagon_unavailable_no_pump">no glucagon pump is enabled</string>
+    <string name="glucagon_unavailable_not_ready">the glucagon pump is not ready</string>
+    <string name="glucagon_unavailable_reservoir">%1$.0f mcg left in the reservoir, below the 25 mcg minimum dose</string>
+    <string name="glucagon_unavailable_delivery_failed">delivery of %1$.0f mcg failed</string>
+    <string name="glucagon_reservoir_low">Glucagon reservoir low: %1$.0f mcg left</string>
     <string name="glucagon_formulation_summary">Sets the GOB curve. GlucaGen: peak 15 min, 90 min duration. Gvoke and dasiglucagon: peak 30 min, 180 min duration. Dasiglucagon doses are scaled to 0.65.</string>
     <string name="glucagon_formulation_glucagen">GlucaGen (native glucagon)</string>
     <string name="glucagon_formulation_gvoke">Gvoke</string>

@@ -21,7 +21,8 @@ class BolusDataPoint(
     override fun getX(): Double = data.timestamp.toDouble()
     override fun getY(): Double = if (data.type == BS.Type.SMB) preferences.get(UnitDoubleKey.OverviewLowMark) else yValue
     override val label
-        get() = decimalFormatter.toPumpSupportedBolus(data.amount, bolusStep)
+        get() = if (data.type == BS.Type.GLUCAGON) "${(data.amount * 1000).toInt()}µg"   // stored in mg
+        else decimalFormatter.toPumpSupportedBolus(data.amount, bolusStep)
     override val duration = 0L
     override val size = 2f
     override val paintStyle: Paint.Style = Paint.Style.FILL // not used
@@ -30,6 +31,7 @@ class BolusDataPoint(
 
     override fun color(context: Context?): Int =
         if (data.type == BS.Type.SMB) rh.gac(context, app.aaps.core.ui.R.attr.smbColor)
+        else if (data.type == BS.Type.GLUCAGON) rh.gac(context, app.aaps.core.ui.R.attr.glucagonColor)
         else if (data.isValid) rh.gac(context, app.aaps.core.ui.R.attr.bolusDataPointColor)
         else rh.gac(context, app.aaps.core.ui.R.attr.alarmColor)
 

@@ -206,6 +206,7 @@
         <item name="uamColor">@color/uam</item>
         <item name="ztColor">@color/zt</item>
         <item name="smbColor">@color/tempbasal</item>
+        <item name="glucagonColor">@color/glucagon</item>
         <item name="bolusDataPointColor">@color/pumpHistory</item>
         <item name="profileSwitchColor">@color/profileSwitch</item>
         <item name="originalBgValueColor">@color/white</item>

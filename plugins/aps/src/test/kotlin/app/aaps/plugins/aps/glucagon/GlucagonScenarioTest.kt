@@ -11,6 +11,7 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.pump.GlucagonPump
+import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
@@ -46,6 +47,7 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
     @Mock lateinit var mockApsResult: APSResult
     @Mock lateinit var mockGlucoseStatus: GlucoseStatus
     @Mock lateinit var mockPersistenceLayer: PersistenceLayer
+    @Mock lateinit var uiInteraction: UiInteraction
 
     private lateinit var fakePump: TestGlucagonPlugin
 
@@ -64,7 +66,6 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
             return true
         }
         override val glucagonReservoirMcg: Double = 1000.0
-        override val lastGlucagonDeliveryTimestamp: Long = 0L
     }
 
     // -------------------------------------------------------------------------
@@ -171,7 +172,8 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
             activePlugin = activePlugin,
             profileFunction = profileFunction,
             persistenceLayer = mockPersistenceLayer,
-            dateUtil = dateUtil
+            dateUtil = dateUtil,
+            uiInteraction = uiInteraction
         )
 
         // Preferences
