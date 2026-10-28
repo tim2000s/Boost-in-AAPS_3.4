@@ -1,5 +1,10 @@
 package app.aaps.pump.glucagon
 
+import android.content.Context
+import androidx.preference.Preference
+import androidx.preference.PreferenceCategory
+import androidx.preference.PreferenceManager
+import androidx.preference.PreferenceScreen
 import app.aaps.core.data.model.BS
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.ue.Action
@@ -14,6 +19,11 @@ import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventNewHistoryData
 import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.keys.IntKey
+import app.aaps.core.keys.IntNonKey
+import app.aaps.core.keys.LongNonKey
+import app.aaps.core.keys.interfaces.Preferences
+import app.aaps.core.validators.preferences.AdaptiveIntPreference
 import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,8 +34,10 @@ import javax.inject.Singleton
  * Implements [GlucagonPump], and is found by [GlucagonAlgorithmPlugin] through
  * `activePlugin.getSpecificPluginsListByInterface(GlucagonPump::class.java)`.
  *
- * Simulates a pump loaded with glucagon. Reservoir defaults to 1000 mcg (1 mg, about a day's supply).
- * Stores delivered doses as BS(type=GLUCAGON) records so GOB can be calculated; they are not uploaded.
+ * The reservoir level and fill time are kept in preferences so a restart does not refill it; the
+ * settings screen sets the fill amount and refills. Delivered doses are stored as BS(type=GLUCAGON)
+ * records so GOB can be calculated. Delivery is synchronous; a real driver would go through a
+ * command queue and confirm each dose from pump history.
  *
  * Amount encoding: BS.amount is stored in mg (1.0 = 1 mg = 1000 mcg).
  */
@@ -35,23 +47,23 @@ class VirtualGlucagonPump @Inject constructor(
     rh: ResourceHelper,
     private val rxBus: RxBus,
     private val persistenceLayer: PersistenceLayer,
-    private val dateUtil: DateUtil
+    private val dateUtil: DateUtil,
+    private val preferences: Preferences
 ) : PluginBase(
     PluginDescription()
         .mainType(PluginType.GENERAL)
         .pluginIcon(app.aaps.core.ui.R.drawable.ic_generic_icon)
         .pluginName(R.string.virtual_glucagon_pump_name)
         .shortName(R.string.virtual_glucagon_pump_short_name)
-        .description(R.string.virtual_glucagon_pump_description),
+        .description(R.string.virtual_glucagon_pump_description)
+        .preferencesId(PluginDescription.PREFERENCE_SCREEN),
     aapsLogger, rh
 ), GlucagonPump {
 
-    // Simulated reservoir, 1000 mcg by default
-    private var reservoirMcg: Double = DEFAULT_RESERVOIR_MCG
+    override val glucagonReservoirMcg: Double get() = preferences.get(IntNonKey.GlucagonReservoirMcg).toDouble()
+    override val glucagonReservoirFilledAt: Long get() = preferences.get(LongNonKey.GlucagonReservoirFilledAt)
 
-    override val glucagonReservoirMcg: Double get() = reservoirMcg
-
-    override fun isGlucagonPumpReady(): Boolean = isEnabled() && reservoirMcg >= MIN_DOSE_MCG
+    override fun isGlucagonPumpReady(): Boolean = isEnabled() && glucagonReservoirMcg >= MIN_DOSE_MCG
 
     override fun deliverGlucagon(doseMcg: Double): Boolean {
         if (!isEnabled()) {
@@ -62,6 +74,7 @@ class VirtualGlucagonPump @Inject constructor(
             aapsLogger.warn(LTag.PUMP, "VirtualGlucagonPump: invalid dose $doseMcg mcg")
             return false
         }
+        val reservoirMcg = glucagonReservoirMcg
         if (reservoirMcg < doseMcg) {
             aapsLogger.warn(LTag.PUMP, "VirtualGlucagonPump: insufficient reservoir (${"%.0f".format(reservoirMcg)} mcg) for dose ${"%.0f".format(doseMcg)} mcg")
             return false
@@ -81,8 +94,8 @@ class VirtualGlucagonPump @Inject constructor(
                 .insertOrUpdateBolus(bolus, Action.GLUCAGON_DOSE, Sources.GlucagonPump)
                 .blockingGet()
             if (result.inserted.isNotEmpty()) {
-                reservoirMcg -= doseMcg
-                aapsLogger.debug(LTag.PUMP, "VirtualGlucagonPump: delivered ${"%.0f".format(doseMcg)} mcg, reservoir=${"%.0f".format(reservoirMcg)} mcg")
+                preferences.put(IntNonKey.GlucagonReservoirMcg, (reservoirMcg - doseMcg).toInt())
+                aapsLogger.debug(LTag.PUMP, "VirtualGlucagonPump: delivered ${"%.0f".format(doseMcg)} mcg, reservoir=${"%.0f".format(glucagonReservoirMcg)} mcg")
                 rxBus.send(EventNewHistoryData(now, false))
                 true
             } else {
@@ -95,13 +108,36 @@ class VirtualGlucagonPump @Inject constructor(
         }
     }
 
-    /** Refill simulator reservoir (for testing). */
-    fun refillReservoir(mcg: Double) {
-        reservoirMcg = mcg.coerceAtLeast(0.0)
+    /** Fill the reservoir to the configured amount and record the fill time. */
+    fun refillReservoir() {
+        preferences.put(IntNonKey.GlucagonReservoirMcg, preferences.get(IntKey.GlucagonReservoirFillMcg))
+        preferences.put(LongNonKey.GlucagonReservoirFilledAt, dateUtil.now())
+        aapsLogger.debug(LTag.PUMP, "VirtualGlucagonPump: refilled to ${glucagonReservoirMcg.toInt()} mcg")
+    }
+
+    override fun addPreferenceScreen(preferenceManager: PreferenceManager, parent: PreferenceScreen, context: Context, requiredKey: String?) {
+        if (requiredKey != null && requiredKey != "virtual_glucagon_pump_settings") return
+        val category = PreferenceCategory(context)
+        parent.addPreference(category)
+        category.apply {
+            key = "virtual_glucagon_pump_settings"
+            title = rh.gs(R.string.virtual_glucagon_pump_name)
+            initialExpandedChildrenCount = 0
+            addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.GlucagonReservoirFillMcg, dialogMessage = R.string.virtual_glucagon_fill_summary, title = R.string.virtual_glucagon_fill_title))
+            addPreference(Preference(context).apply {
+                key = "virtual_glucagon_refill"
+                title = rh.gs(R.string.virtual_glucagon_refill_title)
+                summary = rh.gs(R.string.virtual_glucagon_refill_summary, glucagonReservoirMcg)
+                setOnPreferenceClickListener {
+                    refillReservoir()
+                    summary = rh.gs(R.string.virtual_glucagon_refill_summary, glucagonReservoirMcg)
+                    true
+                }
+            })
+        }
     }
 
     companion object {
-        const val DEFAULT_RESERVOIR_MCG = 1000.0   // 1 mg glucagon
         const val MIN_DOSE_MCG = 25.0
     }
 }

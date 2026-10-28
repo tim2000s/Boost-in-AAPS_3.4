@@ -15,6 +15,7 @@ import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
+import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
 import io.reactivex.rxjava3.core.Single
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.mockito.Mock
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyVararg
 import org.mockito.kotlin.whenever
 import java.io.File
 
@@ -66,6 +68,7 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
             return true
         }
         override val glucagonReservoirMcg: Double = 1000.0
+        override val glucagonReservoirFilledAt: Long = 0L
     }
 
     // -------------------------------------------------------------------------
@@ -101,6 +104,9 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
     @BeforeEach
     fun setUp() {
         fakePump = TestGlucagonPlugin()
+        // Alert texts are built with rh.gs, which the mock would return as null
+        whenever(rh.gs(any<Int>())).thenReturn("text")
+        whenever(rh.gs(any<Int>(), anyVararg<Any>())).thenReturn("text")
     }
 
     // -------------------------------------------------------------------------
@@ -173,12 +179,13 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
             profileFunction = profileFunction,
             persistenceLayer = mockPersistenceLayer,
             dateUtil = dateUtil,
-            uiInteraction = uiInteraction
+            uiInteraction = uiInteraction,
+            profileUtil = profileUtil
         )
 
         // Preferences
         whenever(preferences.get(BooleanKey.GlucagonEnabled)).thenReturn(true)
-        whenever(preferences.get(IntKey.GlucagonMinBgMgdl)).thenReturn(s.minBgMgdl)
+        whenever(preferences.get(UnitDoubleKey.GlucagonMinBg)).thenReturn(s.minBgMgdl.toDouble())
         whenever(preferences.get(IntKey.GlucagonMaxSingleDoseMcg)).thenReturn(s.maxSingleDoseMcg)
         whenever(preferences.get(IntKey.GlucagonMinIntervalMinutes)).thenReturn(s.minIntervalMinutes)
         whenever(preferences.get(IntKey.GlucagonMaxDailyMcg)).thenReturn(s.maxDailyMcg)
@@ -196,6 +203,8 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
 
         // Glucose status
         whenever(mockGlucoseStatus.glucose).thenReturn(s.glucose)
+        whenever(mockGlucoseStatus.date).thenReturn(nowTs)
+        whenever(mockApsResult.date).thenReturn(nowTs)
         whenever(mockGlucoseStatus.delta).thenReturn(s.delta)
         whenever(mockGlucoseStatus.shortAvgDelta).thenReturn(s.shortAvgDelta)
 

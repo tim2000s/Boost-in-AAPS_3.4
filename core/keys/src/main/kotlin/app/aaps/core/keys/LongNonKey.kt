@@ -34,5 +34,6 @@ enum class LongNonKey(
     // preferences are bypassed, so requests are confined to a genuinely new install rather than any
     // later moment history happens to look thin (a long pump break, a deleted history, a sensor swap).
     ApsBoostHistorySyncFirstSeenMs("boost_history_sync_first_seen_ms", 0L),
+    GlucagonReservoirFilledAt("glucagon_reservoir_filled_at", 0L, exportable = false),
 }
 

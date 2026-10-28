@@ -93,9 +93,9 @@ enum class IntKey(
     SiteRotationUserProfile("site_rotation_user_profile", 0, 0, 2),
 
     // Glucagon dosing settings
-    GlucagonMinBgMgdl("glucagon_min_bg_mgdl", 90, 54, 120, dependency = BooleanKey.GlucagonEnabled),
     GlucagonMaxSingleDoseMcg("glucagon_max_single_dose_mcg", 150, 25, 150, dependency = BooleanKey.GlucagonEnabled),
     GlucagonMinIntervalMinutes("glucagon_min_interval_min", 20, 5, 60, dependency = BooleanKey.GlucagonEnabled),
     GlucagonMaxDailyMcg("glucagon_max_daily_mcg", 900, 100, 2000, dependency = BooleanKey.GlucagonEnabled),
     GlucagonMaxGobMcg("glucagon_max_gob_mcg", 75, 25, 300, dependency = BooleanKey.GlucagonEnabled),
+    GlucagonReservoirFillMcg("glucagon_reservoir_fill_mcg", 1000, 100, 3000),
 }

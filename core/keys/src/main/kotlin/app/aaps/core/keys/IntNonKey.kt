@@ -31,5 +31,7 @@ enum class IntNonKey(
     // Row counts sampled immediately BEFORE a backfill request, so the "filled" breadcrumb can report
     // what the backfill actually recovered (+treatments / +bg) rather than a bare absolute.
     ApsBoostHistorySyncPreBg("boost_history_sync_pre_bg", 0),
-    ApsBoostHistorySyncPreTreatments("boost_history_sync_pre_treatments", 0)
+    ApsBoostHistorySyncPreTreatments("boost_history_sync_pre_treatments", 0),
+    // Virtual glucagon pump reservoir, kept across restarts
+    GlucagonReservoirMcg("glucagon_reservoir_mcg", 1000, exportable = false)
 }

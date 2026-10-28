@@ -1,6 +1,6 @@
 {
-  "scenario": "05_dose_iob_penalty_50mcg",
-  "description": "carbsReq=20, iob=2.0 U. Profile basal=1.0 U/h → iobRatio=2.0/1.0=2.0 > 1.5 → iobPenalty=0.5. baseDose=100 mcg × 0.5 = 50 mcg → rounds to 50 mcg.",
+  "scenario": "05_dose_high_iob_not_reduced",
+  "description": "IOB 2× basal (ratio > 1.5). The dose is not reduced: carbsReq=20 → 100 mcg, and an alert says one dose may not be enough.",
   "input": {
     "glucose": 80.0,
     "delta": -2.0,
@@ -19,7 +19,7 @@
     "priorDoses": []
   },
   "expected": {
-    "doseMcg": 50.0,
-    "reason": "iobRatio=2.0 > 1.5 → iobPenalty=0.5, 100 mcg × 0.5 = 50 mcg"
+    "doseMcg": 100.0,
+    "reason": "high IOB → full dose plus insufficient alert"
   }
 }

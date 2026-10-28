@@ -2,11 +2,16 @@ package app.aaps.plugins.aps.glucagon
 
 import app.aaps.core.data.model.BS
 import app.aaps.core.data.model.RM
+import app.aaps.core.data.model.TrendArrow
+import app.aaps.core.data.model.TE
+import app.aaps.core.data.model.SourceSensor
+import app.aaps.core.data.model.GV
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.aps.GlucoseStatus
 import app.aaps.core.interfaces.aps.IobTotal
+import app.aaps.core.objects.constraints.ConstraintObject
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.notifications.Notification
 import app.aaps.core.interfaces.plugin.PluginBase
@@ -16,6 +21,7 @@ import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
+import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
 import io.reactivex.rxjava3.core.Single
@@ -24,6 +30,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyVararg
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
@@ -67,6 +74,7 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
             return deliveryResult
         }
         override var glucagonReservoirMcg: Double = 1000.0
+        override var glucagonReservoirFilledAt: Long = 0L
     }
 
     // -------------------------------------------------------------------------
@@ -85,7 +93,8 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
             profileFunction = profileFunction,
             persistenceLayer = mockPersistenceLayer,
             dateUtil = dateUtil,
-            uiInteraction = uiInteraction
+            uiInteraction = uiInteraction,
+            profileUtil = profileUtil
         )
 
         fakePump = TestGlucagonPlugin()
@@ -96,7 +105,7 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
 
         // Default: all 8 conditions passing
         whenever(preferences.get(BooleanKey.GlucagonEnabled)).thenReturn(true)
-        whenever(preferences.get(IntKey.GlucagonMinBgMgdl)).thenReturn(90)
+        whenever(preferences.get(UnitDoubleKey.GlucagonMinBg)).thenReturn(90.0)
         whenever(preferences.get(IntKey.GlucagonMaxSingleDoseMcg)).thenReturn(150)
         whenever(preferences.get(IntKey.GlucagonMinIntervalMinutes)).thenReturn(20)
         whenever(preferences.get(IntKey.GlucagonMaxDailyMcg)).thenReturn(900)
@@ -113,6 +122,8 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
         whenever(mockApsResult.iobData).thenReturn(arrayOf(IobTotal(setupNow, iob = 0.5)))
 
         whenever(mockGlucoseStatus.glucose).thenReturn(80.0)
+        whenever(mockGlucoseStatus.date).thenReturn(setupNow)
+        whenever(mockApsResult.date).thenReturn(setupNow)
         whenever(mockGlucoseStatus.delta).thenReturn(-2.0)
         whenever(mockGlucoseStatus.shortAvgDelta).thenReturn(-1.5)
 
@@ -391,18 +402,6 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
     }
 
     @Test
-    fun `IOB penalty applies before the cap`() {
-        // 300 mcg asked, halved to 150 by the penalty, then capped at 150; the old order gave 75
-        whenever(mockApsResult.carbsReq).thenReturn(60)
-        val now = dateUtil.now()
-        whenever(mockApsResult.iobData).thenReturn(arrayOf(IobTotal(now, iob = 2.0)))
-
-        plugin.evaluateAndDoseForTest()
-
-        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(150.0)
-    }
-
-    @Test
     fun `dose is trimmed to the reservoir`() {
         fakePump.glucagonReservoirMcg = 60.0
         whenever(mockApsResult.carbsReq).thenReturn(20)   // 100 mcg asked, 50 deliverable in 25 mcg steps
@@ -449,20 +448,20 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
     }
 
     @Test
-    fun `IOB penalty halves dose when IOB ratio exceeds 1 5`() {
-        // Profile: 1 U/h. IOB = 2.0 → ratio = 2.0 → penalty = 0.5
-        // carbsReq=20 → baseDose = 100 mcg → penalised raw = 50 → round(50/25)*25 = 50
+    fun `high IOB keeps the full dose and warns it may not be enough`() {
+        // Profile: 1 U/h. IOB = 2.0 → ratio 2.0 > 1.5; carbsReq=20 → 100 mcg, not halved
         val now = dateUtil.now()
         whenever(mockApsResult.carbsReq).thenReturn(20)
         whenever(mockApsResult.iobData).thenReturn(arrayOf(IobTotal(now, iob = 2.0)))
 
         plugin.evaluateAndDoseForTest()
 
-        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(50.0)
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(100.0)
+        verify(uiInteraction).addNotificationWithSound(eq(Notification.GLUCAGON_INSUFFICIENT), any(), eq(Notification.URGENT), any())
     }
 
     @Test
-    fun `no IOB penalty when IOB ratio is below 1 5`() {
+    fun `no insufficient warning when IOB ratio is below 1 5`() {
         // Profile: 1 U/h. IOB = 1.0 → ratio = 1.0 → no penalty
         // carbsReq=20 → baseDose = 100 mcg → no penalty → 100
         val now = dateUtil.now()
@@ -472,6 +471,133 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
         plugin.evaluateAndDoseForTest()
 
         assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(100.0)
+        verify(uiInteraction, never()).addNotificationWithSound(eq(Notification.GLUCAGON_INSUFFICIENT), any(), any(), any())
+    }
+
+    // -------------------------------------------------------------------------
+    // Freshness
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `no dose on a stale glucose reading`() {
+        val old = dateUtil.now() - 8 * 60_000L
+        whenever(mockGlucoseStatus.date).thenReturn(old)
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(0.0)
+    }
+
+    @Test
+    fun `no dose on a stale APS result`() {
+        val old = dateUtil.now() - 8 * 60_000L
+        whenever(mockApsResult.date).thenReturn(old)
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(0.0)
+    }
+
+    // -------------------------------------------------------------------------
+    // Effectiveness
+    // -------------------------------------------------------------------------
+
+    private fun doseAgo(minutes: Long, bgAtDose: Double) {
+        val now = dateUtil.now()
+        val dose = BS(timestamp = now - minutes * 60_000L, amount = 0.1, type = BS.Type.GLUCAGON, isValid = true)
+        whenever(mockPersistenceLayer.getGlucagonDosesFromTime(any(), any())).thenReturn(Single.just(listOf(dose)))
+        val gv = GV(timestamp = dose.timestamp - 60_000L, value = bgAtDose, raw = null, noise = null, trendArrow = TrendArrow.FLAT, sourceSensor = SourceSensor.UNKNOWN)
+        whenever(mockPersistenceLayer.getBgReadingsDataFromTimeToTime(any(), any(), any())).thenReturn(listOf(gv))
+    }
+
+    @Test
+    fun `alarm when glucose is still falling 25 minutes after a dose`() {
+        doseAgo(25, bgAtDose = 78.0)
+        whenever(mockGlucoseStatus.glucose).thenReturn(72.0)
+
+        plugin.evaluateAndDoseForTest()
+
+        verify(uiInteraction).addNotificationWithSound(eq(Notification.GLUCAGON_NOT_WORKING), any(), eq(Notification.URGENT), any())
+    }
+
+    @Test
+    fun `no not-working alarm before the dose has had time to act`() {
+        doseAgo(10, bgAtDose = 78.0)
+        whenever(mockGlucoseStatus.glucose).thenReturn(72.0)
+
+        plugin.evaluateAndDoseForTest()
+
+        verify(uiInteraction, never()).addNotificationWithSound(eq(Notification.GLUCAGON_NOT_WORKING), any(), any(), any())
+    }
+
+    @Test
+    fun `glucose above the dose-time reading clears the not-working alarm`() {
+        doseAgo(25, bgAtDose = 70.0)
+        whenever(mockGlucoseStatus.glucose).thenReturn(85.0)
+
+        plugin.evaluateAndDoseForTest()
+
+        verify(uiInteraction, never()).addNotificationWithSound(eq(Notification.GLUCAGON_NOT_WORKING), any(), any(), any())
+        verify(uiInteraction).dismissNotification(Notification.GLUCAGON_NOT_WORKING)
+    }
+
+    // -------------------------------------------------------------------------
+    // Insulin loop constraints
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `glucagon on board turns SMB off and caps temp basal at profile rate`() {
+        doseAgo(10, bgAtDose = 78.0)   // 100 mcg GlucaGen 10 min ago: about 84 mcg on board
+
+        assertThat(plugin.isSMBModeEnabled(ConstraintObject(true, aapsLogger)).value()).isFalse()
+        assertThat(plugin.applyBasalConstraints(ConstraintObject(3.0, aapsLogger), validProfile).value()).isWithin(0.001).of(validProfile.getBasal())
+        assertThat(plugin.applyBasalPercentConstraints(ConstraintObject(250, aapsLogger), validProfile).value()).isEqualTo(100)
+    }
+
+    @Test
+    fun `no glucagon on board leaves the insulin loop alone`() {
+        assertThat(plugin.isSMBModeEnabled(ConstraintObject(true, aapsLogger)).value()).isTrue()
+        assertThat(plugin.applyBasalConstraints(ConstraintObject(3.0, aapsLogger), validProfile).value()).isWithin(0.001).of(3.0)
+    }
+
+    @Test
+    fun `glucagon disabled leaves the insulin loop alone even with glucagon on board`() {
+        doseAgo(10, bgAtDose = 78.0)
+        whenever(preferences.get(BooleanKey.GlucagonEnabled)).thenReturn(false)
+
+        assertThat(plugin.isSMBModeEnabled(ConstraintObject(true, aapsLogger)).value()).isTrue()
+    }
+
+    // -------------------------------------------------------------------------
+    // Records and reservoir age
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `delivery leaves a note for Nightscout`() {
+        plugin.evaluateAndDoseForTest()
+
+        verify(mockPersistenceLayer).insertOrUpdateTherapyEvent(argThat { type == TE.Type.NOTE && note == "Glucagon 50 mcg (GlucaGen)" })
+    }
+
+    @Test
+    fun `GlucaGen in the pump longer than 72 h raises the replace notice`() {
+        fakePump.glucagonReservoirFilledAt = dateUtil.now() - 80 * 3_600_000L
+        whenever(mockGlucoseStatus.glucose).thenReturn(120.0)
+
+        plugin.evaluateAndDoseForTest()
+
+        verify(uiInteraction).addNotification(eq(Notification.GLUCAGON_RESERVOIR_OLD), any(), eq(Notification.NORMAL))
+    }
+
+    @Test
+    fun `dasiglucagon has no in-pump age limit`() {
+        fakePump.glucagonReservoirFilledAt = dateUtil.now() - 80 * 3_600_000L
+        whenever(preferences.get(StringKey.GlucagonFormulation)).thenReturn("DASIGLUCAGON")
+        whenever(mockGlucoseStatus.glucose).thenReturn(120.0)
+
+        plugin.evaluateAndDoseForTest()
+
+        verify(uiInteraction, never()).addNotification(eq(Notification.GLUCAGON_RESERVOIR_OLD), any(), any())
     }
 
     // -------------------------------------------------------------------------

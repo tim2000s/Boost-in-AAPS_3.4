@@ -151,6 +151,9 @@ open class Notification {
         const val BOOST_NEED_WATCH = 1001
         const val GLUCAGON_UNAVAILABLE = 1002
         const val GLUCAGON_RESERVOIR_LOW = 1003
+        const val GLUCAGON_NOT_WORKING = 1004
+        const val GLUCAGON_INSUFFICIENT = 1005
+        const val GLUCAGON_RESERVOIR_OLD = 1006
 
         const val IMPORTANCE_HIGH = 2
         const val CATEGORY_ALARM = "alarm"

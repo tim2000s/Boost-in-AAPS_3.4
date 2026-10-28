@@ -27,11 +27,17 @@ import kotlin.math.pow
  * 0.2 mg), computed in backtesting/scripts/2026-10-glucagon-formulations/dose_factor.py. Its
  * larger late effect is carried by the longer curve instead. Gvoke stays at 1.0 because no
  * small-dose comparison with native glucagon was found.
+ *
+ * maxReservoirHours is how long glucagon may stay in the pump before a reminder to replace it. None of
+ * the three is licensed for pump use. Reconstituted GlucaGen is labelled for immediate use; 72 h is
+ * the longest one n=1 report found it still working (diabettech.com, Glucagon & Me part 2), so it is
+ * an upper bound rather than a shelf life. Gvoke and dasiglucagon are ready-made solutions with no
+ * in-pump figure, so no reminder is set.
  */
-enum class GlucagonFormulation(val peakMinutes: Int, val durationMinutes: Int, val doseFactor: Double) {
-    GLUCAGEN(15, 90, 1.0),
-    GVOKE(30, 180, 1.0),
-    DASIGLUCAGON(30, 180, 0.65);
+enum class GlucagonFormulation(val peakMinutes: Int, val durationMinutes: Int, val doseFactor: Double, val maxReservoirHours: Int?, val displayName: String) {
+    GLUCAGEN(15, 90, 1.0, 72, "GlucaGen"),
+    GVOKE(30, 180, 1.0, null, "Gvoke"),
+    DASIGLUCAGON(30, 180, 0.65, null, "Dasiglucagon");
 
     companion object {
         // An unknown value falls back to the slowest curve, which holds GOB higher for longer

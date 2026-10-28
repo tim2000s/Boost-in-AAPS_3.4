@@ -23,4 +23,7 @@ interface GlucagonPump {
 
     /** Remaining glucagon in the reservoir, in micrograms. */
     val glucagonReservoirMcg: Double
+
+    /** When the reservoir was last filled (ms), or 0 if unknown. Glucagon in solution has a limited life. */
+    val glucagonReservoirFilledAt: Long
 }

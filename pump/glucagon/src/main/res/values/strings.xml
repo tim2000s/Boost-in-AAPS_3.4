@@ -2,5 +2,9 @@
 <resources>
     <string name="virtual_glucagon_pump_name">Virtual Glucagon Pump</string>
     <string name="virtual_glucagon_pump_short_name">VGluc</string>
-    <string name="virtual_glucagon_pump_description">Simulated glucagon pump for testing the bihormonal closed-loop. Stores delivered doses as GLUCAGON records so GOB calculation and Nightscout sync work correctly.</string>
+    <string name="virtual_glucagon_pump_description">Simulated glucagon pump for testing the bihormonal closed loop. Stores delivered doses as GLUCAGON records so GOB can be calculated.</string>
+    <string name="virtual_glucagon_fill_title">Reservoir fill (mcg)</string>
+    <string name="virtual_glucagon_fill_summary">Amount the reservoir holds after a refill.</string>
+    <string name="virtual_glucagon_refill_title">Refill reservoir</string>
+    <string name="virtual_glucagon_refill_summary">Tap to refill. Now %1$.0f mcg.</string>
 </resources>
