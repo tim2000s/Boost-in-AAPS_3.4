@@ -24,9 +24,12 @@ import app.aaps.core.interfaces.rx.events.EventGlucagonDoseDelivered
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
+import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.interfaces.Preferences
+import app.aaps.core.objects.glucagon.GlucagonFormulation
 import app.aaps.core.objects.glucagon.GobCalculator
 import app.aaps.core.validators.preferences.AdaptiveIntPreference
+import app.aaps.core.validators.preferences.AdaptiveListPreference
 import app.aaps.core.validators.preferences.AdaptiveSwitchPreference
 import app.aaps.plugins.aps.R
 import io.reactivex.rxjava3.disposables.CompositeDisposable
@@ -115,9 +118,9 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         if (!trendDown) return
 
         // Condition 5: current GOB < max
-        val halfLife = preferences.get(IntKey.GlucagonHalfLifeMinutes)
+        val formulation = GlucagonFormulation.fromKey(preferences.get(StringKey.GlucagonFormulation))
         val maxGob = preferences.get(IntKey.GlucagonMaxGobMcg)
-        val currentGob = gobCalculator.currentGob(halfLife)
+        val currentGob = gobCalculator.currentGob(formulation)
         if (currentGob >= maxGob) {
             aapsLogger.debug(LTag.APS, "Glucagon blocked: GOB ${"%.1f".format(currentGob)} mcg >= max $maxGob mcg")
             return
@@ -237,7 +240,14 @@ class GlucagonAlgorithmPlugin @Inject constructor(
             addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.GlucagonMaxSingleDoseMcg, dialogMessage = R.string.glucagon_max_single_dose_summary, title = R.string.glucagon_max_single_dose_title))
             addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.GlucagonMinIntervalMinutes, dialogMessage = R.string.glucagon_min_interval_summary, title = R.string.glucagon_min_interval_title))
             addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.GlucagonMaxDailyMcg, dialogMessage = R.string.glucagon_max_daily_summary, title = R.string.glucagon_max_daily_title))
-            addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.GlucagonHalfLifeMinutes, dialogMessage = R.string.glucagon_half_life_summary, title = R.string.glucagon_half_life_title))
+            addPreference(
+                AdaptiveListPreference(
+                    ctx = context, stringKey = StringKey.GlucagonFormulation, title = R.string.glucagon_formulation_title,
+                    summary = R.string.glucagon_formulation_summary,
+                    entries = arrayOf<CharSequence>(rh.gs(R.string.glucagon_formulation_glucagen), rh.gs(R.string.glucagon_formulation_gvoke), rh.gs(R.string.glucagon_formulation_dasiglucagon)),
+                    entryValues = GlucagonFormulation.entries.map<GlucagonFormulation, CharSequence> { it.name }.toTypedArray()
+                )
+            )
             addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.GlucagonMaxGobMcg, dialogMessage = R.string.glucagon_max_gob_summary, title = R.string.glucagon_max_gob_title))
         }
     }

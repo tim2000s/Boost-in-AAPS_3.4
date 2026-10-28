@@ -97,6 +97,5 @@ enum class IntKey(
     GlucagonMaxSingleDoseMcg("glucagon_max_single_dose_mcg", 150, 25, 150, dependency = BooleanKey.GlucagonEnabled),
     GlucagonMinIntervalMinutes("glucagon_min_interval_min", 20, 5, 60, dependency = BooleanKey.GlucagonEnabled),
     GlucagonMaxDailyMcg("glucagon_max_daily_mcg", 900, 100, 2000, dependency = BooleanKey.GlucagonEnabled),
-    GlucagonHalfLifeMinutes("glucagon_half_life_min", 20, 10, 60, dependency = BooleanKey.GlucagonEnabled),
     GlucagonMaxGobMcg("glucagon_max_gob_mcg", 75, 25, 300, dependency = BooleanKey.GlucagonEnabled),
 }

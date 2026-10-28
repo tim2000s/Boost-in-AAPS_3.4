@@ -1,6 +1,6 @@
 {
   "scenario": "12_dose_after_interval_elapsed",
-  "description": "Last dose was 25 mcg, 30 minutes ago. GOB ≈ 25 × exp(−30×ln2/20) ≈ 8.8 mcg < 75. Interval 30 min > minIntervalMinutes=20. All conditions pass → 50 mcg dose (carbsReq=10).",
+  "description": "Last dose was 25 mcg, 30 minutes ago. Dasiglucagon is 71% on board at 30 min, GOB ≈ 18 mcg < 75. Interval 30 min > minIntervalMinutes=20. All conditions pass → 50 mcg dose (carbsReq=10).",
   "input": {
     "glucose": 80.0,
     "delta": -2.0,
@@ -13,15 +13,18 @@
       "maxSingleDoseMcg": 150,
       "minIntervalMinutes": 20,
       "maxDailyMcg": 900,
-      "halfLifeMinutes": 20,
+      "formulation": "DASIGLUCAGON",
       "maxGobMcg": 75
     },
     "priorDoses": [
-      { "minutesAgo": 30, "doseMcg": 25.0 }
+      {
+        "minutesAgo": 30,
+        "doseMcg": 25.0
+      }
     ]
   },
   "expected": {
     "doseMcg": 50.0,
-    "reason": "Interval 30 min > 20 min, GOB ≈ 8.8 mcg < 75. Daily total 25 mcg < 900. carbsReq=10 → 50 mcg."
+    "reason": "Interval 30 min > 20 min, GOB ≈ 18 mcg < 75. Daily total 25 mcg < 900. carbsReq=10 → 50 mcg."
   }
 }

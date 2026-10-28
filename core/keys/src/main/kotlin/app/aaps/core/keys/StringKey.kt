@@ -40,6 +40,7 @@ enum class StringKey(
     MaintenanceEmail("maintenance_logs_email", "logs@aaps.app", defaultedBySM = true),
     MaintenanceIdentification("email_for_crash_report", ""),
     AutomationLocation("location", "PASSIVE", hideParentScreenIfHidden = true),
+    GlucagonFormulation("glucagon_formulation", "DASIGLUCAGON", dependency = BooleanKey.GlucagonEnabled),
 
     SmsAllowedNumbers("smscommunicator_allowednumbers", ""),
     SmsOtpPassword("smscommunicator_otp_password", "", dependency = BooleanKey.SmsAllowRemoteCommands, isPassword = true),

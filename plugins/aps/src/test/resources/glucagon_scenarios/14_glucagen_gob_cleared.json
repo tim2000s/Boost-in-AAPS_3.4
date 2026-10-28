@@ -1,0 +1,30 @@
+{
+  "scenario": "14_glucagen_gob_cleared",
+  "description": "100 mcg GlucaGen 20 min ago is 58% on board (peak 15 min, 90 min duration), GOB ≈ 58 mcg < 75. Interval 20 min = minIntervalMinutes. carbsReq=20 → 100 mcg.",
+  "input": {
+    "glucose": 80.0,
+    "delta": -2.0,
+    "shortAvgDelta": -1.5,
+    "carbsRequired": true,
+    "carbsReq": 20,
+    "iob": 0.0,
+    "preferences": {
+      "minBgMgdl": 90,
+      "maxSingleDoseMcg": 150,
+      "minIntervalMinutes": 20,
+      "maxDailyMcg": 900,
+      "formulation": "GLUCAGEN",
+      "maxGobMcg": 75
+    },
+    "priorDoses": [
+      {
+        "minutesAgo": 20,
+        "doseMcg": 100.0
+      }
+    ]
+  },
+  "expected": {
+    "doseMcg": 100.0,
+    "reason": "GlucaGen GOB ≈ 58 mcg < 75 → dose"
+  }
+}

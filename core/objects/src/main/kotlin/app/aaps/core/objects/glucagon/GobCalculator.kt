@@ -4,15 +4,43 @@ import app.aaps.core.data.model.BS
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.utils.DateUtil
 import kotlin.math.exp
-import kotlin.math.ln
+import kotlin.math.pow
+
+/**
+ * Subcutaneous glucagon formulations and the activity curve used for each.
+ *
+ * Peak is the median plasma glucagon tmax at the small doses a closed loop gives. Duration is
+ * that peak plus about five plasma half-lives, by which time under 5% of a dose remains. Both are
+ * modelling choices read off the published data below, not fitted values.
+ *
+ * GLUCAGEN (native glucagon, reconstituted): Hövelmann 2019 (doi 10.1111/dom.13562), Lilly native
+ * glucagon 0.03 to 0.2 mg, tmax 0.25 h, t1/2 0.25 h; Blauw 2016 (doi 10.1111/dom.12571), 0.11 to
+ * 0.44 mg, tmax 10 to 20 min. GlucaGen US label: hyperglycaemic action 60 to 90 min.
+ * GVOKE (Xeris non-aqueous glucagon): G-Pen Mini, same formulation, NCT02081014, 75 and 150 mcg,
+ * mean tmax 29 to 30 min fasting and 24 to 33 min after insulin; Gvoke US label, 1 mg, t1/2 32 min.
+ * DASIGLUCAGON (Zegalogue): Hövelmann 2019, 0.03 to 0.2 mg, median tmax 0.5 h, t1/2 0.4 to 0.7 h;
+ * Zegalogue US label, 0.6 mg, tmax about 35 min, t1/2 about 30 min.
+ *
+ * Gvoke and dasiglucagon share a curve because the data give no basis to separate them.
+ */
+enum class GlucagonFormulation(val peakMinutes: Int, val durationMinutes: Int) {
+    GLUCAGEN(15, 90),
+    GVOKE(30, 180),
+    DASIGLUCAGON(30, 180);
+
+    companion object {
+        // An unknown value falls back to the slowest curve, which holds GOB higher for longer
+        fun fromKey(key: String): GlucagonFormulation = entries.firstOrNull { it.name == key } ?: DASIGLUCAGON
+    }
+}
 
 /**
  * Glucagon On Board (GOB) calculator.
  *
- * Applies a single-compartment exponential decay model, analogous to IOB:
- *   GOB(now) = Σ  dose_i_mcg × exp( −minutesSince_i × ln(2) / halfLifeMinutes )
+ * Uses the oref exponential activity curve (as InsulinOrefBasePlugin does for insulin) with the
+ * formulation's peak and duration, so a dose counts in full at delivery and decays slowly until
+ * its absorption peak has passed.
  *
- * Queries BS records of type GLUCAGON from the last 3 hours.
  * Dose amounts are stored in the BS table in mg; this class converts to mcg internally.
  */
 class GobCalculator(
@@ -20,29 +48,32 @@ class GobCalculator(
     private val dateUtil: DateUtil
 ) {
 
-    private companion object {
-        const val LOOKBACK_MS = 3 * 60 * 60 * 1000L   // 3 hours
-        val LN2 = ln(2.0)
-    }
-
-    /**
-     * Calculate current Glucagon On Board in micrograms.
-     * @param halfLifeMinutes decay half-life (typically 20 min)
-     */
-    fun currentGob(halfLifeMinutes: Int): Double {
+    /** Calculate current Glucagon On Board in micrograms. */
+    fun currentGob(formulation: GlucagonFormulation): Double {
         val now = dateUtil.now()
-        val since = now - LOOKBACK_MS
+        val since = now - formulation.durationMinutes * 60_000L
 
-        val doses = persistenceLayer
+        return persistenceLayer
             .getBolusesFromTimeToTime(since, now, ascending = true)
             .filter { it.isValid && it.type == BS.Type.GLUCAGON }
+            .sumOf { dose ->
+                val minutesSince = (now - dose.timestamp) / 60_000.0
+                dose.amount * 1000.0 * fractionRemaining(minutesSince, formulation)   // mg → mcg
+            }
+    }
 
-        if (doses.isEmpty()) return 0.0
+    companion object {
 
-        return doses.sumOf { dose ->
-            val doseMcg = dose.amount * 1000.0          // mg → mcg
-            val minutesSince = (now - dose.timestamp) / 60_000.0
-            doseMcg * exp(-minutesSince * LN2 / halfLifeMinutes)
+        /** Share of a dose still on board [minutes] after delivery. */
+        fun fractionRemaining(minutes: Double, formulation: GlucagonFormulation): Double {
+            val td = formulation.durationMinutes.toDouble()
+            val tp = formulation.peakMinutes.toDouble()
+            if (minutes >= td) return 0.0
+            val t = minutes.coerceAtLeast(0.0)
+            val tau = tp * (1 - tp / td) / (1 - 2 * tp / td)
+            val a = 2 * tau / td
+            val s = 1 / (1 - a + (1 + a) * exp(-td / tau))
+            return 1 - s * (1 - a) * ((t.pow(2.0) / (tau * td * (1 - a)) - t / tau - 1) * exp(-t / tau) + 1)
         }
     }
 }

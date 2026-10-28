@@ -13,7 +13,7 @@
       "maxSingleDoseMcg": 150,
       "minIntervalMinutes": 20,
       "maxDailyMcg": 900,
-      "halfLifeMinutes": 20,
+      "formulation": "DASIGLUCAGON",
       "maxGobMcg": 75
     },
     "priorDoses": [

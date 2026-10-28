@@ -9,14 +9,12 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.kotlin.whenever
-import kotlin.math.exp
-import kotlin.math.ln
 
 /**
  * Unit tests for [GobCalculator].
  *
- * Verifies that the exponential decay model produces correct GOB values
- * for known dose histories.
+ * Expected values were computed independently from the oref curve with each
+ * formulation's peak and duration, so a change to either moves them.
  */
 class GobCalculatorTest : TestBase() {
 
@@ -46,10 +44,6 @@ class GobCalculatorTest : TestBase() {
             isValid = true
         )
 
-    /** Expected GOB contribution of a single dose with a given half-life. */
-    private fun expectedContribution(doseMcg: Double, minutesAgo: Double, halfLife: Int): Double =
-        doseMcg * exp(-minutesAgo * ln(2.0) / halfLife)
-
     private fun stubDoses(vararg doses: BS) {
         whenever(
             persistenceLayer.getBolusesFromTimeToTime(
@@ -67,121 +61,62 @@ class GobCalculatorTest : TestBase() {
     @Test
     fun `returns zero GOB when no doses in lookback window`() {
         stubDoses()
-        assertThat(gobCalculator.currentGob(20)).isWithin(0.001).of(0.0)
+        assertThat(gobCalculator.currentGob(GlucagonFormulation.DASIGLUCAGON)).isWithin(0.001).of(0.0)
     }
 
     @Test
-    fun `dose delivered 20 minutes ago decays to exactly half at half-life boundary`() {
-        val doseMcg = 100.0
-        val halfLife = 20
-        stubDoses(glucagonDose(doseMcg, minutesAgo = 20))
-
-        val gob = gobCalculator.currentGob(halfLife)
-
-        // After exactly one half-life, GOB should be 50 mcg
-        assertThat(gob).isWithin(0.5).of(50.0)
+    fun `dose counts in full at delivery`() {
+        stubDoses(glucagonDose(100.0, minutesAgo = 0))
+        assertThat(gobCalculator.currentGob(GlucagonFormulation.GLUCAGEN)).isWithin(0.01).of(100.0)
     }
 
     @Test
-    fun `immediate dose contributes full dose to GOB`() {
-        // 1 minute ago ≈ immediate (small decay)
-        val doseMcg = 100.0
-        val halfLife = 20
-        stubDoses(glucagonDose(doseMcg, minutesAgo = 1))
-
-        val gob = gobCalculator.currentGob(halfLife)
-        val expected = expectedContribution(doseMcg, 1.0, halfLife)
-
-        assertThat(gob).isWithin(0.5).of(expected)
+    fun `GlucaGen curve at known points`() {
+        assertThat(100 * GobCalculator.fractionRemaining(10.0, GlucagonFormulation.GLUCAGEN)).isWithin(0.01).of(84.31)
+        assertThat(100 * GobCalculator.fractionRemaining(20.0, GlucagonFormulation.GLUCAGEN)).isWithin(0.01).of(57.98)
+        assertThat(100 * GobCalculator.fractionRemaining(60.0, GlucagonFormulation.GLUCAGEN)).isWithin(0.01).of(4.13)
+        assertThat(GobCalculator.fractionRemaining(90.0, GlucagonFormulation.GLUCAGEN)).isEqualTo(0.0)
     }
 
     @Test
-    fun `dose delivered 60 minutes ago with 20 min half-life decays significantly`() {
-        val doseMcg = 100.0
-        val halfLife = 20
-        stubDoses(glucagonDose(doseMcg, minutesAgo = 60))
+    fun `dasiglucagon curve at known points`() {
+        assertThat(100 * GobCalculator.fractionRemaining(20.0, GlucagonFormulation.DASIGLUCAGON)).isWithin(0.01).of(84.31)
+        assertThat(100 * GobCalculator.fractionRemaining(30.0, GlucagonFormulation.DASIGLUCAGON)).isWithin(0.01).of(71.18)
+        assertThat(100 * GobCalculator.fractionRemaining(60.0, GlucagonFormulation.DASIGLUCAGON)).isWithin(0.01).of(35.33)
+        assertThat(GobCalculator.fractionRemaining(180.0, GlucagonFormulation.DASIGLUCAGON)).isEqualTo(0.0)
+    }
 
-        val gob = gobCalculator.currentGob(halfLife)
-        // 3 half-lives → 100 × 0.125 = 12.5 mcg
-        assertThat(gob).isWithin(1.0).of(12.5)
+    @Test
+    fun `Gvoke uses the dasiglucagon curve`() {
+        assertThat(GlucagonFormulation.GVOKE.peakMinutes).isEqualTo(GlucagonFormulation.DASIGLUCAGON.peakMinutes)
+        assertThat(GlucagonFormulation.GVOKE.durationMinutes).isEqualTo(GlucagonFormulation.DASIGLUCAGON.durationMinutes)
+    }
+
+    @Test
+    fun `formulation changes GOB for the same history`() {
+        stubDoses(glucagonDose(100.0, minutesAgo = 30))
+        assertThat(gobCalculator.currentGob(GlucagonFormulation.GLUCAGEN)).isWithin(0.01).of(35.33)
+        assertThat(gobCalculator.currentGob(GlucagonFormulation.DASIGLUCAGON)).isWithin(0.01).of(71.18)
     }
 
     @Test
     fun `multiple doses sum correctly`() {
-        val halfLife = 20
-        val dose1Mcg = 100.0
-        val dose2Mcg = 75.0
-        val minutes1Ago = 10L
-        val minutes2Ago = 30L
-
-        stubDoses(
-            glucagonDose(dose1Mcg, minutesAgo = minutes1Ago),
-            glucagonDose(dose2Mcg, minutesAgo = minutes2Ago)
-        )
-
-        val gob = gobCalculator.currentGob(halfLife)
-        val expected = expectedContribution(dose1Mcg, minutes1Ago.toDouble(), halfLife) +
-            expectedContribution(dose2Mcg, minutes2Ago.toDouble(), halfLife)
-
-        assertThat(gob).isWithin(0.5).of(expected)
+        stubDoses(glucagonDose(100.0, minutesAgo = 10), glucagonDose(75.0, minutesAgo = 30))
+        // 100 × 0.9517 + 75 × 0.7118
+        assertThat(gobCalculator.currentGob(GlucagonFormulation.DASIGLUCAGON)).isWithin(0.01).of(148.56)
     }
 
     @Test
-    fun `only GLUCAGON type records are included in GOB`() {
-        val halfLife = 20
-        val glucagonDose = glucagonDose(100.0, minutesAgo = 10)
-        val insulinBolus = BS(
-            timestamp = now - 10 * 60_000L,
-            amount = 2.0,
-            type = BS.Type.NORMAL,
-            isValid = true
-        )
-
-        stubDoses(glucagonDose, insulinBolus)
-
-        val gob = gobCalculator.currentGob(halfLife)
-        // Only the glucagon dose should be counted
-        val expected = expectedContribution(100.0, 10.0, halfLife)
-        assertThat(gob).isWithin(0.5).of(expected)
+    fun `only valid GLUCAGON records are included in GOB`() {
+        val insulinBolus = BS(timestamp = now - 10 * 60_000L, amount = 2.0, type = BS.Type.NORMAL, isValid = true)
+        val invalidDose = BS(timestamp = now - 5 * 60_000L, amount = 0.2, type = BS.Type.GLUCAGON, isValid = false)
+        stubDoses(glucagonDose(100.0, minutesAgo = 10), insulinBolus, invalidDose)
+        assertThat(gobCalculator.currentGob(GlucagonFormulation.DASIGLUCAGON)).isWithin(0.01).of(95.17)
     }
 
     @Test
-    fun `invalid doses are excluded from GOB`() {
-        val halfLife = 20
-        val validDose = glucagonDose(100.0, minutesAgo = 10)
-        val invalidDose = BS(
-            timestamp = now - 5 * 60_000L,
-            amount = 200.0 / 1000.0,
-            type = BS.Type.GLUCAGON,
-            isValid = false
-        )
-
-        stubDoses(validDose, invalidDose)
-
-        val gob = gobCalculator.currentGob(halfLife)
-        val expected = expectedContribution(100.0, 10.0, halfLife)
-        assertThat(gob).isWithin(0.5).of(expected)
-    }
-
-    @Test
-    fun `longer half-life results in higher GOB for same dose`() {
-        val doseMcg = 100.0
-        val minutesAgo = 30L
-        stubDoses(glucagonDose(doseMcg, minutesAgo))
-
-        val gobShortHalfLife = gobCalculator.currentGob(20)
-        val gobLongHalfLife = gobCalculator.currentGob(60)
-
-        assertThat(gobLongHalfLife).isGreaterThan(gobShortHalfLife)
-    }
-
-    @Test
-    fun `GOB is always non-negative`() {
-        val doseMcg = 50.0
-        val minutesAgo = 180L   // 3 hours — near edge of lookback window
-        stubDoses(glucagonDose(doseMcg, minutesAgo))
-
-        val gob = gobCalculator.currentGob(20)
-        assertThat(gob).isAtLeast(0.0)
+    fun `unknown formulation key falls back to dasiglucagon`() {
+        assertThat(GlucagonFormulation.fromKey("GLUCAGEN")).isEqualTo(GlucagonFormulation.GLUCAGEN)
+        assertThat(GlucagonFormulation.fromKey("")).isEqualTo(GlucagonFormulation.DASIGLUCAGON)
     }
 }

@@ -12,6 +12,7 @@ import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.pump.GlucagonPump
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
+import app.aaps.core.keys.StringKey
 import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
 import org.json.JSONObject
@@ -83,7 +84,7 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
         val maxSingleDoseMcg: Int,
         val minIntervalMinutes: Int,
         val maxDailyMcg: Int,
-        val halfLifeMinutes: Int,
+        val formulation: String,
         val maxGobMcg: Int,
         val priorDoses: List<PriorDose>,
         val expectedDoseMcg: Double,
@@ -143,7 +144,7 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
             maxSingleDoseMcg = prefs.getInt("maxSingleDoseMcg"),
             minIntervalMinutes = prefs.getInt("minIntervalMinutes"),
             maxDailyMcg = prefs.getInt("maxDailyMcg"),
-            halfLifeMinutes = prefs.getInt("halfLifeMinutes"),
+            formulation = prefs.getString("formulation"),
             maxGobMcg = prefs.getInt("maxGobMcg"),
             priorDoses = priorDoses,
             expectedDoseMcg = expected.getDouble("doseMcg"),
@@ -177,7 +178,7 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
         whenever(preferences.get(IntKey.GlucagonMaxSingleDoseMcg)).thenReturn(s.maxSingleDoseMcg)
         whenever(preferences.get(IntKey.GlucagonMinIntervalMinutes)).thenReturn(s.minIntervalMinutes)
         whenever(preferences.get(IntKey.GlucagonMaxDailyMcg)).thenReturn(s.maxDailyMcg)
-        whenever(preferences.get(IntKey.GlucagonHalfLifeMinutes)).thenReturn(s.halfLifeMinutes)
+        whenever(preferences.get(StringKey.GlucagonFormulation)).thenReturn(s.formulation)
         whenever(preferences.get(IntKey.GlucagonMaxGobMcg)).thenReturn(s.maxGobMcg)
 
         // APS result
