@@ -33,5 +33,7 @@ enum class IntNonKey(
     ApsBoostHistorySyncPreBg("boost_history_sync_pre_bg", 0),
     ApsBoostHistorySyncPreTreatments("boost_history_sync_pre_treatments", 0),
     // Virtual glucagon pump reservoir, kept across restarts
-    GlucagonReservoirMcg("glucagon_reservoir_mcg", 1000, exportable = false)
+    GlucagonReservoirMcg("glucagon_reservoir_mcg", 1000, exportable = false),
+    // The mg/dL-only minimum glucose setting before GlucagonMinBg; read once to migrate, then removed
+    GlucagonMinBgMgdlLegacy("glucagon_min_bg_mgdl", 90, exportable = false)
 }

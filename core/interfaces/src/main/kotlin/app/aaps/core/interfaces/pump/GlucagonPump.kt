@@ -14,6 +14,12 @@ interface GlucagonPump {
     /** True if the pump is ready to deliver a dose (enabled, reservoir holds at least the minimum dose, no active delivery). */
     fun isGlucagonPumpReady(): Boolean
 
+    companion object {
+
+        /** enteredBy on the NOTE that carries each dose to Nightscout, so the graph can skip it. */
+        const val NOTE_ENTERED_BY = "AAPS glucagon"
+    }
+
     /**
      * Deliver a glucagon microdose.
      * @param doseMcg dose in micrograms (e.g. 100.0 for 100 mcg)

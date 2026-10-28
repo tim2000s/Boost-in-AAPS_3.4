@@ -25,6 +25,7 @@ class VirtualGlucagonPumpTest : TestBaseWithProfile() {
 
     @BeforeEach
     fun setUp() {
+        whenever(preferences.get(LongNonKey.GlucagonReservoirFilledAt)).thenReturn(1L)   // filled once already
         pump = VirtualGlucagonPump(aapsLogger, rh, rxBus, mockPersistenceLayer, dateUtil, preferences)
         pump.setPluginEnabled(PluginType.GENERAL, true)
         whenever(preferences.get(IntNonKey.GlucagonReservoirMcg)).thenReturn(120)
@@ -49,6 +50,13 @@ class VirtualGlucagonPumpTest : TestBaseWithProfile() {
         assertThat(pump.isGlucagonPumpReady()).isTrue()
         whenever(preferences.get(IntNonKey.GlucagonReservoirMcg)).thenReturn(20)
         assertThat(pump.isGlucagonPumpReady()).isFalse()
+    }
+
+    @Test
+    fun `start without a fill time counts the reservoir from now`() {
+        whenever(preferences.get(LongNonKey.GlucagonReservoirFilledAt)).thenReturn(0L)
+        pump.onStart()
+        verify(preferences).put(LongNonKey.GlucagonReservoirFilledAt, dateUtil.now())
     }
 
     @Test

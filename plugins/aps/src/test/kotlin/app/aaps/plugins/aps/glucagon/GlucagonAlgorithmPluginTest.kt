@@ -7,6 +7,8 @@ import app.aaps.core.data.model.TE
 import app.aaps.core.data.model.SourceSensor
 import app.aaps.core.data.model.GV
 import app.aaps.core.data.plugin.PluginType
+import app.aaps.core.data.ue.Sources
+import app.aaps.core.data.ue.Action
 import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.aps.GlucoseStatus
@@ -20,6 +22,7 @@ import app.aaps.core.interfaces.pump.GlucagonPump
 import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
+import app.aaps.core.keys.IntNonKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.shared.tests.TestBaseWithProfile
@@ -29,10 +32,12 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.anyVararg
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -561,9 +566,25 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
     }
 
     @Test
-    fun `glucagon disabled leaves the insulin loop alone even with glucagon on board`() {
+    fun `switching glucagon dosing off keeps the insulin hold while glucagon is acting`() {
         doseAgo(10, bgAtDose = 78.0)
         whenever(preferences.get(BooleanKey.GlucagonEnabled)).thenReturn(false)
+
+        assertThat(plugin.isSMBModeEnabled(ConstraintObject(true, aapsLogger)).value()).isFalse()
+    }
+
+    @Test
+    fun `a 25 mcg dose holds insulin for more than its first minute`() {
+        val now = dateUtil.now()
+        val dose = BS(timestamp = now - 20 * 60_000L, amount = 0.025, type = BS.Type.GLUCAGON, isValid = true)   // 58% left at 20 min
+        whenever(mockPersistenceLayer.getGlucagonDosesFromTime(any(), any())).thenReturn(Single.just(listOf(dose)))
+
+        assertThat(plugin.isSMBModeEnabled(ConstraintObject(true, aapsLogger)).value()).isFalse()
+    }
+
+    @Test
+    fun `the hold ends once three quarters of the dose has acted`() {
+        doseAgo(40, bgAtDose = 78.0)   // GlucaGen: 14% left at 40 min
 
         assertThat(plugin.isSMBModeEnabled(ConstraintObject(true, aapsLogger)).value()).isTrue()
     }
@@ -576,7 +597,10 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
     fun `delivery leaves a note for Nightscout`() {
         plugin.evaluateAndDoseForTest()
 
-        verify(mockPersistenceLayer).insertOrUpdateTherapyEvent(argThat { type == TE.Type.NOTE && note == "Glucagon 50 mcg (GlucaGen)" })
+        verify(mockPersistenceLayer).insertPumpTherapyEventIfNewByTimestamp(
+            argThat { type == TE.Type.NOTE && note == "Glucagon 50 mcg (GlucaGen)" && enteredBy == GlucagonPump.NOTE_ENTERED_BY },
+            any(), eq(Action.CAREPORTAL), eq(Sources.GlucagonPump), anyOrNull(), any()
+        )
     }
 
     @Test
@@ -681,6 +705,66 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
 
         verify(uiInteraction).dismissNotification(Notification.GLUCAGON_RESERVOIR_LOW)
         verify(uiInteraction, never()).addNotification(eq(Notification.GLUCAGON_RESERVOIR_LOW), any(), any())
+    }
+
+    // -------------------------------------------------------------------------
+    // Alarm lifecycle and migration
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `daily cap reached while glucagon is wanted raises the unavailable alarm`() {
+        whenever(preferences.get(IntKey.GlucagonMaxDailyMcg)).thenReturn(100)
+        doseAgo(120, bgAtDose = 78.0)   // 100 mcg two hours ago: interval and GOB pass, cap does not
+
+        plugin.evaluateAndDoseForTest()
+
+        assertThat(fakePump.lastDoseMcg).isWithin(0.001).of(0.0)
+        verifyUnavailableAlarm()
+    }
+
+    @Test
+    fun `the unavailable alarm clears once glucagon is no longer wanted`() {
+        whenever(mockGlucoseStatus.glucose).thenReturn(120.0)
+
+        plugin.evaluateAndDoseForTest()
+
+        verify(uiInteraction).dismissNotification(Notification.GLUCAGON_UNAVAILABLE)
+    }
+
+    @Test
+    fun `a new reason replaces the unavailable alarm text`() {
+        whenever(rh.gs(app.aaps.plugins.aps.R.string.glucagon_unavailable_no_pump)).thenReturn("no pump")
+        whenever(rh.gs(app.aaps.plugins.aps.R.string.glucagon_unavailable_not_ready)).thenReturn("not ready")
+        whenever(rh.gs(eq(app.aaps.plugins.aps.R.string.glucagon_unavailable), anyVararg<Any>())).thenAnswer { "unavailable: " + it.arguments.drop(1).joinToString() }
+        whenever(activePlugin.getSpecificPluginsListByInterface(GlucagonPump::class.java)).thenReturn(arrayListOf())
+        plugin.evaluateAndDoseForTest()
+        whenever(activePlugin.getSpecificPluginsListByInterface(GlucagonPump::class.java)).thenReturn(arrayListOf(fakePump as PluginBase))
+        fakePump.ready = false
+        plugin.evaluateAndDoseForTest()
+
+        verify(uiInteraction).dismissNotification(Notification.GLUCAGON_UNAVAILABLE)
+        verify(uiInteraction, times(2)).addNotificationWithSound(eq(Notification.GLUCAGON_UNAVAILABLE), any(), any(), any())
+    }
+
+    @Test
+    fun `the not-working alarm clears after the window once glucose is above the threshold`() {
+        doseAgo(90, bgAtDose = 100.0)
+        whenever(mockGlucoseStatus.glucose).thenReturn(95.0)   // above the 90 threshold, still below the dose-time reading
+
+        plugin.evaluateAndDoseForTest()
+
+        verify(uiInteraction).dismissNotification(Notification.GLUCAGON_NOT_WORKING)
+    }
+
+    @Test
+    fun `the mg per dL setting it replaced is migrated once`() {
+        whenever(preferences.getIfExists(IntNonKey.GlucagonMinBgMgdlLegacy)).thenReturn(70)
+
+        plugin.onStart()
+        plugin.onStop()
+
+        verify(preferences).put(UnitDoubleKey.GlucagonMinBg, 70.0)
+        verify(preferences).remove(IntNonKey.GlucagonMinBgMgdlLegacy)
     }
 
     // -------------------------------------------------------------------------

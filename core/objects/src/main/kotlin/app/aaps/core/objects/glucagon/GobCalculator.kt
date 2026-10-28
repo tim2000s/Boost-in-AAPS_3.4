@@ -1,5 +1,6 @@
 package app.aaps.core.objects.glucagon
 
+import app.aaps.core.data.model.BS
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.utils.DateUtil
 import kotlin.math.exp
@@ -64,16 +65,14 @@ class GobCalculator(
         val now = dateUtil.now()
         val since = now - formulation.durationMinutes * 60_000L
 
-        return persistenceLayer
-            .getGlucagonDosesFromTime(since, includeInvalid = false)
-            .blockingGet()
-            .sumOf { dose ->
-                val minutesSince = (now - dose.timestamp) / 60_000.0
-                dose.amount * 1000.0 * fractionRemaining(minutesSince, formulation)   // mg → mcg
-            }
+        return gobOf(persistenceLayer.getGlucagonDosesFromTime(since, includeInvalid = false).blockingGet(), now, formulation)
     }
 
     companion object {
+
+        /** GOB in mcg at [now] from glucagon records already read (amount in mg). */
+        fun gobOf(doses: List<BS>, now: Long, formulation: GlucagonFormulation): Double =
+            doses.sumOf { it.amount * 1000.0 * fractionRemaining((now - it.timestamp) / 60_000.0, formulation) }
 
         /** Share of a dose still on board [minutes] after delivery. */
         fun fractionRemaining(minutes: Double, formulation: GlucagonFormulation): Double {

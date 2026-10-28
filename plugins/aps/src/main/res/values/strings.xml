@@ -442,10 +442,11 @@
     <string name="glucagon_unavailable_no_pump">no glucagon pump is enabled</string>
     <string name="glucagon_unavailable_not_ready">the glucagon pump is not ready</string>
     <string name="glucagon_unavailable_reservoir">%1$.0f mcg left in the reservoir, below the 25 mcg minimum dose</string>
+    <string name="glucagon_unavailable_daily_cap">the daily limit is reached (%1$.0f of %2$d mcg in 24 h)</string>
     <string name="glucagon_unavailable_delivery_failed">delivery of %1$.0f mcg failed</string>
     <string name="glucagon_reservoir_low">Glucagon reservoir low: %1$.0f mcg left</string>
     <string name="glucagon_reservoir_old">Glucagon has been in the pump %1$.0f h, longer than %2$d h. Replace it.</string>
-    <string name="glucagon_not_working">Glucagon given %1$.0f min ago has not raised glucose (%2$s then, %3$s now). Take fast-acting carbs.</string>
+    <string name="glucagon_not_working">Glucagon given at %1$s has not raised glucose. Take fast-acting carbs.</string>
     <string name="glucagon_insufficient">Insulin on board is %1$.1f× basal. One glucagon dose may not be enough: take fast-acting carbs.</string>
     <string name="glucagon_insulin_hold">Glucagon on board: SMB off and temp basal capped at profile rate</string>
     <string name="glucagon_formulation_summary">Sets the GOB curve. GlucaGen: peak 15 min, 90 min duration. Gvoke and dasiglucagon: peak 30 min, 180 min duration. Dasiglucagon doses are scaled to 0.65. None of the three is licensed for pump use; GlucaGen is flagged after 72 h in the pump.</string>

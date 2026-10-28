@@ -4,10 +4,13 @@ import android.content.Context
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceManager
 import androidx.preference.PreferenceScreen
+import app.aaps.core.data.model.BS
 import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.TE
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.time.T
+import app.aaps.core.data.ue.Action
+import app.aaps.core.data.ue.Sources
 import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.aps.GlucoseStatus
 import app.aaps.core.interfaces.constraints.Constraint
@@ -31,6 +34,7 @@ import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
+import app.aaps.core.keys.IntNonKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.Preferences
@@ -87,12 +91,19 @@ class GlucagonAlgorithmPlugin @Inject constructor(
 ), PluginConstraints {
 
     private val disposable = CompositeDisposable()
-    private val gobCalculator by lazy { GobCalculator(persistenceLayer, dateUtil) }
+
+    // The constraint calls come several times a cycle and from the UI; one read serves them all
+    @Volatile private var dosesCache: Pair<Long, List<BS>>? = null
 
     private val formulation get() = GlucagonFormulation.fromKey(preferences.get(StringKey.GlucagonFormulation))
 
     override fun onStart() {
         super.onStart()
+        // The mg/dL-only setting it replaces was stored in mg/dL, as GlucagonMinBg is
+        preferences.getIfExists(IntNonKey.GlucagonMinBgMgdlLegacy)?.let {
+            preferences.put(UnitDoubleKey.GlucagonMinBg, it.toDouble())
+            preferences.remove(IntNonKey.GlucagonMinBgMgdlLegacy)
+        }
         disposable += rxBus
             .toObservable(EventAPSCalculationFinished::class.java)
             .observeOn(aapsSchedulers.io)
@@ -111,10 +122,16 @@ class GlucagonAlgorithmPlugin @Inject constructor(
     // Insulin loop constraints
     // -------------------------------------------------------------------------
 
-    /** Glucagon is still acting: at least one minimum dose on board. */
-    private fun glucagonActive(): Boolean =
-        preferences.get(BooleanKey.GlucagonEnabled) &&
-            runCatching { gobCalculator.currentGob(formulation) >= INSULIN_HOLD_GOB_MCG }.getOrDefault(false)
+    /**
+     * Glucagon is still acting: some dose has more than a quarter of itself left to act, whatever its
+     * size and whether new doses are allowed. That is 36 min (GlucaGen) or 72 min (Gvoke,
+     * dasiglucagon) after the last dose.
+     */
+    private fun glucagonActive(): Boolean = runCatching {
+        val now = dateUtil.now()
+        val f = formulation
+        recentDoses(now).any { GobCalculator.fractionRemaining((now - it.timestamp) / 60_000.0, f) > INSULIN_HOLD_FRACTION }
+    }.getOrDefault(false)
 
     override fun isSMBModeEnabled(value: Constraint<Boolean>): Constraint<Boolean> {
         if (glucagonActive()) value.set(false, rh.gs(R.string.glucagon_insulin_hold), this)
@@ -139,6 +156,9 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         // Condition 1: feature enabled
         if (!preferences.get(BooleanKey.GlucagonEnabled)) return
 
+        // Reservoir notices do not depend on the loop mode, so a refill can happen in open loop too
+        checkReservoir()
+
         // Open loop needs the user to confirm each action; suspended and disabled modes stop the loop
         val now = dateUtil.now()
         val mode = runCatching { persistenceLayer.getRunningModeActiveAt(now).mode }.getOrNull()
@@ -146,8 +166,6 @@ class GlucagonAlgorithmPlugin @Inject constructor(
             aapsLogger.debug(LTag.APS, "Glucagon blocked: running mode $mode")
             return
         }
-
-        checkReservoir()
 
         val aps: APS = activePlugin.activeAPS
         val apsResult = aps.lastAPSResult ?: return
@@ -159,14 +177,15 @@ class GlucagonAlgorithmPlugin @Inject constructor(
             return
         }
 
-        checkEffectiveness(glucoseStatus, now)
-
-        // Condition 2: carbsReq signals upcoming low
-        if (!apsResult.isCarbsRequired) return
-
-        // Condition 3: current BG <= threshold (stored in mg/dL, read in the user's units)
+        // Stored in mg/dL, read in the user's units
         val minBgMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.GlucagonMinBg))
-        if (glucoseStatus.glucose > minBgMgdl) return
+        checkEffectiveness(glucoseStatus, now, minBgMgdl)
+
+        // Conditions 2 and 3: carbsReq signals an upcoming low and BG <= threshold; otherwise glucagon is not wanted
+        if (!apsResult.isCarbsRequired || glucoseStatus.glucose > minBgMgdl) {
+            clear(Notification.GLUCAGON_UNAVAILABLE)
+            return
+        }
 
         // Condition 4: BG not rising now; a falling short average alone would dose into a recovery
         if (glucoseStatus.delta > 0.0) return
@@ -174,7 +193,7 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         // Condition 5: current GOB < max
         val formulation = formulation
         val maxGob = preferences.get(IntKey.GlucagonMaxGobMcg)
-        val currentGob = gobCalculator.currentGob(formulation)
+        val currentGob = GobCalculator.gobOf(recentDoses(now), now, formulation)
         if (currentGob >= maxGob) {
             aapsLogger.debug(LTag.APS, "Glucagon blocked: GOB ${"%.1f".format(currentGob)} mcg >= max $maxGob mcg")
             return
@@ -193,7 +212,7 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         val maxDaily = preferences.get(IntKey.GlucagonMaxDailyMcg)
         val dailyTotal = dailyGlucagonMcg(now)
         if (dailyTotal >= maxDaily) {
-            aapsLogger.warn(LTag.APS, "Glucagon blocked: daily total ${"%.0f".format(dailyTotal)} mcg >= hard cap $maxDaily mcg")
+            alarmUnavailable(rh.gs(R.string.glucagon_unavailable_daily_cap, dailyTotal, maxDaily))
             return
         }
 
@@ -224,7 +243,7 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         // Trim to the daily headroom in whole 25 mcg steps so this dose cannot carry the total past the cap
         val dailyHeadroom = Math.floor((maxDaily - dailyTotal) / 25.0) * 25.0
         if (dailyHeadroom < 25.0) {
-            aapsLogger.warn(LTag.APS, "Glucagon blocked: daily headroom ${"%.0f".format(maxDaily - dailyTotal)} mcg below the 25 mcg minimum dose")
+            alarmUnavailable(rh.gs(R.string.glucagon_unavailable_daily_cap, dailyTotal, maxDaily))
             return
         }
         val reservoirStep = Math.floor(glucagonPump.glucagonReservoirMcg / 25.0) * 25.0
@@ -241,15 +260,15 @@ class GlucagonAlgorithmPlugin @Inject constructor(
                 "gob=${"%.1f".format(currentGob)} dailyTotal=${"%.0f".format(dailyTotal)}"
         )
 
-        if (glucagonPump.deliverGlucagon(finalDoseMcg)) {
-            uiInteraction.dismissNotification(Notification.GLUCAGON_UNAVAILABLE)
+        val delivered = glucagonPump.deliverGlucagon(finalDoseMcg)
+        dosesCache = null
+        if (delivered) {
+            clear(Notification.GLUCAGON_UNAVAILABLE)
             recordForNightscout(now, finalDoseMcg, formulation)
             checkReservoir()
             // Above 1.5x basal IOB one dose has not been enough to stop a fall (n=1); warn rather than dose more
             if (iobRatio > INSUFFICIENT_IOB_RATIO)
-                uiInteraction.addNotificationWithSound(
-                    Notification.GLUCAGON_INSUFFICIENT, rh.gs(R.string.glucagon_insufficient, iobRatio), Notification.URGENT, app.aaps.core.ui.R.raw.alarm
-                )
+                raise(Notification.GLUCAGON_INSUFFICIENT, rh.gs(R.string.glucagon_insufficient, iobRatio), Notification.URGENT, app.aaps.core.ui.R.raw.alarm)
         } else {
             aapsLogger.error(LTag.APS, "Glucagon delivery failed for dose ${"%.0f".format(finalDoseMcg)} mcg")
             alarmUnavailable(rh.gs(R.string.glucagon_unavailable_delivery_failed, finalDoseMcg))
@@ -259,29 +278,48 @@ class GlucagonAlgorithmPlugin @Inject constructor(
     /**
      * A dose has had time to act (onset 10 to 15 min) and glucose is still at or below where it was
      * given, and not rising: glucagon is not working (alcohol, depleted glycogen, high insulin).
+     * Both glucagon alarms clear once glucose is above the dose-time reading or the threshold, or
+     * three hours after the last dose.
      */
-    private fun checkEffectiveness(glucoseStatus: GlucoseStatus, now: Long) {
+    private fun checkEffectiveness(glucoseStatus: GlucoseStatus, now: Long, minBgMgdl: Double) {
         val lastDose = lastGlucagonTimestamp(now)
-        if (lastDose == 0L) return
         val minutes = (now - lastDose) / 60_000.0
-        if (minutes < EFFECT_CHECK_FROM_MIN || minutes > EFFECT_CHECK_TO_MIN) return
-        val bgAtDose = persistenceLayer.getBgReadingsDataFromTimeToTime(lastDose - T.mins(10).msecs(), lastDose, false).firstOrNull()?.value ?: return
-        if (glucoseStatus.glucose <= bgAtDose && glucoseStatus.delta <= 0.0)
-            uiInteraction.addNotificationWithSound(
-                Notification.GLUCAGON_NOT_WORKING,
-                rh.gs(R.string.glucagon_not_working, minutes, profileUtil.fromMgdlToStringInUnits(bgAtDose), profileUtil.fromMgdlToStringInUnits(glucoseStatus.glucose)),
-                Notification.URGENT, app.aaps.core.ui.R.raw.alarm
-            )
-        else if (glucoseStatus.glucose > bgAtDose) {
-            uiInteraction.dismissNotification(Notification.GLUCAGON_NOT_WORKING)
-            uiInteraction.dismissNotification(Notification.GLUCAGON_INSUFFICIENT)
+        if (lastDose == 0L || minutes > EFFECT_ALARM_EXPIRY_MIN) {
+            clear(Notification.GLUCAGON_NOT_WORKING)
+            clear(Notification.GLUCAGON_INSUFFICIENT)
+            return
         }
+        val bgAtDose = persistenceLayer.getBgReadingsDataFromTimeToTime(lastDose - T.mins(10).msecs(), lastDose, false).firstOrNull()?.value ?: return
+        if (glucoseStatus.glucose > bgAtDose || glucoseStatus.glucose > minBgMgdl) {
+            clear(Notification.GLUCAGON_NOT_WORKING)
+            clear(Notification.GLUCAGON_INSUFFICIENT)
+        } else if (minutes >= EFFECT_CHECK_FROM_MIN && minutes <= EFFECT_CHECK_TO_MIN && glucoseStatus.delta <= 0.0)
+            // Fixed text: the store keeps the first text of an id, so nothing in it may change while it is shown
+            raise(Notification.GLUCAGON_NOT_WORKING, rh.gs(R.string.glucagon_not_working, profileUtil.fromMgdlToStringInUnits(bgAtDose)), Notification.URGENT, app.aaps.core.ui.R.raw.alarm)
     }
+
+    /**
+     * NotificationStore keeps the text of an id already shown, so a changed text is dismissed and raised
+     * again (an urgent one sounds again, since its reason changed). The same text is re-raised as is.
+     */
+    private fun raise(id: Int, text: String, level: Int, sound: Int? = null) {
+        if (shownText[id] != null && shownText[id] != text) uiInteraction.dismissNotification(id)
+        shownText[id] = text
+        if (sound != null) uiInteraction.addNotificationWithSound(id, text, level, sound)
+        else uiInteraction.addNotification(id, text, level)
+    }
+
+    private fun clear(id: Int) {
+        shownText.remove(id)
+        uiInteraction.dismissNotification(id)
+    }
+
+    private val shownText = java.util.concurrent.ConcurrentHashMap<Int, String>()
 
     /** Glucagon is wanted and cannot be given. Re-raising the same id while it is shown does not re-sound it. */
     private fun alarmUnavailable(reason: String) {
         aapsLogger.warn(LTag.APS, "Glucagon blocked: $reason")
-        uiInteraction.addNotificationWithSound(Notification.GLUCAGON_UNAVAILABLE, rh.gs(R.string.glucagon_unavailable, reason), Notification.URGENT, app.aaps.core.ui.R.raw.alarm)
+        raise(Notification.GLUCAGON_UNAVAILABLE, rh.gs(R.string.glucagon_unavailable, reason), Notification.URGENT, app.aaps.core.ui.R.raw.alarm)
     }
 
     /**
@@ -292,17 +330,18 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         val pump = activeGlucagonPump() ?: return
         val left = pump.glucagonReservoirMcg
         if (left < preferences.get(IntKey.GlucagonMaxSingleDoseMcg))
-            uiInteraction.addNotification(Notification.GLUCAGON_RESERVOIR_LOW, rh.gs(R.string.glucagon_reservoir_low, left), Notification.NORMAL)
+            raise(Notification.GLUCAGON_RESERVOIR_LOW, rh.gs(R.string.glucagon_reservoir_low, left), Notification.NORMAL)
         else
-            uiInteraction.dismissNotification(Notification.GLUCAGON_RESERVOIR_LOW)
+            clear(Notification.GLUCAGON_RESERVOIR_LOW)
 
         val maxHours = formulation.maxReservoirHours
         val filledAt = pump.glucagonReservoirFilledAt
         val ageHours = (dateUtil.now() - filledAt) / 3_600_000.0
+        // Whole hours in the text, so it changes (and is re-raised) at most hourly
         if (maxHours != null && filledAt > 0 && ageHours > maxHours)
-            uiInteraction.addNotification(Notification.GLUCAGON_RESERVOIR_OLD, rh.gs(R.string.glucagon_reservoir_old, ageHours, maxHours), Notification.NORMAL)
+            raise(Notification.GLUCAGON_RESERVOIR_OLD, rh.gs(R.string.glucagon_reservoir_old, Math.floor(ageHours), maxHours), Notification.NORMAL)
         else
-            uiInteraction.dismissNotification(Notification.GLUCAGON_RESERVOIR_OLD)
+            clear(Notification.GLUCAGON_RESERVOIR_OLD)
     }
 
     /**
@@ -311,8 +350,12 @@ class GlucagonAlgorithmPlugin @Inject constructor(
      */
     private fun recordForNightscout(now: Long, doseMcg: Double, formulation: GlucagonFormulation) {
         val note = "Glucagon ${doseMcg.toInt()} mcg (${formulation.displayName})"
+        // English and fixed so the extractor can parse it; the settings use the translated names
         runCatching {
-            persistenceLayer.insertOrUpdateTherapyEvent(TE(timestamp = now, type = TE.Type.NOTE, note = note, enteredBy = "AAPS", glucoseUnit = GlucoseUnit.MGDL)).blockingGet()
+            persistenceLayer.insertPumpTherapyEventIfNewByTimestamp(
+                therapyEvent = TE(timestamp = now, type = TE.Type.NOTE, note = note, enteredBy = GlucagonPump.NOTE_ENTERED_BY, glucoseUnit = GlucoseUnit.MGDL),
+                timestamp = now, action = Action.CAREPORTAL, source = Sources.GlucagonPump, note = note, listValues = listOf()
+            ).blockingGet()
         }.onFailure { aapsLogger.error(LTag.APS, "Glucagon note not stored", it) }
     }
 
@@ -325,22 +368,17 @@ class GlucagonAlgorithmPlugin @Inject constructor(
             .getSpecificPluginsListByInterface(GlucagonPump::class.java)
             .firstOrNull { it.isEnabled() } as? GlucagonPump
 
-    private fun lastGlucagonTimestamp(now: Long): Long {
-        val since = now - T.hours(3).msecs()
-        return persistenceLayer
-            .getGlucagonDosesFromTime(since, includeInvalid = false)
-            .blockingGet()
-            .maxOfOrNull { it.timestamp }
-            ?: 0L
+    /** Valid glucagon doses of the last 24 h, read at most every 30 s and again after a delivery. */
+    private fun recentDoses(now: Long): List<BS> {
+        dosesCache?.let { (at, doses) -> if (now - at in 0 until CACHE_MS) return doses }
+        return persistenceLayer.getGlucagonDosesFromTime(now - T.hours(24).msecs(), includeInvalid = false).blockingGet()
+            .filter { it.timestamp <= now }
+            .also { dosesCache = now to it }
     }
 
-    private fun dailyGlucagonMcg(now: Long): Double {
-        val since = now - T.hours(24).msecs()
-        return persistenceLayer
-            .getGlucagonDosesFromTime(since, includeInvalid = false)
-            .blockingGet()
-            .sumOf { it.amount * 1000.0 }   // mg → mcg
-    }
+    private fun lastGlucagonTimestamp(now: Long): Long = recentDoses(now).maxOfOrNull { it.timestamp } ?: 0L
+
+    private fun dailyGlucagonMcg(now: Long): Double = recentDoses(now).sumOf { it.amount * 1000.0 }   // mg → mcg
 
     // -------------------------------------------------------------------------
     // Preference screen
@@ -373,7 +411,9 @@ class GlucagonAlgorithmPlugin @Inject constructor(
 
     private companion object {
         const val STALE_MS = 7 * 60_000L                  // more than one missed 5-minute reading
-        const val INSULIN_HOLD_GOB_MCG = 25.0             // one minimum dose
+        const val INSULIN_HOLD_FRACTION = 0.25            // hold until three quarters of the last dose has acted
+        const val CACHE_MS = 30_000L
+        const val EFFECT_ALARM_EXPIRY_MIN = 180.0
         const val INSUFFICIENT_IOB_RATIO = 1.5            // diabettech.com Glucagon & Me part 2
         const val EFFECT_CHECK_FROM_MIN = 20.0            // onset 10 to 15 min (GlucaGen label; Laugesen 2022 +20 mg/dL by 15 min)
         const val EFFECT_CHECK_TO_MIN = 60.0

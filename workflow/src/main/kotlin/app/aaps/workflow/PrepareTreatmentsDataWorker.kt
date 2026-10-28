@@ -20,6 +20,7 @@ import app.aaps.core.interfaces.overview.OverviewData
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.profile.ProfileUtil
 import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.pump.GlucagonPump
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventIobCalculationProgress
 import app.aaps.core.interfaces.utils.DecimalFormatter
@@ -108,6 +109,7 @@ class PrepareTreatmentsDataWorker(
 
         // Careportal
         persistenceLayer.getTherapyEventDataFromToTime(fromTime - T.hours(6).msecs(), endTime).blockingGet()
+            .filter { it.enteredBy != GlucagonPump.NOTE_ENTERED_BY }   // drawn as a glucagon point already
             .map { TherapyEventDataPoint(it, rh, profileUtil, translator) }
             .filterTimeframe(fromTime, endTime)
             .forEach {

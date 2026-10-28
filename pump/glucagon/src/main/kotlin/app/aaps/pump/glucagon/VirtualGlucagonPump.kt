@@ -60,6 +60,12 @@ class VirtualGlucagonPump @Inject constructor(
     aapsLogger, rh
 ), GlucagonPump {
 
+    override fun onStart() {
+        super.onStart()
+        // An install that never refilled has no fill time; count from now so the age reminder can run
+        if (preferences.get(LongNonKey.GlucagonReservoirFilledAt) == 0L) preferences.put(LongNonKey.GlucagonReservoirFilledAt, dateUtil.now())
+    }
+
     override val glucagonReservoirMcg: Double get() = preferences.get(IntNonKey.GlucagonReservoirMcg).toDouble()
     override val glucagonReservoirFilledAt: Long get() = preferences.get(LongNonKey.GlucagonReservoirFilledAt)
 
