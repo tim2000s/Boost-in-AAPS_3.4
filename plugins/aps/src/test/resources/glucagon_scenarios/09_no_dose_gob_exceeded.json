@@ -1,6 +1,6 @@
 {
   "scenario": "09_no_dose_gob_exceeded",
-  "description": "Condition 5 fails: a 150 mcg dasiglucagon dose 5 min ago is 99% on board (peak 30 min, 180 min duration), GOB ≈ 149 mcg, which exceeds maxGobMcg=75. No dose.",
+  "description": "Condition 5 fails: a 150 mcg GlucaGen dose 5 min ago is 95% on board (peak 15 min, 90 min duration), GOB ≈ 143 mcg, which exceeds maxGobMcg=75. No dose.",
   "input": {
     "glucose": 80.0,
     "delta": -2.0,
@@ -13,7 +13,7 @@
       "maxSingleDoseMcg": 150,
       "minIntervalMinutes": 20,
       "maxDailyMcg": 900,
-      "formulation": "DASIGLUCAGON",
+      "formulation": "GLUCAGEN",
       "maxGobMcg": 75
     },
     "priorDoses": [
@@ -25,6 +25,6 @@
   },
   "expected": {
     "doseMcg": 0.0,
-    "reason": "GOB ≈ 149 mcg ≥ maxGobMcg=75 mcg → blocked"
+    "reason": "GOB ≈ 143 mcg ≥ maxGobMcg=75 mcg → blocked"
   }
 }

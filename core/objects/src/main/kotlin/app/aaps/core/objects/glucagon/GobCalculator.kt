@@ -22,11 +22,17 @@ import kotlin.math.pow
  * Zegalogue US label, 0.6 mg, tmax about 35 min, t1/2 about 30 min.
  *
  * Gvoke and dasiglucagon share a curve because the data give no basis to separate them.
+ *
+ * doseFactor scales the dose to give the same 30-minute glucose rise as native glucagon. For
+ * dasiglucagon it is 0.65, from Hövelmann 2019 Table 2 at 0.03 and 0.08 mg (0.61 and 0.66; 0.90 at
+ * 0.2 mg), computed in backtesting/scripts/2026-10-glucagon-formulations/dose_factor.py. Its
+ * larger late effect is carried by the longer curve instead. Gvoke stays at 1.0 because no
+ * small-dose comparison with native glucagon was found.
  */
-enum class GlucagonFormulation(val peakMinutes: Int, val durationMinutes: Int) {
-    GLUCAGEN(15, 90),
-    GVOKE(30, 180),
-    DASIGLUCAGON(30, 180);
+enum class GlucagonFormulation(val peakMinutes: Int, val durationMinutes: Int, val doseFactor: Double) {
+    GLUCAGEN(15, 90, 1.0),
+    GVOKE(30, 180, 1.0),
+    DASIGLUCAGON(30, 180, 0.65);
 
     companion object {
         // An unknown value falls back to the slowest curve, which holds GOB higher for longer

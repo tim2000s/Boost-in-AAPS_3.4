@@ -164,7 +164,7 @@ class GlucagonAlgorithmPlugin @Inject constructor(
 
         val carbsReq = apsResult.carbsReq
         val maxSingle = preferences.get(IntKey.GlucagonMaxSingleDoseMcg)
-        val baseDose = carbsReq * 5.0
+        val baseDose = carbsReq * 5.0 * formulation.doseFactor
         val clampedBase = baseDose.coerceIn(25.0, maxSingle.toDouble())
         val raw = clampedBase * iobPenalty
         // Round to nearest 25 mcg step, minimum 25 mcg
@@ -185,7 +185,7 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         aapsLogger.debug(
             LTag.APS,
             "Glucagon dose: carbsReq=$carbsReq iobRatio=${"%.2f".format(iobRatio)} " +
-                "iobPenalty=$iobPenalty baseDose=${"%.0f".format(baseDose)} finalDose=${"%.0f".format(finalDoseMcg)} mcg " +
+                "iobPenalty=$iobPenalty formulation=$formulation baseDose=${"%.0f".format(baseDose)} finalDose=${"%.0f".format(finalDoseMcg)} mcg " +
                 "gob=${"%.1f".format(currentGob)} dailyTotal=${"%.0f".format(dailyTotal)}"
         )
 

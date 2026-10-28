@@ -438,7 +438,7 @@
     <string name="glucagon_max_daily_title">Daily hard cap (mcg)</string>
     <string name="glucagon_max_daily_summary">Hard limit on total glucagon per day. Doses are blocked once this is reached. Default: 900 mcg.</string>
     <string name="glucagon_formulation_title">Glucagon formulation</string>
-    <string name="glucagon_formulation_summary">Sets the GOB curve. GlucaGen: peak 15 min, 90 min duration. Gvoke and dasiglucagon: peak 30 min, 180 min duration.</string>
+    <string name="glucagon_formulation_summary">Sets the GOB curve. GlucaGen: peak 15 min, 90 min duration. Gvoke and dasiglucagon: peak 30 min, 180 min duration. Dasiglucagon doses are scaled to 0.65.</string>
     <string name="glucagon_formulation_glucagen">GlucaGen (native glucagon)</string>
     <string name="glucagon_formulation_gvoke">Gvoke</string>
     <string name="glucagon_formulation_dasiglucagon">Dasiglucagon (Zegalogue)</string>

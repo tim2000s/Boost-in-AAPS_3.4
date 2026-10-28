@@ -1,0 +1,25 @@
+{
+  "scenario": "16_dasiglucagon_dose_scaled",
+  "description": "As scenario 01 with dasiglucagon: carbsReq=20 → 100 mcg × 0.65 = 65 mcg, rounded to nearest 25 → 75 mcg.",
+  "input": {
+    "glucose": 80.0,
+    "delta": -2.0,
+    "shortAvgDelta": -1.5,
+    "carbsRequired": true,
+    "carbsReq": 20,
+    "iob": 0.0,
+    "preferences": {
+      "minBgMgdl": 90,
+      "maxSingleDoseMcg": 150,
+      "minIntervalMinutes": 20,
+      "maxDailyMcg": 900,
+      "formulation": "DASIGLUCAGON",
+      "maxGobMcg": 75
+    },
+    "priorDoses": []
+  },
+  "expected": {
+    "doseMcg": 75.0,
+    "reason": "dasiglucagon doseFactor 0.65 → 65 mcg → 75 mcg"
+  }
+}

@@ -13,28 +13,82 @@
       "maxSingleDoseMcg": 150,
       "minIntervalMinutes": 20,
       "maxDailyMcg": 900,
-      "formulation": "DASIGLUCAGON",
+      "formulation": "GLUCAGEN",
       "maxGobMcg": 75
     },
     "priorDoses": [
-      { "minutesAgo":   60, "doseMcg": 50.0 },
-      { "minutesAgo":  120, "doseMcg": 50.0 },
-      { "minutesAgo":  180, "doseMcg": 50.0 },
-      { "minutesAgo":  240, "doseMcg": 50.0 },
-      { "minutesAgo":  300, "doseMcg": 50.0 },
-      { "minutesAgo":  360, "doseMcg": 50.0 },
-      { "minutesAgo":  420, "doseMcg": 50.0 },
-      { "minutesAgo":  480, "doseMcg": 50.0 },
-      { "minutesAgo":  540, "doseMcg": 50.0 },
-      { "minutesAgo":  600, "doseMcg": 50.0 },
-      { "minutesAgo":  660, "doseMcg": 50.0 },
-      { "minutesAgo":  720, "doseMcg": 50.0 },
-      { "minutesAgo":  780, "doseMcg": 50.0 },
-      { "minutesAgo":  840, "doseMcg": 50.0 },
-      { "minutesAgo":  900, "doseMcg": 50.0 },
-      { "minutesAgo":  960, "doseMcg": 50.0 },
-      { "minutesAgo": 1020, "doseMcg": 50.0 },
-      { "minutesAgo": 1080, "doseMcg": 50.0 }
+      {
+        "minutesAgo": 60,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 120,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 180,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 240,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 300,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 360,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 420,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 480,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 540,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 600,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 660,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 720,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 780,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 840,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 900,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 960,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 1020,
+        "doseMcg": 50.0
+      },
+      {
+        "minutesAgo": 1080,
+        "doseMcg": 50.0
+      }
     ]
   },
   "expected": {

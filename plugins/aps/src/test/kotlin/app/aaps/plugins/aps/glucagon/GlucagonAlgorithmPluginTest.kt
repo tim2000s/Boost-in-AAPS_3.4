@@ -90,7 +90,7 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
         whenever(preferences.get(IntKey.GlucagonMaxSingleDoseMcg)).thenReturn(150)
         whenever(preferences.get(IntKey.GlucagonMinIntervalMinutes)).thenReturn(20)
         whenever(preferences.get(IntKey.GlucagonMaxDailyMcg)).thenReturn(900)
-        whenever(preferences.get(StringKey.GlucagonFormulation)).thenReturn("DASIGLUCAGON")
+        whenever(preferences.get(StringKey.GlucagonFormulation)).thenReturn("GLUCAGEN")
         whenever(preferences.get(IntKey.GlucagonMaxGobMcg)).thenReturn(75)
 
         whenever(activePlugin.activeAPS).thenReturn(mockAps)
@@ -199,7 +199,7 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
 
     @Test
     fun `no dose when GOB exceeds max (large recent dose)`() {
-        // 150 mcg dasiglucagon delivered 5 min ago → GOB ≈ 149 mcg > 75 mcg max
+        // 150 mcg GlucaGen delivered 5 min ago → GOB ≈ 143 mcg > 75 mcg max
         val recentDose = BS(
             timestamp = dateUtil.now() - 5 * 60_000L,
             amount = 150.0 / 1000.0,
