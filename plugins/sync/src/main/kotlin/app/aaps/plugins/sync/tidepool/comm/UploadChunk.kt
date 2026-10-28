@@ -1,5 +1,6 @@
 package app.aaps.plugins.sync.tidepool.comm
 
+import app.aaps.core.data.model.BS
 import app.aaps.core.data.model.EPS
 import app.aaps.core.data.model.TB
 import app.aaps.core.data.time.T
@@ -99,6 +100,7 @@ class UploadChunk @Inject constructor(
     private fun getTreatments(start: Long, end: Long): List<BaseElement> {
         val result = LinkedList<BaseElement>()
         persistenceLayer.getBolusesFromTimeToTime(start, end, true)
+            .filter { it.type != BS.Type.GLUCAGON }
             .forEach { bolus ->
                 result.add(BolusElement(bolus, dateUtil))
             }

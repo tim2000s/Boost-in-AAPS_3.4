@@ -1,5 +1,6 @@
 package app.aaps.plugins.sync.nsclient
 
+import app.aaps.core.data.model.BS
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
@@ -182,6 +183,9 @@ class DataSyncSelectorV1 @Inject constructor(
                 aapsLogger.info(LTag.NSCLIENT, "Loading Bolus data Start: $startId ${bolus.first} forID: ${bolus.second.id} ")
                 val dataPair = DataSyncSelector.PairBolus(bolus.first, bolus.second.id)
                 when {
+                    // glucagon is stored as a bolus in mg; Nightscout would count it as insulin
+                    bolus.first.type == BS.Type.GLUCAGON ->
+                        aapsLogger.info(LTag.NSCLIENT, "Ignoring Bolus. Glucagon: ${bolus.second.id} ")
                     // new record with existing NS id => must be coming from NS => ignore
                     bolus.first.id == bolus.second.id && bolus.first.ids.nightscoutId != null ->
                         aapsLogger.info(LTag.NSCLIENT, "Ignoring Bolus. Loaded from NS: ${bolus.second.id} ")

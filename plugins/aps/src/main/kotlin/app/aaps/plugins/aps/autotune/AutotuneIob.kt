@@ -119,7 +119,7 @@ open class AutotuneIob @Inject constructor(
         var nbBolus = 0
         for (i in tmpBolus.indices) {
             val tp = tmpBolus[i]
-            if (tp.isValid && tp.type != BS.Type.PRIMING) {
+            if (tp.isValid && tp.type != BS.Type.PRIMING && tp.type != BS.Type.GLUCAGON) {
                 boluses.add(tp)
                 nsTreatments.add(NsTreatment(tp))
                 //only carbs after first BGReadings are taken into account in calculation of Autotune
@@ -250,7 +250,7 @@ open class AutotuneIob @Inject constructor(
 
     // Add specific calculation for Autotune (reference localInsulin for Peak/dia)
     private fun BS.iobCalc(time: Long, localInsulin: LocalInsulin): Iob {
-        if (!isValid || type == BS.Type.PRIMING) return Iob()
+        if (!isValid || type == BS.Type.PRIMING || type == BS.Type.GLUCAGON) return Iob()
         return localInsulin.iobCalcForTreatment(this, time)
     }
 

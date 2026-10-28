@@ -106,7 +106,7 @@ class TddCalculatorImpl @Inject constructor(
         val tdd = TDD(timestamp = startTimeAligned)
         var tbrFound = false
         persistenceLayer.getBolusesFromTimeToTime(startTime, endTime, true)
-            .filter { it.type != BS.Type.PRIMING }
+            .filter { it.type != BS.Type.PRIMING && it.type != BS.Type.GLUCAGON }
             .forEach { t ->
                 tdd.bolusAmount += t.amount
             }

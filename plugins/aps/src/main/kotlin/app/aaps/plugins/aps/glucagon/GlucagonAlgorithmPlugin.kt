@@ -165,7 +165,14 @@ class GlucagonAlgorithmPlugin @Inject constructor(
         val clampedBase = baseDose.coerceIn(25.0, maxSingle.toDouble())
         val raw = clampedBase * iobPenalty
         // Round to nearest 25 mcg step, minimum 25 mcg
-        val finalDoseMcg = (Math.round(raw / 25.0) * 25.0).coerceAtLeast(25.0)
+        val roundedDose = (Math.round(raw / 25.0) * 25.0).coerceAtLeast(25.0)
+        // Trim to the daily headroom in whole 25 mcg steps so this dose cannot carry the total past the cap
+        val dailyHeadroom = Math.floor((maxDaily - dailyTotal) / 25.0) * 25.0
+        if (dailyHeadroom < 25.0) {
+            aapsLogger.warn(LTag.APS, "Glucagon blocked: daily headroom ${"%.0f".format(maxDaily - dailyTotal)} mcg below the 25 mcg minimum dose")
+            return
+        }
+        val finalDoseMcg = minOf(roundedDose, dailyHeadroom)
 
         // Warn if approaching daily cap
         if (dailyTotal + finalDoseMcg > 600) {
