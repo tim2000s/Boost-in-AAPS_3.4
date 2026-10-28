@@ -1,6 +1,5 @@
 package app.aaps.plugins.sync.nsclientV3
 
-import app.aaps.core.data.model.BS
 import androidx.annotation.OpenForTesting
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.db.PersistenceLayer
@@ -162,9 +161,6 @@ class DataSyncSelectorV3 @Inject constructor(
             rxBus.send(EventNSClientUpdateGuiQueue())
             persistenceLayer.getNextSyncElementBolus(startId).blockingGet()?.let { bolus ->
                 when {
-                    // glucagon is stored as a bolus in mg; Nightscout would count it as insulin
-                    bolus.first.type == BS.Type.GLUCAGON ->
-                        aapsLogger.info(LTag.NSCLIENT, "Ignoring Bolus. Glucagon: ${bolus.second.id} ")
                     // new record with existing NS id => must be coming from NS => ignore
                     bolus.first.id == bolus.second.id && bolus.first.ids.nightscoutId != null ->
                         aapsLogger.info(LTag.NSCLIENT, "Ignoring Bolus. Loaded from NS: ${bolus.second.id} ")

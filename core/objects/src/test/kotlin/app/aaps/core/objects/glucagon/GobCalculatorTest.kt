@@ -5,6 +5,7 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.shared.tests.TestBase
 import com.google.common.truth.Truth.assertThat
+import io.reactivex.rxjava3.core.Single
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
@@ -45,13 +46,8 @@ class GobCalculatorTest : TestBase() {
         )
 
     private fun stubDoses(vararg doses: BS) {
-        whenever(
-            persistenceLayer.getBolusesFromTimeToTime(
-                org.mockito.kotlin.any(),
-                org.mockito.kotlin.any(),
-                org.mockito.kotlin.any()
-            )
-        ).thenReturn(doses.toList())
+        whenever(persistenceLayer.getGlucagonDosesFromTime(org.mockito.kotlin.any(), org.mockito.kotlin.any()))
+            .thenReturn(Single.just(doses.toList()))
     }
 
     // -------------------------------------------------------------------------
@@ -107,11 +103,11 @@ class GobCalculatorTest : TestBase() {
     }
 
     @Test
-    fun `only valid GLUCAGON records are included in GOB`() {
-        val insulinBolus = BS(timestamp = now - 10 * 60_000L, amount = 2.0, type = BS.Type.NORMAL, isValid = true)
-        val invalidDose = BS(timestamp = now - 5 * 60_000L, amount = 0.2, type = BS.Type.GLUCAGON, isValid = false)
-        stubDoses(glucagonDose(100.0, minutesAgo = 10), insulinBolus, invalidDose)
+    fun `reads valid glucagon doses over the formulation duration`() {
+        // Selecting valid GLUCAGON rows is the query's job, tested in BolusDaoTest
+        stubDoses(glucagonDose(100.0, minutesAgo = 10))
         assertThat(gobCalculator.currentGob(GlucagonFormulation.DASIGLUCAGON)).isWithin(0.01).of(95.17)
+        org.mockito.kotlin.verify(persistenceLayer).getGlucagonDosesFromTime(now - 180 * 60_000L, false)
     }
 
     @Test

@@ -99,6 +99,7 @@ class TreatmentsBolusCarbsFragment : DaggerFragment(), MenuProvider {
 
     private fun bolusMealLinksWithInvalid(now: Long) = persistenceLayer
         .getBolusesFromTimeIncludingInvalid(now - millsToThePast, false)
+        .zipWith(persistenceLayer.getGlucagonDosesFromTime(now - millsToThePast, includeInvalid = true)) { first, second -> first + second }
         .map { bolus -> bolus.map { MealLink(bolus = it) } }
 
     private fun carbsMealLinksWithInvalid(now: Long) = persistenceLayer
@@ -111,6 +112,7 @@ class TreatmentsBolusCarbsFragment : DaggerFragment(), MenuProvider {
 
     private fun bolusMealLinks(now: Long) = persistenceLayer
         .getBolusesFromTime(now - millsToThePast, false)
+        .zipWith(persistenceLayer.getGlucagonDosesFromTime(now - millsToThePast, includeInvalid = false)) { first, second -> first + second }
         .map { bolus -> bolus.map { MealLink(bolus = it) } }
 
     private fun carbsMealLinks(now: Long) = persistenceLayer
@@ -218,7 +220,9 @@ class TreatmentsBolusCarbsFragment : DaggerFragment(), MenuProvider {
             holder.binding.bolusLayout.visibility = (ml.bolus != null && (ml.bolus.isValid || showInvalidated)).toVisibility()
             ml.bolus?.let { bolus ->
                 holder.binding.bolusTime.text = dateUtil.timeString(bolus.timestamp)
-                holder.binding.insulin.text = rh.gs(app.aaps.core.ui.R.string.format_insulin_units, bolus.amount)
+                holder.binding.insulin.text =
+                    if (bolus.type == BS.Type.GLUCAGON) rh.gs(R.string.format_glucagon_mcg, bolus.amount * 1000.0)   // stored in mg
+                    else rh.gs(app.aaps.core.ui.R.string.format_insulin_units, bolus.amount)
                 holder.binding.bolusNs.visibility = (bolus.ids.nightscoutId != null).toVisibility()
                 holder.binding.bolusPump.visibility = bolus.ids.isPumpHistory().toVisibility()
                 holder.binding.bolusInvalid.visibility = bolus.isValid.not().toVisibility()
@@ -395,6 +399,9 @@ class TreatmentsBolusCarbsFragment : DaggerFragment(), MenuProvider {
         if (selectedItems.size() == 1) {
             val mealLink = selectedItems.valueAt(0)
             val bolus = mealLink.bolus
+            if (bolus?.type == BS.Type.GLUCAGON)
+                return rh.gs(R.string.glucagon_dose) + ": " + rh.gs(R.string.format_glucagon_mcg, bolus.amount * 1000.0) + "\n" +
+                    rh.gs(app.aaps.core.ui.R.string.date) + ": " + dateUtil.dateAndTimeString(bolus.timestamp)
             if (bolus != null)
                 return rh.gs(app.aaps.core.ui.R.string.configbuilder_insulin) + ": " + rh.gs(app.aaps.core.ui.R.string.format_insulin_units, bolus.amount) + "\n" +
                     rh.gs(app.aaps.core.ui.R.string.date) + ": " + dateUtil.dateAndTimeString(bolus.timestamp)
@@ -416,7 +423,8 @@ class TreatmentsBolusCarbsFragment : DaggerFragment(), MenuProvider {
                             source = Sources.Treatments,
                             listValues = listOf(
                                 ValueWithUnit.Timestamp(bolus.timestamp),
-                                ValueWithUnit.Insulin(bolus.amount)
+                                if (bolus.type == BS.Type.GLUCAGON) ValueWithUnit.SimpleString(rh.gs(R.string.format_glucagon_mcg, bolus.amount * 1000.0))
+                                else ValueWithUnit.Insulin(bolus.amount)
                             )
                         ).subscribe()
                     }

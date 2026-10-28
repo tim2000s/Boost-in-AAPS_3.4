@@ -118,6 +118,7 @@
     <string name="meal_bolus">Meal</string>
     <string name="prime">Prime</string>
     <string name="glucagon_dose">Glucagon</string>
+    <string name="format_glucagon_mcg">%1$.0f mcg</string>
     <string name="carbs_and_bolus">Carbs and bolus</string>
     <string name="show_invalidated_records">Show invalidated / removed records</string>
     <string name="hide_invalidated_records">Hide invalidated / removed records</string>

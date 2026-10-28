@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceManager
 import androidx.preference.PreferenceScreen
-import app.aaps.core.data.model.BS
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.aps.APS
@@ -214,8 +213,8 @@ class GlucagonAlgorithmPlugin @Inject constructor(
     private fun lastGlucagonTimestamp(now: Long): Long {
         val since = now - T.hours(3).msecs()
         return persistenceLayer
-            .getBolusesFromTimeToTime(since, now, ascending = false)
-            .filter { it.isValid && it.type == BS.Type.GLUCAGON }
+            .getGlucagonDosesFromTime(since, includeInvalid = false)
+            .blockingGet()
             .maxOfOrNull { it.timestamp }
             ?: 0L
     }
@@ -223,8 +222,8 @@ class GlucagonAlgorithmPlugin @Inject constructor(
     private fun dailyGlucagonMcg(now: Long): Double {
         val since = now - T.hours(24).msecs()
         return persistenceLayer
-            .getBolusesFromTimeToTime(since, now, ascending = true)
-            .filter { it.isValid && it.type == BS.Type.GLUCAGON }
+            .getGlucagonDosesFromTime(since, includeInvalid = false)
+            .blockingGet()
             .sumOf { it.amount * 1000.0 }   // mg → mcg
     }
 

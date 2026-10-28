@@ -1,6 +1,5 @@
 package app.aaps.core.objects.glucagon
 
-import app.aaps.core.data.model.BS
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.utils.DateUtil
 import kotlin.math.exp
@@ -60,8 +59,8 @@ class GobCalculator(
         val since = now - formulation.durationMinutes * 60_000L
 
         return persistenceLayer
-            .getBolusesFromTimeToTime(since, now, ascending = true)
-            .filter { it.isValid && it.type == BS.Type.GLUCAGON }
+            .getGlucagonDosesFromTime(since, includeInvalid = false)
+            .blockingGet()
             .sumOf { dose ->
                 val minutesSince = (now - dose.timestamp) / 60_000.0
                 dose.amount * 1000.0 * fractionRemaining(minutesSince, formulation)   // mg → mcg

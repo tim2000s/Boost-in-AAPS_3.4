@@ -111,6 +111,15 @@ interface PersistenceLayer {
     fun getBolusesFromTimeIncludingInvalid(startTime: Long, ascending: Boolean): Single<List<BS>>
 
     /**
+     * Get glucagon doses from time, oldest first. The bolus queries above never return them.
+     *
+     * @param startTime from
+     * @param includeInvalid include invalidated records
+     * @return List of glucagon doses (BS.Type.GLUCAGON, amount in mg)
+     */
+    fun getGlucagonDosesFromTime(startTime: Long, includeInvalid: Boolean): Single<List<BS>>
+
+    /**
      * Get next changed record after id
      *
      * @param id record id

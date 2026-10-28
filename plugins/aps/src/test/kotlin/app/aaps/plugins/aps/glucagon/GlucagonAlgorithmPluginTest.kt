@@ -17,6 +17,7 @@ import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
 import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
+import io.reactivex.rxjava3.core.Single
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
@@ -111,8 +112,8 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
             .thenReturn(RM(timestamp = setupNow, mode = RM.Mode.CLOSED_LOOP, duration = 0))
 
         // No prior glucagon doses
-        whenever(mockPersistenceLayer.getBolusesFromTimeToTime(any(), any(), any()))
-            .thenReturn(emptyList())
+        whenever(mockPersistenceLayer.getGlucagonDosesFromTime(any(), any()))
+            .thenReturn(Single.just(emptyList()))
 
         // Active, ready glucagon pump
         whenever(activePlugin.getSpecificPluginsListByInterface(GlucagonPump::class.java))
@@ -266,8 +267,8 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
             type = BS.Type.GLUCAGON,
             isValid = true
         )
-        whenever(mockPersistenceLayer.getBolusesFromTimeToTime(any(), any(), any()))
-            .thenReturn(listOf(recentDose))
+        whenever(mockPersistenceLayer.getGlucagonDosesFromTime(any(), any()))
+            .thenReturn(Single.just(listOf(recentDose)))
 
         plugin.evaluateAndDoseForTest()
 
@@ -286,8 +287,8 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
             type = BS.Type.GLUCAGON,
             isValid = true
         )
-        whenever(mockPersistenceLayer.getBolusesFromTimeToTime(any(), any(), any()))
-            .thenReturn(listOf(recentDose))
+        whenever(mockPersistenceLayer.getGlucagonDosesFromTime(any(), any()))
+            .thenReturn(Single.just(listOf(recentDose)))
 
         plugin.evaluateAndDoseForTest()
 
@@ -302,8 +303,8 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
             type = BS.Type.GLUCAGON,
             isValid = true
         )
-        whenever(mockPersistenceLayer.getBolusesFromTimeToTime(any(), any(), any()))
-            .thenReturn(listOf(oldDose))
+        whenever(mockPersistenceLayer.getGlucagonDosesFromTime(any(), any()))
+            .thenReturn(Single.just(listOf(oldDose)))
 
         plugin.evaluateAndDoseForTest()
 
@@ -325,8 +326,8 @@ class GlucagonAlgorithmPluginTest : TestBaseWithProfile() {
                 isValid = true
             )
         }
-        whenever(mockPersistenceLayer.getBolusesFromTimeToTime(any(), any(), any()))
-            .thenReturn(doses)
+        whenever(mockPersistenceLayer.getGlucagonDosesFromTime(any(), any()))
+            .thenReturn(Single.just(doses))
 
         plugin.evaluateAndDoseForTest()
 

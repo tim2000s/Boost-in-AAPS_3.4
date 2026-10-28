@@ -169,6 +169,10 @@ class PersistenceLayerImpl @Inject constructor(
         repository.getBolusesIncludingInvalidFromTime(startTime, ascending)
             .map { list -> list.asSequence().map { it.fromDb() }.toList() }
 
+    override fun getGlucagonDosesFromTime(startTime: Long, includeInvalid: Boolean): Single<List<BS>> =
+        repository.getGlucagonFromTime(startTime, includeInvalid)
+            .map { list -> list.asSequence().map { it.fromDb() }.toList() }
+
     override fun getNextSyncElementBolus(id: Long): Maybe<Pair<BS, BS>> =
         repository.getNextSyncElementBolus(id)
             .map { pair -> Pair(pair.first.fromDb(), pair.second.fromDb()) }

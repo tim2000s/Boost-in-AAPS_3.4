@@ -1,6 +1,5 @@
 package app.aaps.plugins.sync.xdrip
 
-import app.aaps.core.data.model.BS
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
@@ -207,7 +206,7 @@ class DataSyncSelectorXdripImpl @Inject constructor(
             progress = "$startId/$lastDbId"
             persistenceLayer.getNextSyncElementBolus(startId).blockingGet()?.let { bolus ->
                 aapsLogger.info(LTag.XDRIP, "Loading Bolus data Start: $startId ${bolus.first} forID: ${bolus.second.id} ")
-                if (!isOld(bolus.first.timestamp) && bolus.first.type != BS.Type.GLUCAGON)
+                if (!isOld(bolus.first.timestamp))
                     preparedTreatments.add(DataSyncSelector.PairBolus(bolus.first, bolus.second.id))
                 sendTreatments(force = false, progress)
                 confirmLastBolusIdIfGreater(bolus.second.id)

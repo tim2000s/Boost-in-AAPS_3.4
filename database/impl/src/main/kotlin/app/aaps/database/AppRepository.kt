@@ -514,6 +514,10 @@ class AppRepository @Inject internal constructor(
             .map { if (!ascending) it.reversed() else it }
             .subscribeOn(Schedulers.io())
 
+    fun getGlucagonFromTime(timestamp: Long, includeInvalid: Boolean): Single<List<Bolus>> =
+        (if (includeInvalid) database.bolusDao.getGlucagonIncludingInvalidFromTime(timestamp) else database.bolusDao.getGlucagonFromTime(timestamp))
+            .subscribeOn(Schedulers.io())
+
     fun getLastBolusId(): Long? =
         database.bolusDao.getLastId()
     // CARBS

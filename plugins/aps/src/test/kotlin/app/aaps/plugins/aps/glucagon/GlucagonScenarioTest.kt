@@ -16,6 +16,7 @@ import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
 import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
+import io.reactivex.rxjava3.core.Single
 import org.json.JSONObject
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DynamicTest
@@ -207,8 +208,8 @@ class GlucagonScenarioTest : TestBaseWithProfile() {
         }
         whenever(mockPersistenceLayer.getRunningModeActiveAt(any()))
             .thenReturn(RM(timestamp = nowTs, mode = RM.Mode.CLOSED_LOOP, duration = 0))
-        whenever(mockPersistenceLayer.getBolusesFromTimeToTime(any(), any(), any()))
-            .thenReturn(doses)
+        whenever(mockPersistenceLayer.getGlucagonDosesFromTime(any(), any()))
+            .thenReturn(Single.just(doses))
 
         // Active pump
         whenever(activePlugin.getSpecificPluginsListByInterface(GlucagonPump::class.java))

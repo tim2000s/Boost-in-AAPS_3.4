@@ -47,17 +47,25 @@ internal interface BolusDao : TraceableDao<Bolus> {
     @Query("SELECT * FROM $TABLE_BOLUSES WHERE likely(isValid = 1) AND type NOT IN ('PRIMING', 'GLUCAGON') AND unlikely(referenceId IS NULL) ORDER BY timestamp ASC LIMIT 1")
     fun getOldestBolusRecord(): Maybe<Bolus>
 
-    @Query("SELECT * FROM $TABLE_BOLUSES WHERE likely(isValid = 1) AND unlikely(timestamp >= :timestamp) AND likely(referenceId IS NULL) ORDER BY id DESC")
+    // Glucagon shares this table (amount in mg), so every insulin query excludes it and it is read
+    // only through the glucagon queries below
+    @Query("SELECT * FROM $TABLE_BOLUSES WHERE likely(isValid = 1) AND unlikely(timestamp >= :timestamp) AND likely(referenceId IS NULL) AND type <> 'GLUCAGON' ORDER BY id DESC")
     fun getBolusesFromTime(timestamp: Long): Single<List<Bolus>>
 
-    @Query("SELECT * FROM $TABLE_BOLUSES WHERE likely(isValid = 1) AND unlikely(timestamp BETWEEN :start AND :end) AND likely(referenceId IS NULL) ORDER BY id DESC")
+    @Query("SELECT * FROM $TABLE_BOLUSES WHERE likely(isValid = 1) AND unlikely(timestamp BETWEEN :start AND :end) AND likely(referenceId IS NULL) AND type <> 'GLUCAGON' ORDER BY id DESC")
     fun getBolusesFromTime(start: Long, end: Long): Single<List<Bolus>>
 
-    @Query("SELECT * FROM $TABLE_BOLUSES WHERE unlikely(timestamp >= :timestamp) AND likely(referenceId IS NULL) ORDER BY id DESC")
+    @Query("SELECT * FROM $TABLE_BOLUSES WHERE unlikely(timestamp >= :timestamp) AND likely(referenceId IS NULL) AND type <> 'GLUCAGON' ORDER BY id DESC")
     fun getBolusesIncludingInvalidFromTime(timestamp: Long): Single<List<Bolus>>
 
+    @Query("SELECT * FROM $TABLE_BOLUSES WHERE likely(isValid = 1) AND timestamp >= :timestamp AND likely(referenceId IS NULL) AND type = 'GLUCAGON' ORDER BY timestamp ASC")
+    fun getGlucagonFromTime(timestamp: Long): Single<List<Bolus>>
+
+    @Query("SELECT * FROM $TABLE_BOLUSES WHERE timestamp >= :timestamp AND likely(referenceId IS NULL) AND type = 'GLUCAGON' ORDER BY timestamp ASC")
+    fun getGlucagonIncludingInvalidFromTime(timestamp: Long): Single<List<Bolus>>
+
     // for WS we need 1 record only
-    @Query("SELECT * FROM $TABLE_BOLUSES WHERE unlikely(id > :id) AND likely(pumpId IS NOT NULL) AND likely(type <> :exclude) ORDER BY id ASC limit 1")
+    @Query("SELECT * FROM $TABLE_BOLUSES WHERE unlikely(id > :id) AND likely(pumpId IS NOT NULL) AND likely(type <> :exclude) AND type <> 'GLUCAGON' ORDER BY id ASC limit 1")
     fun getNextModifiedOrNewAfterExclude(id: Long, exclude: Bolus.Type = Bolus.Type.PRIMING): Maybe<Bolus>
 
     @Query("SELECT * FROM $TABLE_BOLUSES WHERE id = :referenceId")
